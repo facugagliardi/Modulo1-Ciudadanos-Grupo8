@@ -1,0 +1,18 @@
+target/
+*.class
+*.log
+
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+.settings/
+.classpath
+.project
+
+# Archivos subidos por POST /personas/{id}/documentos
+archivos-documentos/
+
+.env
+application-local.yml

@@ -1,0 +1,61 @@
+spring:
+  application:
+    name: ciudadanos-modulo1
+
+  datasource:
+    url: ${POSTGRES_URL:jdbc:postgresql://localhost:5432/ciudadanos_m1}
+    username: ${POSTGRES_USER:ciudadanos_app}
+    password: ${POSTGRES_PASSWORD:cambiar_en_local}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    # El esquema lo crea db/01_schema.sql. "validate" hace que el arranque
+    # falle si las entidades y las tablas se desincronizan, en vez de romper en runtime.
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: true
+        jdbc:
+          time_zone: UTC
+
+  jackson:
+    deserialization:
+      # Los DTO son la lista blanca de campos aceptados: cualquier propiedad que
+      # no este declarada hace fallar el request con 400, en vez de ignorarse en
+      # silencio y dejar creer que el dato se guardo.
+      fail-on-unknown-properties: true
+
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 12MB
+
+  data:
+    mongodb:
+      uri: ${MONGO_URI:mongodb://localhost:27017/ciudadanos_m1_eventos}
+      auto-index-creation: true
+
+server:
+  port: ${SERVER_PORT:8080}
+  error:
+    include-message: never
+    include-stacktrace: never
+
+app:
+  # Donde se guardan los archivos de POST /personas/{id}/documentos.
+  almacenamiento:
+    directorio: ${ALMACENAMIENTO_DIR:./archivos-documentos}
+
+  jwt:
+    # HS256 exige >= 32 bytes. Generar con: openssl rand -base64 48
+    # En cualquier entorno real esto viene de APP_JWT_SECRET, no del yml.
+    secret: ${APP_JWT_SECRET:ZGV2LXNvbG8tbG9jYWwtY2FtYmlhci1lc3RlLXNlY3JldG8tYWhvcmEtMTIzNDU2Nzg5}
+    issuer: modulo1-ciudadanos
+    access-token-ttl-seconds: 900      # 15 min
+    refresh-token-ttl-seconds: 604800  # 7 dias
+
+logging:
+  level:
+    ar.edu.uade.ciudadanos: DEBUG
