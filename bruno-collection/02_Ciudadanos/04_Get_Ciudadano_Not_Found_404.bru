@@ -1,0 +1,21 @@
+meta {
+  name: 04_Get_Ciudadano_Not_Found_404
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/ciudadanos/9999
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt_empleado}}
+}
+
+tests {
+  test("Status code is 404", function() {
+    expect(res.getStatus()).to.equal(404);
+  });
+}

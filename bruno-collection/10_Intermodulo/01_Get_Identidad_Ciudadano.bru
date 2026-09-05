@@ -1,0 +1,21 @@
+meta {
+  name: 01_Get_Identidad_Ciudadano
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/ciudadanos/1/identidad
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt_empleado}}
+}
+
+tests {
+  test("Status code is 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+}

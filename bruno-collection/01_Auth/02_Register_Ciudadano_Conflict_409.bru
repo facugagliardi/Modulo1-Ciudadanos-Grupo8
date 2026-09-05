@@ -1,0 +1,29 @@
+meta {
+  name: 02_Register_Ciudadano_Conflict_409
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/auth/register
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "tipo": "CIUDADANO",
+    "cuit": "20-12345678-9",
+    "password": "clave-segura-1",
+    "dni": "12345678",
+    "nombre": "Nuevo",
+    "apellido": "Usuario",
+    "fechaNacimiento": "1990-01-01"
+  }
+}
+
+tests {
+  test("Status code is 409", function() {
+    expect(res.getStatus()).to.equal(409);
+  });
+}

@@ -1,0 +1,27 @@
+meta {
+  name: 04_Patch_Relacion_Responsable
+  type: http
+  seq: 1
+}
+
+patch {
+  url: {{baseUrl}}/relaciones/1/responsable
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt_empleado}}
+}
+
+body:json {
+  {
+    "esResponsable": false
+  }
+}
+
+tests {
+  test("Status code is 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+}

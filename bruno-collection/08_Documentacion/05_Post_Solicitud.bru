@@ -1,0 +1,30 @@
+meta {
+  name: 05_Post_Solicitud
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/solicitudes-documentacion
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt_empleado}}
+}
+
+body:json {
+  {
+    "titularId": 1,
+    "tipoDocumento": "DNI",
+    "plazo": "2027-01-01",
+    "origen": "INTERNO"
+  }
+}
+
+tests {
+  test("Status code is 201", function() {
+    expect(res.getStatus()).to.equal(201);
+  });
+}

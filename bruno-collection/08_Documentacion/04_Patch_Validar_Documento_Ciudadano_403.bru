@@ -1,0 +1,27 @@
+meta {
+  name: 04_Patch_Validar_Documento_Ciudadano_403
+  type: http
+  seq: 1
+}
+
+patch {
+  url: {{baseUrl}}/documentos/1/validar
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt_ciudadano}}
+}
+
+body:json {
+  {
+    "aprobado": true
+  }
+}
+
+tests {
+  test("Status code is 403", function() {
+    expect(res.getStatus()).to.equal(403);
+  });
+}

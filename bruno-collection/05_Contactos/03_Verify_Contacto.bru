@@ -1,0 +1,27 @@
+meta {
+  name: 03_Verify_Contacto
+  type: http
+  seq: 1
+}
+
+patch {
+  url: {{baseUrl}}/contactos/1/verificar
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt_ciudadano}}
+}
+
+body:json {
+  {
+    "codigo": "123456"
+  }
+}
+
+tests {
+  test("Status code is 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+}

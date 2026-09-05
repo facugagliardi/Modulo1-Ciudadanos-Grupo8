@@ -1,0 +1,21 @@
+meta {
+  name: 05_Get_Representacion_Vigencia
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/representaciones/vigencia?ciudadanoId=1&organizacionId=1
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt_empleado}}
+}
+
+tests {
+  test("Status code is 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+}

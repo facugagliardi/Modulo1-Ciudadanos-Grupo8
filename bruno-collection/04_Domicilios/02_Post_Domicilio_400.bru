@@ -1,0 +1,28 @@
+meta {
+  name: 02_Post_Domicilio_400
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/personas/1/domicilios
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt_ciudadano}}
+}
+
+body:json {
+  {
+    "tipo": "INVALID",
+    "calle": "Falsa"
+  }
+}
+
+tests {
+  test("Status code is 400", function() {
+    expect(res.getStatus()).to.equal(400);
+  });
+}

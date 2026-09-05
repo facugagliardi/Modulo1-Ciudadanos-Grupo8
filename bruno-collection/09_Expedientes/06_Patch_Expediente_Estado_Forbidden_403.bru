@@ -1,0 +1,27 @@
+meta {
+  name: 06_Patch_Expediente_Estado_Forbidden_403
+  type: http
+  seq: 1
+}
+
+patch {
+  url: {{baseUrl}}/expedientes/1/estado
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt_ciudadano}}
+}
+
+body:json {
+  {
+    "estado": "RESUELTO"
+  }
+}
+
+tests {
+  test("Status code is 403", function() {
+    expect(res.getStatus()).to.equal(403);
+  });
+}

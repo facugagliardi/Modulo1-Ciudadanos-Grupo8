@@ -1,0 +1,31 @@
+meta {
+  name: 04_Login_Empleado_Admin_Success
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/auth/empleados/login
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "mail": "admin@municipio.gob.ar",
+    "password": "Empleado.2026"
+  }
+}
+
+script:post-response {
+  const headers = res.getHeaders();
+  if (headers['authorization']) {
+    bru.setEnvVar('jwt_empleado', headers['authorization'].replace('Bearer ', ''));
+  }
+}
+
+tests {
+  test("Status code is 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+}

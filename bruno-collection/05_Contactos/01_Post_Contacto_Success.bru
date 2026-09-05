@@ -1,0 +1,28 @@
+meta {
+  name: 01_Post_Contacto_Success
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/ciudadanos/1/contactos
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt_ciudadano}}
+}
+
+body:json {
+  {
+    "tipo": "EMAIL",
+    "valor": "user@example.com"
+  }
+}
+
+tests {
+  test("Status code is 201", function() {
+    expect(res.getStatus()).to.equal(201);
+  });
+}

@@ -2,6 +2,8 @@ target/
 *.class
 *.log
 
+resources/
+
 .idea/
 *.iml
 *.ipr

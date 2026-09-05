@@ -1,0 +1,28 @@
+meta {
+  name: 07_Post_Duenos_Success
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/organizaciones/2/duenos
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt_ciudadano}}
+}
+
+body:json {
+  {
+    "personaId": 1,
+    "porcentajeTitularidad": 50.0
+  }
+}
+
+tests {
+  test("Status code is 201", function() {
+    expect(res.getStatus()).to.equal(201);
+  });
+}

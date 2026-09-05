@@ -1,0 +1,21 @@
+meta {
+  name: 05_Patch_Domicilio_Principal
+  type: http
+  seq: 1
+}
+
+patch {
+  url: {{baseUrl}}/domicilios/1/principal
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt_ciudadano}}
+}
+
+tests {
+  test("Status code is 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+}

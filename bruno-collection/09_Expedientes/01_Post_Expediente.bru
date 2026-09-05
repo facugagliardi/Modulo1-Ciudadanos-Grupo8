@@ -1,0 +1,29 @@
+meta {
+  name: 01_Post_Expediente
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/expedientes
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt_empleado}}
+}
+
+body:json {
+  {
+    "personaId": 1,
+    "areaIniciadora": "Mesa de Entradas",
+    "caratula": "Test"
+  }
+}
+
+tests {
+  test("Status code is 201", function() {
+    expect(res.getStatus()).to.equal(201);
+  });
+}

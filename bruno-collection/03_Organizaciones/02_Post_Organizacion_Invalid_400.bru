@@ -1,0 +1,28 @@
+meta {
+  name: 02_Post_Organizacion_Invalid_400
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/organizaciones
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt_ciudadano}}
+}
+
+body:json {
+  {
+    "cuit": "invalid",
+    "razonSocial": "Empresa Test"
+  }
+}
+
+tests {
+  test("Status code is 400", function() {
+    expect(res.getStatus()).to.equal(400);
+  });
+}

@@ -1,0 +1,27 @@
+meta {
+  name: 05_Patch_Expediente_Estado
+  type: http
+  seq: 1
+}
+
+patch {
+  url: {{baseUrl}}/expedientes/1/estado
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt_empleado}}
+}
+
+body:json {
+  {
+    "estado": "RESUELTO"
+  }
+}
+
+tests {
+  test("Status code is 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+}

@@ -4,8 +4,8 @@ spring:
 
   datasource:
     url: ${POSTGRES_URL:jdbc:postgresql://localhost:5432/ciudadanos_m1}
-    username: ${POSTGRES_USER:ciudadanos_app}
-    password: ${POSTGRES_PASSWORD:cambiar_en_local}
+    username: ${POSTGRES_USER:postgres}
+    password: ${POSTGRES_PASSWORD:postgres}
     driver-class-name: org.postgresql.Driver
 
   jpa:
@@ -51,7 +51,7 @@ app:
   jwt:
     # HS256 exige >= 32 bytes. Generar con: openssl rand -base64 48
     # En cualquier entorno real esto viene de APP_JWT_SECRET, no del yml.
-    secret: ${APP_JWT_SECRET:ZGV2LXNvbG8tbG9jYWwtY2FtYmlhci1lc3RlLXNlY3JldG8tYWhvcmEtMTIzNDU2Nzg5}
+    secret: ${APP_JWT_SECRET:HW7VYGHSIRjfe8U8h7Jzu7yQrMGu09U5AgM/wUYxFuQsRAWloH41njCVECA4gC16}
     issuer: modulo1-ciudadanos
     access-token-ttl-seconds: 900      # 15 min
     refresh-token-ttl-seconds: 604800  # 7 dias

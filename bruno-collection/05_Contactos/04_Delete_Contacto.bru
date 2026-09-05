@@ -1,0 +1,21 @@
+meta {
+  name: 04_Delete_Contacto
+  type: http
+  seq: 1
+}
+
+delete {
+  url: {{baseUrl}}/contactos/1
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt_ciudadano}}
+}
+
+tests {
+  test("Status code is 204", function() {
+    expect(res.getStatus()).to.equal(204);
+  });
+}
