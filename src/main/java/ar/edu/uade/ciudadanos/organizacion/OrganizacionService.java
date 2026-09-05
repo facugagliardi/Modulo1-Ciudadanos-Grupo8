@@ -75,8 +75,16 @@ public class OrganizacionService {
 
         // Los duenos se validan ANTES de crear nada: si uno no existe, no queda
         // una organizacion a medio armar.
-        List<Long> duenos = request.personaId().stream().distinct().toList();
-        duenos.forEach(directorio::exigirQueExista);
+        java.math.BigDecimal sumaPorcentajes = java.math.BigDecimal.ZERO;
+        for (var dueno : request.duenos()) {
+            directorio.exigirQueExista(dueno.personaId());
+            if (dueno.porcentajeTitularidad() != null) {
+                sumaPorcentajes = sumaPorcentajes.add(dueno.porcentajeTitularidad());
+            }
+        }
+        if (sumaPorcentajes.compareTo(java.math.BigDecimal.valueOf(100)) > 0) {
+            throw ApiException.conflicto("La suma de titularidades iniciales supera el 100%");
+        }
 
         Organizacion organizacion = new Organizacion();
         organizacion.setCuit(cuit);
@@ -87,9 +95,10 @@ public class OrganizacionService {
         organizacion.setEstado(EstadoOrganizacion.ACTIVA);
         organizacionRepository.save(organizacion);
 
-        duenos.forEach(personaId -> {
+        request.duenos().forEach(dueno -> {
             PersonaOrganizacion vinculo = new PersonaOrganizacion();
-            vinculo.setId(new PersonaOrganizacionId(personaId, organizacion.getOrganizacionId()));
+            vinculo.setId(new PersonaOrganizacionId(dueno.personaId(), organizacion.getOrganizacionId()));
+            vinculo.setPorcentajeTitularidad(dueno.porcentajeTitularidad());
             duenoRepository.save(vinculo);
         });
 

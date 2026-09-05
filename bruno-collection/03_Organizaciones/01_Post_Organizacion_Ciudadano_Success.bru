@@ -1,0 +1,35 @@
+meta {
+  name: 01_Post_Organizacion_Ciudadano_Success
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/organizaciones
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt_ciudadano}}
+}
+
+body:json {
+  {
+    "cuit": "30-11111111-9",
+    "razonSocial": "Empresa Test",
+    "nombreFantasia": "Empresa Test",
+    "duenos": [
+      {
+        "personaId": 1,
+        "porcentajeTitularidad": 100.0
+      }
+    ]
+  }
+}
+
+tests {
+  test("Status code is 201", function() {
+    expect(res.getStatus()).to.equal(201);
+  });
+}

@@ -1,0 +1,27 @@
+meta {
+  name: 07_Patch_Solicitud_Estado
+  type: http
+  seq: 1
+}
+
+patch {
+  url: {{baseUrl}}/solicitudes-documentacion/1/estado
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt_empleado}}
+}
+
+body:json {
+  {
+    "estado": "CUMPLIDA"
+  }
+}
+
+tests {
+  test("Status code is 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+}

@@ -1,0 +1,21 @@
+meta {
+  name: 01_Get_Padron_Empleado_Success
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/ciudadanos
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt_empleado}}
+}
+
+tests {
+  test("Status code is 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+}

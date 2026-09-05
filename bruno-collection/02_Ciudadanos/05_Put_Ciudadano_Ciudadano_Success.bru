@@ -1,0 +1,29 @@
+meta {
+  name: 05_Put_Ciudadano_Ciudadano_Success
+  type: http
+  seq: 1
+}
+
+put {
+  url: {{baseUrl}}/ciudadanos/1
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt_ciudadano}}
+}
+
+body:json {
+  {
+    "nombre": "Nombre Editado",
+    "apellido": "Apellido",
+    "fechaNacimiento": "1990-01-01"
+  }
+}
+
+tests {
+  test("Status code is 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+}

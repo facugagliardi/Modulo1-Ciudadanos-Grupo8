@@ -1,0 +1,27 @@
+meta {
+  name: 04_Patch_Representacion_Estado
+  type: http
+  seq: 1
+}
+
+patch {
+  url: {{baseUrl}}/representaciones/1/estado
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt_ciudadano}}
+}
+
+body:json {
+  {
+    "estado": "REVOCADA"
+  }
+}
+
+tests {
+  test("Status code is 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+}

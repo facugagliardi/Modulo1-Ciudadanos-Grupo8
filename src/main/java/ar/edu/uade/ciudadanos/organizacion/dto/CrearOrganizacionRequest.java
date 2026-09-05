@@ -28,6 +28,7 @@ public record CrearOrganizacionRequest(
         String taxId,
 
         /** Duenos iniciales. Al menos uno: una organizacion sin titular no sirve. */
-        @NotEmpty(message = "personaId debe traer al menos un dueno")
-        List<Long> personaId) {
+        @NotEmpty(message = "duenos debe traer al menos un dueno")
+        @jakarta.validation.Valid
+        List<DuenoInicialRequest> duenos) {
 }

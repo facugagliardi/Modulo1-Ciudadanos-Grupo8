@@ -1,0 +1,21 @@
+meta {
+  name: 02_Get_Representaciones_Org
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/organizaciones/1/representaciones
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt_empleado}}
+}
+
+tests {
+  test("Status code is 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+}

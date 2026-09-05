@@ -11,14 +11,13 @@
 
 -- Rol de la aplicacion. Cambiar la clave antes de usarlo fuera de local.
 DROP ROLE IF EXISTS ciudadanos_app;
-CREATE ROLE ciudadanos_app WITH LOGIN PASSWORD 'cambiar_en_local';
+CREATE ROLE ciudadanos_app WITH LOGIN PASSWORD 'ciudadanos';
 
 DROP DATABASE IF EXISTS ciudadanos_m1;
 CREATE DATABASE ciudadanos_m1
     WITH OWNER = ciudadanos_app
          ENCODING = 'UTF8'
-         LC_COLLATE = 'es_AR.UTF-8'
-         LC_CTYPE = 'es_AR.UTF-8'
+
          TEMPLATE = template0;
 
 COMMENT ON DATABASE ciudadanos_m1 IS 'Modulo 1 - personas, organizaciones, documentacion y expedientes';

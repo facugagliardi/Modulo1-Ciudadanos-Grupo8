@@ -1,0 +1,21 @@
+meta {
+  name: 03_Get_Ciudadano_Propio_Success
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/ciudadanos/1
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt_ciudadano}}
+}
+
+tests {
+  test("Status code is 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+}

@@ -1,0 +1,28 @@
+meta {
+  name: 05_Put_Organizacion_Success
+  type: http
+  seq: 1
+}
+
+put {
+  url: {{baseUrl}}/organizaciones/1
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt_ciudadano}}
+}
+
+body:json {
+  {
+    "razonSocial": "Empresa Actualizada",
+    "nombreFantasia": "Fantas\u00eda"
+  }
+}
+
+tests {
+  test("Status code is 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+}

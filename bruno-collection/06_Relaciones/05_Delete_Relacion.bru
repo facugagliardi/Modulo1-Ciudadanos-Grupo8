@@ -1,0 +1,21 @@
+meta {
+  name: 05_Delete_Relacion
+  type: http
+  seq: 1
+}
+
+delete {
+  url: {{baseUrl}}/relaciones/1
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt_empleado}}
+}
+
+tests {
+  test("Status code is 204", function() {
+    expect(res.getStatus()).to.equal(204);
+  });
+}

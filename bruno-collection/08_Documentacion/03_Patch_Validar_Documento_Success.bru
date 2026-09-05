@@ -1,0 +1,27 @@
+meta {
+  name: 03_Patch_Validar_Documento_Success
+  type: http
+  seq: 1
+}
+
+patch {
+  url: {{baseUrl}}/documentos/1/validar
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt_empleado}}
+}
+
+body:json {
+  {
+    "aprobado": true
+  }
+}
+
+tests {
+  test("Status code is 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+}

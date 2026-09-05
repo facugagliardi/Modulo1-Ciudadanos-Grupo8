@@ -1,0 +1,31 @@
+meta {
+  name: 05_Login_Ciudadano_Success
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/auth/login
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "cuit": "20345678901",
+    "password": "Ciudadano.2026"
+  }
+}
+
+script:post-response {
+  const headers = res.getHeaders();
+  if (headers['authorization']) {
+    bru.setEnvVar('jwt_ciudadano', headers['authorization'].replace('Bearer ', ''));
+  }
+}
+
+tests {
+  test("Status code is 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+}

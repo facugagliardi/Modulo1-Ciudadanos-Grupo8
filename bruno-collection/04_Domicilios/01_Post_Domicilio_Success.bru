@@ -1,0 +1,31 @@
+meta {
+  name: 01_Post_Domicilio_Success
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/personas/1/domicilios
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt_ciudadano}}
+}
+
+body:json {
+  {
+    "tipo": "CASA",
+    "calle": "Falsa",
+    "numero": "123",
+    "idBarrio": "123e4567-e89b-12d3-a456-426614174000",
+    "coords": "0,0"
+  }
+}
+
+tests {
+  test("Status code is 201", function() {
+    expect(res.getStatus()).to.equal(201);
+  });
+}

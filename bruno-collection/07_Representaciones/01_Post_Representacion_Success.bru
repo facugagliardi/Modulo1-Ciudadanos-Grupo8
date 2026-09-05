@@ -1,0 +1,31 @@
+meta {
+  name: 01_Post_Representacion_Success
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/representaciones
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt_ciudadano}}
+}
+
+body:json {
+  {
+    "personaId": 1,
+    "organizacionId": 1,
+    "alcance": "LEGAL",
+    "desde": "2026-01-01",
+    "hasta": "2027-01-01"
+  }
+}
+
+tests {
+  test("Status code is 201", function() {
+    expect(res.getStatus()).to.equal(201);
+  });
+}
