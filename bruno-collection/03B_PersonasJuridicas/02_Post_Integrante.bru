@@ -1,0 +1,31 @@
+meta {
+  name: 02_Post_Integrante
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/personas-juridicas/8/integrantes
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt_empleado}}
+}
+
+body:json {
+  {
+    "ciudadanoId": 1
+  },{
+    "ciudadanoId": 2
+  },{
+    "ciudadanoId": 6
+  },
+}
+
+tests {
+  test("Status code is 201", function() {
+    expect(res.getStatus()).to.equal(201);
+  });
+}

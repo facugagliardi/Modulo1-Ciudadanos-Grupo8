@@ -1,17 +1,17 @@
 meta {
-  name: 03_Get_Ciudadano_Propio_Success
+  name: 01_Get_PersonaJuridica
   type: http
   seq: 1
 }
 
 get {
-  url: {{baseUrl}}/ciudadanos/7
+  url: {{baseUrl}}/personas-juridicas/8
   body: none
   auth: bearer
 }
 
 auth:bearer {
-  token: {{jwt_ciudadano}}
+  token: {{jwt_empleado}}
 }
 
 tests {

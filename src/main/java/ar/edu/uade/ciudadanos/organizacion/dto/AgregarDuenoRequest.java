@@ -4,6 +4,7 @@ import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotNull;
 import java.math.BigDecimal;
+import java.util.List;
 
 /** POST /organizaciones/{id}/duenos (RF-19). */
 public record AgregarDuenoRequest(
@@ -12,5 +13,8 @@ public record AgregarDuenoRequest(
 
         @DecimalMin(value = "0.01", message = "porcentajeTitularidad debe ser mayor que 0")
         @DecimalMax(value = "100.00", message = "porcentajeTitularidad no puede superar 100")
-        BigDecimal porcentajeTitularidad) {
+        BigDecimal porcentajeTitularidad,
+        
+        @jakarta.validation.Valid
+        List<AjusteDuenoRequest> ajustes) {
 }

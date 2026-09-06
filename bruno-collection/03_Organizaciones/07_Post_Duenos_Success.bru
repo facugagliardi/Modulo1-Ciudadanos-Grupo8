@@ -5,7 +5,7 @@ meta {
 }
 
 post {
-  url: {{baseUrl}}/organizaciones/2/duenos
+  url: {{baseUrl}}/organizaciones/1/duenos
   body: json
   auth: bearer
 }
@@ -16,8 +16,14 @@ auth:bearer {
 
 body:json {
   {
-    "personaId": 1,
-    "porcentajeTitularidad": 50.0
+    "personaId": 3,
+    "porcentajeTitularidad": 50.0,
+    "ajustes": [
+      {
+        "personaId": 1,
+        "nuevoPorcentaje": 50.0
+      }
+    ]
   }
 }
 

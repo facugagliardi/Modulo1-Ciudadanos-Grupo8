@@ -1,17 +1,17 @@
 meta {
-  name: 08_Delete_Duenos_Success
+  name: 03_Delete_Integrante
   type: http
   seq: 1
 }
 
 delete {
-  url: {{baseUrl}}/organizaciones/1/duenos/3?beneficiarioId=1
+  url: {{baseUrl}}/personas-juridicas/2/integrantes/1
   body: none
   auth: bearer
 }
 
 auth:bearer {
-  token: {{jwt_ciudadano}}
+  token: {{jwt_empleado}}
 }
 
 tests {
