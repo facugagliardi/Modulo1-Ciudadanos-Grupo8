@@ -107,6 +107,7 @@ public class OrganizacionService {
 
     @Transactional(readOnly = true)
     public OrganizacionResponse obtener(Long id) {
+        autorizacion.exigirLecturaSobreOrganizacion(id);
         return armar(buscar(id));
     }
 
@@ -175,6 +176,17 @@ public class OrganizacionService {
         if (duenoRepository.existsById(clave)) {
             throw ApiException.conflicto("La persona ya figura como duena de la organizacion");
         }
+
+        if (request.ajustes() != null) {
+            for (var ajuste : request.ajustes()) {
+                PersonaOrganizacionId ajusteClave = new PersonaOrganizacionId(ajuste.personaId(), organizacionId);
+                PersonaOrganizacion vinculoExistente = duenoRepository.findById(ajusteClave)
+                        .orElseThrow(() -> ApiException.conflicto("El dueno a ajustar no existe en la organizacion"));
+                vinculoExistente.setPorcentajeTitularidad(ajuste.nuevoPorcentaje());
+                duenoRepository.save(vinculoExistente);
+            }
+        }
+
         exigirTitularidadCoherente(organizacionId, request.porcentajeTitularidad(), null);
 
         PersonaOrganizacion vinculo = new PersonaOrganizacion();
@@ -193,17 +205,53 @@ public class OrganizacionService {
     }
 
     @Transactional
-    public void quitarDueno(Long organizacionId, Long personaId) {
+    public void quitarDueno(Long organizacionId, Long personaId, Long beneficiarioId) {
         buscar(organizacionId);
         autorizacion.exigirEscrituraSobreOrganizacion(organizacionId);
 
         PersonaOrganizacionId clave = new PersonaOrganizacionId(personaId, organizacionId);
-        if (!duenoRepository.existsById(clave)) {
-            throw ApiException.noEncontrado("La persona " + personaId + " no es duena de la organizacion");
-        }
-        if (duenoRepository.findByIdIdOrganizacion(organizacionId).size() == 1) {
+        PersonaOrganizacion vinculo = duenoRepository.findById(clave)
+                .orElseThrow(() -> ApiException.noEncontrado("La persona " + personaId + " no es duena de la organizacion"));
+
+        java.util.List<PersonaOrganizacion> todosLosDuenos = duenoRepository.findByIdIdOrganizacion(organizacionId);
+        if (todosLosDuenos.size() == 1) {
             throw ApiException.conflicto("Es el unico dueno: la organizacion no puede quedar sin titular");
         }
+        
+        java.math.BigDecimal porcentajeAEliminar = vinculo.getPorcentajeTitularidad();
+
+        if (porcentajeAEliminar != null && porcentajeAEliminar.compareTo(java.math.BigDecimal.ZERO) > 0) {
+            if (beneficiarioId != null) {
+                // Asignar al beneficiario especifico
+                PersonaOrganizacionId beneficiarioClave = new PersonaOrganizacionId(beneficiarioId, organizacionId);
+                PersonaOrganizacion beneficiario = duenoRepository.findById(beneficiarioClave)
+                        .orElseThrow(() -> ApiException.conflicto("El beneficiario especificado no es dueno de la organizacion"));
+                java.math.BigDecimal nuevoPorcentaje = beneficiario.getPorcentajeTitularidad() != null 
+                        ? beneficiario.getPorcentajeTitularidad().add(porcentajeAEliminar) 
+                        : porcentajeAEliminar;
+                beneficiario.setPorcentajeTitularidad(nuevoPorcentaje);
+                duenoRepository.save(beneficiario);
+            } else {
+                // Repartir proporcionalmente
+                java.math.BigDecimal sumaRestantes = todosLosDuenos.stream()
+                        .filter(d -> !d.getId().getIdPersona().equals(personaId))
+                        .map(d -> d.getPorcentajeTitularidad() != null ? d.getPorcentajeTitularidad() : java.math.BigDecimal.ZERO)
+                        .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
+                
+                if (sumaRestantes.compareTo(java.math.BigDecimal.ZERO) > 0) {
+                    for (PersonaOrganizacion d : todosLosDuenos) {
+                        if (!d.getId().getIdPersona().equals(personaId)) {
+                            java.math.BigDecimal actual = d.getPorcentajeTitularidad() != null ? d.getPorcentajeTitularidad() : java.math.BigDecimal.ZERO;
+                            java.math.BigDecimal proporcion = actual.divide(sumaRestantes, 4, java.math.RoundingMode.HALF_UP);
+                            java.math.BigDecimal sumar = porcentajeAEliminar.multiply(proporcion);
+                            d.setPorcentajeTitularidad(actual.add(sumar));
+                            duenoRepository.save(d);
+                        }
+                    }
+                }
+            }
+        }
+
         duenoRepository.deleteById(clave);
     }
 

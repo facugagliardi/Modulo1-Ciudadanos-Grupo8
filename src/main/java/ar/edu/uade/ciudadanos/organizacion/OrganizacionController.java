@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -80,8 +81,9 @@ public class OrganizacionController {
     }
 
     @DeleteMapping("/{id}/duenos/{personaId}")
-    public ResponseEntity<Void> quitarDueno(@PathVariable Long id, @PathVariable Long personaId) {
-        organizacionService.quitarDueno(id, personaId);
+    public ResponseEntity<Void> quitarDueno(@PathVariable Long id, @PathVariable Long personaId,
+                                            @RequestParam(required = false) Long beneficiarioId) {
+        organizacionService.quitarDueno(id, personaId, beneficiarioId);
         return ResponseEntity.noContent().build();
     }
 }

@@ -7,6 +7,8 @@ import static org.mockito.Mockito.mock;
 
 import ar.edu.uade.ciudadanos.organizacion.repository.PersonaOrganizacionRepository;
 import ar.edu.uade.ciudadanos.organizacion.repository.RepresentacionRepository;
+import ar.edu.uade.ciudadanos.persona.repository.IntegrantePersonaJuridicaRepository;
+import ar.edu.uade.ciudadanos.security.Permiso;
 import java.util.List;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -40,8 +42,10 @@ class SoloInternoTest {
         /** El bean tiene que llamarse "permisos": asi lo referencia la anotacion. */
         @Bean("permisos")
         AutorizacionService permisos() {
-            return new AutorizacionService(
-                    mock(PersonaOrganizacionRepository.class), mock(RepresentacionRepository.class));
+            PersonaOrganizacionRepository duenos = mock(PersonaOrganizacionRepository.class);
+            RepresentacionRepository reps = mock(RepresentacionRepository.class);
+            IntegrantePersonaJuridicaRepository intRepos = mock(IntegrantePersonaJuridicaRepository.class);
+            return new AutorizacionService(duenos, reps, intRepos);
         }
 
         @Bean

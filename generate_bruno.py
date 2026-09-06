@@ -222,12 +222,29 @@ endpoints = [
     {
         "folder": "03_Organizaciones", "name": "07_Post_Duenos_Success",
         "method": "POST", "path": "/organizaciones/1/duenos",
-        "body": {"personaId": 3, "porcentajeTitularidad": 50.0},
+        "body": {"personaId": 3, "porcentajeTitularidad": 50.0, "ajustes": [{"personaId": 1, "nuevoPorcentaje": 50.0}]},
         "auth": "bearer_ciudadano", "status": 201
     },
     {
         "folder": "03_Organizaciones", "name": "08_Delete_Duenos_Success",
-        "method": "DELETE", "path": "/organizaciones/1/duenos/1", "auth": "bearer_ciudadano", "status": 204
+        "method": "DELETE", "path": "/organizaciones/1/duenos/3?beneficiarioId=1", "auth": "bearer_ciudadano", "status": 204
+    },
+
+    # ==================== PERSONAS JURIDICAS ====================
+    {
+        "folder": "03B_PersonasJuridicas", "name": "01_Get_PersonaJuridica",
+        "method": "GET", "path": "/personas-juridicas/2", "auth": "bearer_empleado", "status": 200
+    },
+    {
+        "folder": "03B_PersonasJuridicas", "name": "02_Post_Integrante",
+        "method": "POST", "path": "/personas-juridicas/2/integrantes",
+        "body": {"ciudadanoId": 1},
+        "auth": "bearer_empleado", "status": 201
+    },
+    {
+        "folder": "03B_PersonasJuridicas", "name": "03_Delete_Integrante",
+        "method": "DELETE", "path": "/personas-juridicas/2/integrantes/1",
+        "auth": "bearer_empleado", "status": 204
     },
 
     # ==================== DOMICILIOS ====================
