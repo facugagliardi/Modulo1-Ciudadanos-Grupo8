@@ -1,0 +1,233 @@
+@import "./tokens.css";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    border-color: var(--borde);
+  }
+
+  /* La paleta está calculada para fondo claro y sus contrastes están
+     verificados uno por uno. Sin esta declaración, el modo oscuro automático
+     de Chrome invierte los colores por su cuenta y rompe esas relaciones.
+     Si algún día se hace un tema oscuro, se hace a mano y se declara acá. */
+  :root {
+    color-scheme: light;
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background-color: var(--papel);
+    color: var(--tinta);
+    font-family: "IBM Plex Sans", system-ui, sans-serif;
+    font-size: var(--texto-base);
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Los numeros se comparan en columna: DNI contra DNI, importe contra
+     importe. Sin cifras tabulares las tablas del padron no alinean. */
+  table,
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* El foco visible no se negocia: es requisito de accesibilidad y se evalua.
+     Nunca reemplazar por outline:none. */
+  :focus-visible {
+    outline: 3px solid var(--expediente);
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-weight: 600;
+    line-height: 1.25;
+    text-wrap: balance;
+  }
+
+  /* Que el titulo de una pantalla no herede el tamano de la densidad: un h1
+     compacto sigue siendo un h1. */
+  h1 {
+    font-size: 1.5rem;
+    letter-spacing: -0.01em;
+  }
+  h2 {
+    font-size: 1.125rem;
+  }
+}
+
+@layer components {
+  /* Salto al contenido: visible solo cuando se lo enfoca con el teclado. */
+  .salto-contenido {
+    @apply sr-only;
+  }
+  .salto-contenido:focus {
+    @apply not-sr-only fixed left-4 top-4 z-50 rounded bg-expediente px-4 py-2 text-white;
+  }
+
+  /* Identificadores: DNI, CUIT, numero de expediente. Se comparan digito a
+     digito, por eso van en mono y con tracking abierto. */
+  .identificador {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.02em;
+  }
+
+  .caratula {
+    font-family: "EB Garamond", Georgia, serif;
+  }
+
+  /* --- Movimiento ---------------------------------------------------------
+     Cada clase de acá tiene un trabajo declarado. Ver DISENO.md antes de
+     agregar una nueva. Todas se apagan solas con prefers-reduced-motion, que
+     está resuelto abajo de una vez para todo el sistema.                    */
+
+  /* Entrada de pantalla. Se aplica al contenedor del contenido de cada ruta,
+     con key={pathname}, así corre una vez por navegación. Orienta: dice "esto
+     es contenido nuevo" sin hacer esperar a nadie. */
+  .entrada {
+    animation: entrada var(--dur-3) var(--ease-salida) both;
+  }
+
+  /* Listas cortas del portal. El escalonado hace legible el orden de lectura;
+     se corta en el sexto ítem para que una lista larga no se sienta lenta, y
+     no se usa en tablas, que se re-renderizan con cada tecla del buscador. */
+  .lista-escalonada > * {
+    animation: entrada var(--dur-2) var(--ease-salida) both;
+  }
+  .lista-escalonada > *:nth-child(1) { animation-delay: 0ms; }
+  .lista-escalonada > *:nth-child(2) { animation-delay: 35ms; }
+  .lista-escalonada > *:nth-child(3) { animation-delay: 70ms; }
+  .lista-escalonada > *:nth-child(4) { animation-delay: 105ms; }
+  .lista-escalonada > *:nth-child(5) { animation-delay: 140ms; }
+  .lista-escalonada > *:nth-child(n + 6) { animation-delay: 175ms; }
+
+  /* Un dato que acaba de cambiar o un aviso que acaba de aparecer. */
+  .aparece {
+    animation: aparece var(--dur-2) var(--ease-salida) both;
+  }
+
+  /* Todo lo que se anuncia como alerta entra con el mismo gesto, sin que cada
+     pantalla tenga que acordarse. Es de baja frecuencia por definición: sólo
+     aparece cuando algo falló o algo se guardó.
+     `role="status"` queda afuera a propósito — el recuento de la tabla se
+     actualiza con cada tecla del buscador y parpadearía. */
+  [role="alert"] {
+    animation: aparece var(--dur-2) var(--ease-salida) both;
+  }
+
+  /* El sello de un estado terminal. Es el único gesto con carácter del
+     sistema, y por eso está reservado a lo que no vuelve atrás. */
+  .sello-entra {
+    animation: sello-entra var(--dur-2) var(--ease-salida) both;
+  }
+}
+
+@keyframes entrada {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes aparece {
+  from {
+    opacity: 0;
+    transform: translateY(-2px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes sello-entra {
+  from {
+    opacity: 0.4;
+    transform: scale(1.04);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* --- Diálogos (Radix expone data-state) -----------------------------------
+   Entrar es más lento que salir: al abrir hay que orientar, al cerrar la
+   persona ya decidió y quiere que se vaya. La escala arranca en 0.96, nunca
+   en 0: desde 0 se lee como un efecto, no como un objeto que aparece. */
+@keyframes fondo-entra {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes fondo-sale {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+/* Animan `scale`, no `transform`: el centrado del diálogo vive en `translate`,
+   que es una propiedad independiente. Así el keyframe no tiene que repetir el
+   centrado en cada fotograma para no pisarlo.
+
+   Ojo al depurar: Radix espera el `animationend` para desmontar el diálogo, y
+   Chrome congela las animaciones en pestañas ocultas. En una pestaña en segundo
+   plano el diálogo queda en el DOM hasta que se vuelve a mirar. No es un error
+   de la aplicación; despista bastante en pruebas automatizadas. */
+@keyframes dialogo-entra {
+  from {
+    opacity: 0;
+    scale: 0.96;
+  }
+  to {
+    opacity: 1;
+    scale: 1;
+  }
+}
+@keyframes dialogo-sale {
+  from {
+    opacity: 1;
+    scale: 1;
+  }
+  to {
+    opacity: 0;
+    scale: 0.98;
+  }
+}
+
+@layer components {
+  .fondo-dialogo[data-state="open"] {
+    animation: fondo-entra var(--dur-3) var(--ease-salida);
+  }
+  .fondo-dialogo[data-state="closed"] {
+    animation: fondo-sale var(--dur-1) var(--ease-salida);
+  }
+  .panel-dialogo[data-state="open"] {
+    animation: dialogo-entra var(--dur-3) var(--ease-salida);
+  }
+  .panel-dialogo[data-state="closed"] {
+    animation: dialogo-sale var(--dur-1) var(--ease-salida);
+  }
+}
+
+/* Nadie deberia marearse usando un tramite municipal. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
