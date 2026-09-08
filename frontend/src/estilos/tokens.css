@@ -1,0 +1,115 @@
+/**
+ * Tokens del sistema. Ver DISENO.md para el porque de cada decision.
+ *
+ * Dos ideas gobiernan este archivo:
+ *
+ * 1. `--sello` (el vermellon) NO es un acento decorativo. Aparece unicamente
+ *    donde el backend dice que algo no vuelve atras: FALLECIDO, ARCHIVADO,
+ *    REVOCADA, VENCIDA, y las confirmaciones de borrado. El color significa
+ *    irreversibilidad. Si lo usas para destacar un boton, se rompe.
+ *
+ * 2. La densidad es lo unico que separa al Portal del Backoffice. Mismos
+ *    colores, misma tipografia, mismos componentes; cambian las medidas.
+ *    Un vecino entra dos veces por ano y apurado. Un empleado pasa ocho horas.
+ */
+
+:root {
+  /* --- Color -------------------------------------------------------------
+     Contraste verificado sobre --papel (todos >= 4.5:1):
+     tinta 15.9:1 · expediente 10.3:1 · vigente 5.7:1 · sello 5.7:1
+     alerta 5.5:1 · apagado 5.6:1                                          */
+  --tinta: #141a22; /* texto: negro de archivo, cast frio */
+  --papel: #f8f7f4; /* fondo de la app: neutro calido */
+  --superficie: #ffffff; /* tarjetas y tablas */
+
+  --expediente: #1b3a5c; /* primary: azul institucional profundo */
+  --expediente-suave: #e7edf4;
+
+  --vigente: #1f6f4a; /* ACTIVO, VIGENTE, VALIDADO, CUMPLIDA */
+  --vigente-suave: #e3f0e9;
+
+  --alerta: #8a5a00; /* BLOQUEADO, PENDIENTE, INACTIVO */
+  --alerta-suave: #f7eedc;
+
+  --sello: #b3341f; /* SOLO terminales y destructivo */
+  --sello-suave: #f8e7e3;
+
+  --apagado: #5b6472; /* texto secundario, aun legible */
+  --borde: #e4e1da;
+  --borde-fuerte: #c9c4b8;
+
+  --radio: 4px; /* tramite, no producto de consumo */
+
+  /* --- Movimiento ---------------------------------------------------------
+     Duraciones cortas a proposito: esto es una herramienta de trabajo, no una
+     landing. Casi todo cae entre 120 y 240 ms; arriba de 300 ms el sistema
+     empieza a sentirse lento en vez de vivo.
+
+     La regla: toda animacion tiene un trabajo. Si no se puede nombrar que
+     comunica, no va. Ver DISENO.md.                                        */
+  --dur-1: 120ms; /* micro-respuesta: presion de un boton */
+  --dur-2: 180ms; /* superficies chicas: menu, popover, salida de dialogo */
+  --dur-3: 240ms; /* superficies medianas: dialogo, entrada de pantalla */
+
+  /* Entra o sale de la pantalla: arranca rapido y aterriza suave. */
+  --ease-salida: cubic-bezier(0.165, 0.84, 0.44, 1);
+  /* Ya esta en pantalla y se mueve o cambia de forma. */
+  --ease-morph: cubic-bezier(0.645, 0.045, 0.355, 1);
+
+  /* --- Tipografia --------------------------------------------------------
+     IBM Plex Sans para UI (tiene tabular figures, criticas en las tablas).
+     IBM Plex Mono para identificadores: DNI, CUIT, numero de expediente.
+     EB Garamond solo en la caratula del expediente.                        */
+  --texto-base: 1rem;
+  --texto-dato: 0.9375rem;
+
+  /* --- Densidad: por defecto la holgada (Portal del vecino) ------------- */
+  --u1: 0.5rem;
+  --u2: 1rem;
+  --u3: 1.5rem;
+  --u4: 2rem;
+  --u5: 3rem;
+  --alto-fila: 3.5rem;
+  --alto-control: 2.75rem; /* 44px: el minimo tactil */
+}
+
+/* Portal del vecino: holgado. Pantallas con una accion clara, a menudo en telefono. */
+.densidad-holgada {
+  --texto-base: 1rem;
+  --texto-dato: 0.9375rem;
+  --u1: 0.5rem;
+  --u2: 1rem;
+  --u3: 1.5rem;
+  --u4: 2rem;
+  --u5: 3rem;
+  --alto-fila: 3.5rem;
+  --alto-control: 2.75rem;
+}
+
+/* Backoffice: compacto. Tablas largas y uso de teclado durante horas.
+   Los controles bajan a 36px, que es el minimo comodo con mouse y sigue muy
+   por encima del 24x24 que pide WCAG 2.2 AA. El minimo tactil de 44px se
+   recupera abajo, en el breakpoint chico, donde la pantalla se toca. */
+.densidad-compacta {
+  --texto-base: 0.9375rem;
+  --texto-dato: 0.875rem;
+  --u1: 0.25rem;
+  --u2: 0.5rem;
+  --u3: 0.75rem;
+  --u4: 1rem;
+  --u5: 1.5rem;
+  --alto-fila: 2.25rem;
+  --alto-control: 2.25rem;
+}
+
+/* En pantallas chicas el backoffice vuelve a la densidad holgada: la mano
+   necesita el mismo espacio aunque el usuario sea un empleado. */
+@media (max-width: 767px) {
+  .densidad-compacta {
+    --u1: 0.5rem;
+    --u2: 1rem;
+    --u3: 1.5rem;
+    --alto-fila: 3rem;
+    --alto-control: 2.75rem;
+  }
+}
