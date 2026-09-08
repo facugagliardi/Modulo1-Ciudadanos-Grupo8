@@ -1,6 +1,7 @@
 package ar.edu.uade.ciudadanos.organizacion;
 
 import ar.edu.uade.ciudadanos.common.ListaResponse;
+import ar.edu.uade.ciudadanos.organizacion.dto.ActualizarDuenoRequest;
 import ar.edu.uade.ciudadanos.organizacion.dto.ActualizarOrganizacionRequest;
 import ar.edu.uade.ciudadanos.organizacion.dto.AgregarDuenoRequest;
 import ar.edu.uade.ciudadanos.organizacion.dto.CambioEstadoOrganizacionRequest;
@@ -72,6 +73,13 @@ public class OrganizacionController {
     public ResponseEntity<DuenoAgregadoResponse> agregarDueno(@PathVariable Long id,
                                                               @Valid @RequestBody AgregarDuenoRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(organizacionService.agregarDueno(id, request));
+    }
+
+    @PutMapping("/{id}/duenos/{personaId}")
+    public DuenoResponse actualizarDueno(@PathVariable Long id,
+                                         @PathVariable Long personaId,
+                                         @Valid @RequestBody ActualizarDuenoRequest request) {
+        return organizacionService.actualizarDueno(id, personaId, request);
     }
 
     @GetMapping("/{id}/duenos")

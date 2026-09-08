@@ -4,6 +4,7 @@ import ar.edu.uade.ciudadanos.common.ApiException;
 import ar.edu.uade.ciudadanos.common.ListasBlancas;
 import ar.edu.uade.ciudadanos.common.TransicionesEstado;
 import ar.edu.uade.ciudadanos.domicilio.DomicilioService;
+import ar.edu.uade.ciudadanos.organizacion.dto.ActualizarDuenoRequest;
 import ar.edu.uade.ciudadanos.organizacion.dto.ActualizarOrganizacionRequest;
 import ar.edu.uade.ciudadanos.organizacion.dto.AgregarDuenoRequest;
 import ar.edu.uade.ciudadanos.organizacion.dto.CrearOrganizacionRequest;
@@ -184,6 +185,25 @@ public class OrganizacionService {
 
         return new DuenoAgregadoResponse(organizacionId, persona.personaId(), persona.dni(),
                 vinculo.getPorcentajeTitularidad(), vinculo.getAsociadoEn());
+    }
+
+    @Transactional
+    public DuenoResponse actualizarDueno(Long organizacionId, Long personaId, ActualizarDuenoRequest request) {
+        buscar(organizacionId);
+        autorizacion.exigirEscrituraSobreOrganizacion(organizacionId);
+        DatosPersona persona = directorio.resolver(personaId);
+
+        PersonaOrganizacionId clave = new PersonaOrganizacionId(personaId, organizacionId);
+        PersonaOrganizacion vinculo = duenoRepository.findById(clave)
+                .orElseThrow(() -> ApiException.noEncontrado("La persona " + personaId + " no es duena de la organizacion"));
+
+        exigirTitularidadCoherente(organizacionId, request.porcentajeTitularidad(), personaId);
+
+        vinculo.setPorcentajeTitularidad(request.porcentajeTitularidad());
+        duenoRepository.save(vinculo);
+
+        return new DuenoResponse(persona.personaId(), persona.dni(), persona.nombre(), persona.apellido(),
+                vinculo.getPorcentajeTitularidad());
     }
 
     @Transactional(readOnly = true)

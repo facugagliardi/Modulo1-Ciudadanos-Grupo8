@@ -1,0 +1,682 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "M1 — Ciudadanos, Organizaciones y Expedientes Digitales API",
+    "description": "Especificación OpenAPI 3.0 lista para importar en Insomnia / Postman.",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8080",
+      "description": "Servidor Local Spring Boot"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    }
+  },
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
+  "paths": {
+    "/auth/register": {
+      "post": {
+        "summary": "Registro de usuario (Ciudadano)",
+        "tags": ["Auth"],
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "example": {
+                "tipo": "CIUDADANO",
+                "cuit": "20-40123456-7",
+                "password": "clave-segura-1",
+                "dni": "40123456",
+                "nombre": "Ana",
+                "apellido": "Perez",
+                "fechaNacimiento": "1997-03-08"
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "OK" } }
+      }
+    },
+    "/auth/login": {
+      "post": {
+        "summary": "Login de Ciudadano / Jurídica",
+        "tags": ["Auth"],
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "example": {
+                "cuit": "20401234567",
+                "password": "clave-segura-1"
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "OK" } }
+      }
+    },
+    "/auth/empleados/login": {
+      "post": {
+        "summary": "Login de Empleado",
+        "tags": ["Auth"],
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "example": {
+                "mail": "admin@municipio.gob.ar",
+                "password": "Empleado.2026"
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "OK" } }
+      }
+    },
+    "/auth/refresh": {
+      "post": {
+        "summary": "Refrescar Token",
+        "tags": ["Auth"],
+        "security": [],
+        "parameters": [
+          {
+            "name": "X-Refresh-Token",
+            "in": "header",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": { "200": { "description": "OK" } }
+      }
+    },
+    "/auth/logout": {
+      "post": {
+        "summary": "Cerrar sesión",
+        "tags": ["Auth"],
+        "responses": { "204": { "description": "No Content" } }
+      }
+    },
+    "/ciudadanos": {
+      "get": {
+        "summary": "Listar Padrón de Ciudadanos",
+        "tags": ["Ciudadanos"],
+        "responses": { "200": { "description": "OK" } }
+      }
+    },
+    "/ciudadanos/{id}": {
+      "get": {
+        "summary": "Obtener Ciudadano por ID",
+        "tags": ["Ciudadanos"],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "responses": { "200": { "description": "OK" } }
+      },
+      "put": {
+        "summary": "Actualizar Ciudadano",
+        "tags": ["Ciudadanos"],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "example": {
+                "nombre": "Ana Maria",
+                "apellido": "Perez"
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "OK" } }
+      }
+    },
+    "/ciudadanos/{id}/estado": {
+      "patch": {
+        "summary": "Cambiar Estado de Ciudadano",
+        "tags": ["Ciudadanos"],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "example": { "estado": "ACTIVO" }
+            }
+          }
+        },
+        "responses": { "200": { "description": "OK" } }
+      }
+    },
+    "/ciudadanos/dni/{dni}": {
+      "get": {
+        "summary": "Buscar Ciudadano por DNI",
+        "tags": ["Ciudadanos"],
+        "parameters": [{ "name": "dni", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": { "200": { "description": "OK" } }
+      }
+    },
+    "/organizaciones": {
+      "post": {
+        "summary": "Crear Organización",
+        "tags": ["Organizaciones"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "example": {
+                "cuit": "30712345678",
+                "razonSocial": "Empresa S.A.",
+                "nombreFantasia": "Empresa"
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "OK" } }
+      },
+      "get": {
+        "summary": "Listar Organizaciones",
+        "tags": ["Organizaciones"],
+        "responses": { "200": { "description": "OK" } }
+      }
+    },
+    "/organizaciones/{id}": {
+      "get": {
+        "summary": "Obtener Organización por ID",
+        "tags": ["Organizaciones"],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "responses": { "200": { "description": "OK" } }
+      },
+      "put": {
+        "summary": "Actualizar Organización",
+        "tags": ["Organizaciones"],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "example": {
+                "nombreFantasia": "Nuevo Nombre"
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "OK" } }
+      }
+    },
+    "/organizaciones/{id}/estado": {
+      "patch": {
+        "summary": "Cambiar Estado de Organización",
+        "tags": ["Organizaciones"],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "example": { "estado": "ACTIVA" }
+            }
+          }
+        },
+        "responses": { "200": { "description": "OK" } }
+      }
+    },
+    "/organizaciones/cuit/{cuit}": {
+      "get": {
+        "summary": "Buscar Organización por CUIT",
+        "tags": ["Organizaciones"],
+        "parameters": [{ "name": "cuit", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": { "200": { "description": "OK" } }
+      }
+    },
+    "/organizaciones/{id}/duenos": {
+      "get": {
+        "summary": "Listar Dueños de Organización",
+        "tags": ["Organizaciones"],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "responses": { "200": { "description": "OK" } }
+      },
+      "post": {
+        "summary": "Agregar Dueño a Organización",
+        "tags": ["Organizaciones"],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "example": {
+                "personaId": 1,
+                "porcentajeTitularidad": 50.0
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "OK" } }
+      }
+    },
+    "/organizaciones/{id}/duenos/{personaId}": {
+      "delete": {
+        "summary": "Quitar Dueño de Organización",
+        "tags": ["Organizaciones"],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } },
+          { "name": "personaId", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": { "204": { "description": "No Content" } }
+      }
+    },
+    "/personas/{personaId}/domicilios": {
+      "post": {
+        "summary": "Agregar Domicilio a Persona",
+        "tags": ["Domicilios"],
+        "parameters": [{ "name": "personaId", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "example": {
+                "calle": "Av. Corrientes",
+                "altura": 1234,
+                "piso": "3",
+                "departamento": "A",
+                "codigoPostal": "1043",
+                "localidad": "CABA",
+                "provincia": "CABA",
+                "tipoPropiedad": "PROPIO",
+                "esPrincipal": true
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "OK" } }
+      },
+      "get": {
+        "summary": "Obtener Domicilios de Persona",
+        "tags": ["Domicilios"],
+        "parameters": [{ "name": "personaId", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "responses": { "200": { "description": "OK" } }
+      }
+    },
+    "/domicilios/{id}": {
+      "put": {
+        "summary": "Actualizar Domicilio",
+        "tags": ["Domicilios"],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "example": {
+                "calle": "Calle Falsa",
+                "altura": 123,
+                "localidad": "CABA",
+                "provincia": "CABA"
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "OK" } }
+      },
+      "delete": {
+        "summary": "Eliminar Domicilio",
+        "tags": ["Domicilios"],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "responses": { "204": { "description": "No Content" } }
+      }
+    },
+    "/domicilios/{id}/principal": {
+      "patch": {
+        "summary": "Marcar Domicilio como Principal",
+        "tags": ["Domicilios"],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "responses": { "200": { "description": "OK" } }
+      }
+    },
+    "/ciudadanos/{ciudadanoId}/contactos": {
+      "post": {
+        "summary": "Agregar Contacto a Ciudadano",
+        "tags": ["Contactos"],
+        "parameters": [{ "name": "ciudadanoId", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "example": {
+                "tipo": "EMAIL",
+                "valor": "ana.perez@example.com"
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "OK" } }
+      },
+      "get": {
+        "summary": "Obtener Contactos de Ciudadano",
+        "tags": ["Contactos"],
+        "parameters": [{ "name": "ciudadanoId", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "responses": { "200": { "description": "OK" } }
+      }
+    },
+    "/contactos/{id}": {
+      "put": {
+        "summary": "Actualizar Contacto",
+        "tags": ["Contactos"],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "example": {
+                "tipo": "TELEFONO",
+                "valor": "1199998888"
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "OK" } }
+      },
+      "delete": {
+        "summary": "Eliminar Contacto",
+        "tags": ["Contactos"],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "responses": { "204": { "description": "No Content" } }
+      }
+    },
+    "/contactos/{id}/verificar": {
+      "patch": {
+        "summary": "Verificar Contacto",
+        "tags": ["Contactos"],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "example": {
+                "codigo": "123456"
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "OK" } }
+      }
+    },
+    "/relaciones": {
+      "post": {
+        "summary": "Crear Relación entre Ciudadanos",
+        "tags": ["Relaciones"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "example": {
+                "ciudadanoId1": 1,
+                "ciudadanoId2": 2,
+                "relacionCiudadano1": "PADRE",
+                "relacionCiudadano2": "HIJO",
+                "esResponsable": true
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "OK" } }
+      }
+    },
+    "/ciudadanos/{id}/relaciones": {
+      "get": {
+        "summary": "Obtener Relaciones de un Ciudadano",
+        "tags": ["Relaciones"],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "responses": { "200": { "description": "OK" } }
+      }
+    },
+    "/relaciones/{id}": {
+      "put": {
+        "summary": "Actualizar Relación",
+        "tags": ["Relaciones"],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "responses": { "200": { "description": "OK" } },
+        "delete": {
+          "summary": "Eliminar Relación",
+          "tags": ["Relaciones"],
+          "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }],
+          "responses": { "204": { "description": "No Content" } }
+        }
+      }
+    },
+    "/representaciones": {
+      "post": {
+        "summary": "Crear Representación",
+        "tags": ["Representaciones"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "example": {
+                "personaId": 1,
+                "organizacionId": 1,
+                "alcances": ["LEGAL", "ADMINISTRATIVO"],
+                "fechaVencimiento": "2027-12-31"
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "OK" } }
+      }
+    },
+    "/representaciones/{id}/estado": {
+      "patch": {
+        "summary": "Cambiar Estado de Representación",
+        "tags": ["Representaciones"],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "example": { "estado": "ACTIVA" }
+            }
+          }
+        },
+        "responses": { "200": { "description": "OK" } }
+      }
+    },
+    "/organizaciones/{id}/representaciones": {
+      "get": {
+        "summary": "Obtener Representaciones de Organización",
+        "tags": ["Representaciones"],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "responses": { "200": { "description": "OK" } }
+      }
+    },
+    "/personas/{id}/representaciones": {
+      "get": {
+        "summary": "Obtener Representaciones de Persona",
+        "tags": ["Representaciones"],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "responses": { "200": { "description": "OK" } }
+      }
+    },
+    "/representaciones/vigencia": {
+      "get": {
+        "summary": "Consultar Vigencia de Representación",
+        "tags": ["Representaciones"],
+        "parameters": [
+          { "name": "ciudadanoId", "in": "query", "required": true, "schema": { "type": "integer" } },
+          { "name": "organizacionId", "in": "query", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": { "200": { "description": "OK" } }
+      }
+    },
+    "/personas/{personaId}/documentos": {
+      "post": {
+        "summary": "Subir Documento (Multipart)",
+        "tags": ["Documentación"],
+        "parameters": [{ "name": "personaId", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "responses": { "200": { "description": "OK" } },
+        "get": {
+          "summary": "Obtener Documentos de Persona",
+          "tags": ["Documentación"],
+          "parameters": [{ "name": "personaId", "in": "path", "required": true, "schema": { "type": "integer" } }],
+          "responses": { "200": { "description": "OK" } }
+        }
+      }
+    },
+    "/documentos/{id}": {
+      "get": {
+        "summary": "Obtener Detalle de Documento",
+        "tags": ["Documentación"],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "responses": { "200": { "description": "OK" } }
+      }
+    },
+    "/documentos/{id}/validar": {
+      "patch": {
+        "summary": "Validar Documento",
+        "tags": ["Documentación"],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "example": {
+                "aprobado": true,
+                "observaciones": "Documento legible y válido"
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "OK" } }
+      }
+    },
+    "/expedientes": {
+      "get": {
+        "summary": "Listar Expedientes",
+        "tags": ["Expedientes"],
+        "responses": { "200": { "description": "OK" } }
+      },
+      "post": {
+        "summary": "Crear Expediente",
+        "tags": ["Expedientes"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "example": {
+                "titulo": "Solicitud de Permiso Comercial",
+                "caratula": "Trámite 2026-001",
+                "titularId": 1
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "OK" } }
+      }
+    },
+    "/expedientes/{id}": {
+      "get": {
+        "summary": "Obtener Expediente por ID",
+        "tags": ["Expedientes"],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "responses": { "200": { "description": "OK" } }
+      }
+    },
+    "/expedientes/{id}/actuaciones": {
+      "get": {
+        "summary": "Listar Actuaciones de Expediente",
+        "tags": ["Expedientes"],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "responses": { "200": { "description": "OK" } }
+      },
+      "post": {
+        "summary": "Agregar Actuación a Expediente",
+        "tags": ["Expedientes"],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "example": {
+                "tipo": "INFORME",
+                "detalle": "Se adjunta informe técnico inicial"
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "OK" } }
+      }
+    },
+    "/expedientes/{id}/estado": {
+      "patch": {
+        "summary": "Cambiar Estado de Expediente",
+        "tags": ["Expedientes"],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "example": { "estado": "EN_TRAMITE" }
+            }
+          }
+        },
+        "responses": { "200": { "description": "OK" } }
+      }
+    },
+    "/ciudadanos/{id}/identidad": {
+      "get": {
+        "summary": "[Inter-módulo] Consulta de Identidad de Ciudadano",
+        "tags": ["Consultas Intermódulo"],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "responses": { "200": { "description": "OK" } }
+      }
+    },
+    "/ciudadanos/{id}/estado": {
+      "get": {
+        "summary": "[Inter-módulo] Consulta de Estado de Ciudadano",
+        "tags": ["Consultas Intermódulo"],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "responses": { "200": { "description": "OK" } }
+      }
+    },
+    "/organizaciones/{id}/identidad": {
+      "get": {
+        "summary": "[Inter-módulo] Consulta de Identidad de Organización",
+        "tags": ["Consultas Intermódulo"],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "responses": { "200": { "description": "OK" } }
+      }
+    },
+    "/personas/{id}/domicilio-principal": {
+      "get": {
+        "summary": "[Inter-módulo] Consulta de Domicilio Principal",
+        "tags": ["Consultas Intermódulo"],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "responses": { "200": { "description": "OK" } }
+      }
+    },
+    "/ciudadanos/existe": {
+      "get": {
+        "summary": "[Inter-módulo] Verificar si existe Ciudadano por DNI",
+        "tags": ["Consultas Intermódulo"],
+        "parameters": [{ "name": "dni", "in": "query", "required": true, "schema": { "type": "string" } }],
+        "responses": { "200": { "description": "OK" } }
+      }
+    },
+    "/actuator/health": {
+      "get": {
+        "summary": "Health Check del Servidor",
+        "tags": ["Health"],
+        "security": [],
+        "responses": { "200": { "description": "OK" } }
+      }
+    }
+  }
+}
