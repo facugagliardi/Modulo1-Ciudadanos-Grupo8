@@ -469,5 +469,33 @@ anteriores**: haría falta una tabla `documento_version`.
 hay ni productor que escriba los eventos de la sección 2 de `ARCHITECTURE.md` ni publisher
 que los tome de la cola.
 
+## Laboratorio P2P con ActiveMQ
+
+El laboratorio guiado usa la cola `documentacion.solicitada`. El endpoint recibe datos de
+una solicitud de documentación y el productor los envía como un `TextMessage` JSON. Hay dos
+consumidores sobre la misma cola, por lo que ActiveMQ entrega cada mensaje a uno solo.
+
+1. Levantar el broker: `docker compose -f docker-compose.activemq.yml up -d`.
+2. Arrancar el backend con `MENSAJERIA_P2P_ENABLED=true`.
+3. Enviar uno o más `POST /mensajeria/laboratorio/solicitudes-documentacion` autenticados.
+4. Revisar el log: cada `mensajeId` debe aparecer una sola vez, junto al nombre del consumidor.
+
+Ejemplo de cuerpo:
+
+```json
+{
+  "ciudadanoId": 42,
+  "solicitudId": "SOL-2026-001",
+  "programaId": "PROGRAMA-SOCIAL",
+  "fechaLimite": "2026-11-30T18:00:00-03:00",
+  "documentosRequeridos": [
+    { "tipo": "DNI", "descripcion": "Documento de identidad", "obligatorio": true }
+  ]
+}
+```
+
+Esta implementación sirve para el laboratorio. La publicación de los eventos definitivos
+del TP debe salir del outbox y el consumidor debe persistir su resultado e ignorar duplicados.
+
 ---
 
