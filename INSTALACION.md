@@ -113,7 +113,7 @@ Los tres scripts están en `db/` y hay que correrlos **en orden**.
 psql -U postgres -f db/00_crear_database.sql
 
 # 2. Tablas, restricciones e índices
-psql -U postgres -d ciudadanos_m1 -f db/01_schema.sql
+psql -U ciudadanos_app -d ciudadanos_m1 -f db/01_schema.sql
 
 # 3. Datos de prueba — OPCIONAL, solo para desarrollo
 psql -U postgres -d ciudadanos_m1 -f db/02_datos_iniciales.sql
