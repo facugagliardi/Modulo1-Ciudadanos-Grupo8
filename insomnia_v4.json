@@ -1,0 +1,1252 @@
+{
+  "_type": "export",
+  "__export_format": 4,
+  "__export_date": "2026-09-05T20:55:00.000Z",
+  "__export_source": "insomnia.desktop.app:v2023.5.8",
+  "resources": [
+    {
+      "_id": "wrk_m1_ciudadanos",
+      "_type": "workspace",
+      "parentId": null,
+      "modified": 1788641889714,
+      "created": 1788641889714,
+      "name": "M1 — Ciudadanos API (Colección)",
+      "description": "Colección completa de endpoints para M1 Backend",
+      "scope": "collection"
+    },
+    {
+      "_id": "env_m1_base",
+      "_type": "environment",
+      "parentId": "wrk_m1_ciudadanos",
+      "modified": 1788641889714,
+      "created": 1788641889714,
+      "name": "Base Environment",
+      "data": {
+        "base_url": "http://localhost:8080",
+        "token": ""
+      },
+      "dataPropertyOrder": {
+        "&": [
+          "base_url",
+          "token"
+        ]
+      },
+      "color": "#7d69ff",
+      "isPrivate": false,
+      "metaSortKey": 1
+    },
+    {
+      "_id": "fld_auth",
+      "_type": "request_group",
+      "parentId": "wrk_m1_ciudadanos",
+      "modified": 1788641889714,
+      "created": 1788641889714,
+      "name": "Auth",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": 100
+    },
+    {
+      "_id": "req_register_ciudadano",
+      "_type": "request",
+      "parentId": "fld_auth",
+      "modified": 1788641889714,
+      "created": 1788641889714,
+      "url": "{{ _.base_url }}/auth/register",
+      "name": "Register Ciudadano",
+      "method": "POST",
+      "headers": [],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"tipo\": \"CIUDADANO\",\n  \"cuit\": \"20-40123456-7\",\n  \"password\": \"clave-segura-1\",\n  \"dni\": \"40123456\",\n  \"nombre\": \"Ana\",\n  \"apellido\": \"Perez\",\n  \"fechaNacimiento\": \"1997-03-08\"\n}"
+      },
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 100
+    },
+    {
+      "_id": "req_login_ciudadano___juridica",
+      "_type": "request",
+      "parentId": "fld_auth",
+      "modified": 1788641889714,
+      "created": 1788641889714,
+      "url": "{{ _.base_url }}/auth/login",
+      "name": "Login Ciudadano / Juridica",
+      "method": "POST",
+      "headers": [],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"cuit\": \"20401234567\",\n  \"password\": \"clave-segura-1\"\n}"
+      },
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 110
+    },
+    {
+      "_id": "req_login_empleado_admin___mesa___auditor",
+      "_type": "request",
+      "parentId": "fld_auth",
+      "modified": 1788641889714,
+      "created": 1788641889714,
+      "url": "{{ _.base_url }}/auth/empleados/login",
+      "name": "Login Empleado (Admin / Mesa / Auditor)",
+      "method": "POST",
+      "headers": [],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"mail\": \"admin@municipio.gob.ar\",\n  \"password\": \"Empleado.2026\"\n}"
+      },
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 120
+    },
+    {
+      "_id": "req_refreshtoken",
+      "_type": "request",
+      "parentId": "fld_auth",
+      "modified": 1788641889714,
+      "created": 1788641889714,
+      "url": "{{ _.base_url }}/auth/refresh",
+      "name": "RefreshToken",
+      "method": "POST",
+      "headers": [
+        {
+          "name": "X-Refresh-Token",
+          "value": "{{ _.token }}"
+        }
+      ],
+      "body": {},
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 130
+    },
+    {
+      "_id": "req_logout",
+      "_type": "request",
+      "parentId": "fld_auth",
+      "modified": 1788641889714,
+      "created": 1788641889714,
+      "url": "{{ _.base_url }}/auth/logout",
+      "name": "Logout",
+      "method": "POST",
+      "headers": [],
+      "body": {},
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 140
+    },
+    {
+      "_id": "fld_ciudadanos",
+      "_type": "request_group",
+      "parentId": "wrk_m1_ciudadanos",
+      "modified": 1788641889714,
+      "created": 1788641889714,
+      "name": "Ciudadanos",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": 200
+    },
+    {
+      "_id": "req_listar_padrón_de_ciudadanos",
+      "_type": "request",
+      "parentId": "fld_ciudadanos",
+      "modified": 1788641889714,
+      "created": 1788641889714,
+      "url": "{{ _.base_url }}/ciudadanos",
+      "name": "Listar Padrón de Ciudadanos",
+      "method": "GET",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token }}"
+        }
+      ],
+      "body": {},
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 150
+    },
+    {
+      "_id": "req_obtener_ciudadano_por_id",
+      "_type": "request",
+      "parentId": "fld_ciudadanos",
+      "modified": 1788641889714,
+      "created": 1788641889714,
+      "url": "{{ _.base_url }}/ciudadanos/1",
+      "name": "Obtener Ciudadano por ID",
+      "method": "GET",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token }}"
+        }
+      ],
+      "body": {},
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 160
+    },
+    {
+      "_id": "req_actualizar_ciudadano",
+      "_type": "request",
+      "parentId": "fld_ciudadanos",
+      "modified": 1788641889714,
+      "created": 1788641889714,
+      "url": "{{ _.base_url }}/ciudadanos/1",
+      "name": "Actualizar Ciudadano",
+      "method": "PUT",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token }}"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"nombre\": \"Ana Maria\",\n  \"apellido\": \"Perez\"\n}"
+      },
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 170
+    },
+    {
+      "_id": "req_cambiar_estado_de_ciudadano",
+      "_type": "request",
+      "parentId": "fld_ciudadanos",
+      "modified": 1788641889714,
+      "created": 1788641889714,
+      "url": "{{ _.base_url }}/ciudadanos/1/estado",
+      "name": "Cambiar Estado de Ciudadano",
+      "method": "PATCH",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token }}"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"estado\": \"ACTIVO\"\n}"
+      },
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 180
+    },
+    {
+      "_id": "req_buscar_ciudadano_por_dni",
+      "_type": "request",
+      "parentId": "fld_ciudadanos",
+      "modified": 1788641889714,
+      "created": 1788641889714,
+      "url": "{{ _.base_url }}/ciudadanos/dni/40123456",
+      "name": "Buscar Ciudadano por DNI",
+      "method": "GET",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token }}"
+        }
+      ],
+      "body": {},
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 190
+    },
+    {
+      "_id": "fld_organizaciones",
+      "_type": "request_group",
+      "parentId": "wrk_m1_ciudadanos",
+      "modified": 1788641889714,
+      "created": 1788641889714,
+      "name": "Organizaciones",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": 300
+    },
+    {
+      "_id": "req_crear_organización",
+      "_type": "request",
+      "parentId": "fld_organizaciones",
+      "modified": 1788641889714,
+      "created": 1788641889714,
+      "url": "{{ _.base_url }}/organizaciones",
+      "name": "Crear Organización",
+      "method": "POST",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token }}"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"cuit\": \"30712345678\",\n  \"razonSocial\": \"Empresa S.A.\",\n  \"nombreFantasia\": \"Empresa\"\n}"
+      },
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 200
+    },
+    {
+      "_id": "req_listar_organizaciones",
+      "_type": "request",
+      "parentId": "fld_organizaciones",
+      "modified": 1788641889714,
+      "created": 1788641889714,
+      "url": "{{ _.base_url }}/organizaciones",
+      "name": "Listar Organizaciones",
+      "method": "GET",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token }}"
+        }
+      ],
+      "body": {},
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 210
+    },
+    {
+      "_id": "req_obtener_organización_por_id",
+      "_type": "request",
+      "parentId": "fld_organizaciones",
+      "modified": 1788641889714,
+      "created": 1788641889714,
+      "url": "{{ _.base_url }}/organizaciones/1",
+      "name": "Obtener Organización por ID",
+      "method": "GET",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token }}"
+        }
+      ],
+      "body": {},
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 220
+    },
+    {
+      "_id": "req_actualizar_organización",
+      "_type": "request",
+      "parentId": "fld_organizaciones",
+      "modified": 1788641889714,
+      "created": 1788641889714,
+      "url": "{{ _.base_url }}/organizaciones/1",
+      "name": "Actualizar Organización",
+      "method": "PUT",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token }}"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"nombreFantasia\": \"Nuevo Nombre\"\n}"
+      },
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 230
+    },
+    {
+      "_id": "req_cambiar_estado_de_organización",
+      "_type": "request",
+      "parentId": "fld_organizaciones",
+      "modified": 1788641889714,
+      "created": 1788641889714,
+      "url": "{{ _.base_url }}/organizaciones/1/estado",
+      "name": "Cambiar Estado de Organización",
+      "method": "PATCH",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token }}"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"estado\": \"ACTIVA\"\n}"
+      },
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 240
+    },
+    {
+      "_id": "req_buscar_organización_por_cuit",
+      "_type": "request",
+      "parentId": "fld_organizaciones",
+      "modified": 1788641889714,
+      "created": 1788641889714,
+      "url": "{{ _.base_url }}/organizaciones/cuit/30712345678",
+      "name": "Buscar Organización por CUIT",
+      "method": "GET",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token }}"
+        }
+      ],
+      "body": {},
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 250
+    },
+    {
+      "_id": "req_listar_dueños_de_organización",
+      "_type": "request",
+      "parentId": "fld_organizaciones",
+      "modified": 1788641889714,
+      "created": 1788641889714,
+      "url": "{{ _.base_url }}/organizaciones/1/duenos",
+      "name": "Listar Dueños de Organización",
+      "method": "GET",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token }}"
+        }
+      ],
+      "body": {},
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 260
+    },
+    {
+      "_id": "req_agregar_dueño_a_organización",
+      "_type": "request",
+      "parentId": "fld_organizaciones",
+      "modified": 1788641889714,
+      "created": 1788641889714,
+      "url": "{{ _.base_url }}/organizaciones/1/duenos",
+      "name": "Agregar Dueño a Organización",
+      "method": "POST",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token }}"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"personaId\": 1,\n  \"porcentajeTitularidad\": 50.0\n}"
+      },
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 270
+    },
+    {
+      "_id": "req_quitar_dueño_de_organización",
+      "_type": "request",
+      "parentId": "fld_organizaciones",
+      "modified": 1788641889714,
+      "created": 1788641889714,
+      "url": "{{ _.base_url }}/organizaciones/1/duenos/1",
+      "name": "Quitar Dueño de Organización",
+      "method": "DELETE",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token }}"
+        }
+      ],
+      "body": {},
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 280
+    },
+    {
+      "_id": "fld_domicilios",
+      "_type": "request_group",
+      "parentId": "wrk_m1_ciudadanos",
+      "modified": 1788641889714,
+      "created": 1788641889714,
+      "name": "Domicilios",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": 400
+    },
+    {
+      "_id": "req_agregar_domicilio_a_persona",
+      "_type": "request",
+      "parentId": "fld_domicilios",
+      "modified": 1788641889714,
+      "created": 1788641889714,
+      "url": "{{ _.base_url }}/personas/1/domicilios",
+      "name": "Agregar Domicilio a Persona",
+      "method": "POST",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token }}"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"calle\": \"Av. Corrientes\",\n  \"altura\": 1234,\n  \"piso\": \"3\",\n  \"departamento\": \"A\",\n  \"codigoPostal\": \"1043\",\n  \"localidad\": \"CABA\",\n  \"provincia\": \"CABA\",\n  \"tipoPropiedad\": \"PROPIO\",\n  \"esPrincipal\": true\n}"
+      },
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 290
+    },
+    {
+      "_id": "req_obtener_domicilios_de_persona",
+      "_type": "request",
+      "parentId": "fld_domicilios",
+      "modified": 1788641889714,
+      "created": 1788641889714,
+      "url": "{{ _.base_url }}/personas/1/domicilios",
+      "name": "Obtener Domicilios de Persona",
+      "method": "GET",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token }}"
+        }
+      ],
+      "body": {},
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 300
+    },
+    {
+      "_id": "req_actualizar_domicilio",
+      "_type": "request",
+      "parentId": "fld_domicilios",
+      "modified": 1788641889714,
+      "created": 1788641889714,
+      "url": "{{ _.base_url }}/domicilios/1",
+      "name": "Actualizar Domicilio",
+      "method": "PUT",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token }}"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"calle\": \"Calle Falsa\",\n  \"altura\": 123,\n  \"localidad\": \"CABA\",\n  \"provincia\": \"CABA\"\n}"
+      },
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 310
+    },
+    {
+      "_id": "req_marcar_domicilio_como_principal",
+      "_type": "request",
+      "parentId": "fld_domicilios",
+      "modified": 1788641889714,
+      "created": 1788641889714,
+      "url": "{{ _.base_url }}/domicilios/1/principal",
+      "name": "Marcar Domicilio como Principal",
+      "method": "PATCH",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token }}"
+        }
+      ],
+      "body": {},
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 320
+    },
+    {
+      "_id": "req_eliminar_domicilio",
+      "_type": "request",
+      "parentId": "fld_domicilios",
+      "modified": 1788641889714,
+      "created": 1788641889714,
+      "url": "{{ _.base_url }}/domicilios/1",
+      "name": "Eliminar Domicilio",
+      "method": "DELETE",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token }}"
+        }
+      ],
+      "body": {},
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 330
+    },
+    {
+      "_id": "fld_contactos",
+      "_type": "request_group",
+      "parentId": "wrk_m1_ciudadanos",
+      "modified": 1788641889714,
+      "created": 1788641889714,
+      "name": "Contactos",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": 500
+    },
+    {
+      "_id": "req_agregar_contacto_a_ciudadano",
+      "_type": "request",
+      "parentId": "fld_contactos",
+      "modified": 1788641889714,
+      "created": 1788641889714,
+      "url": "{{ _.base_url }}/ciudadanos/1/contactos",
+      "name": "Agregar Contacto a Ciudadano",
+      "method": "POST",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token }}"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"tipo\": \"EMAIL\",\n  \"valor\": \"ana.perez@example.com\"\n}"
+      },
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 340
+    },
+    {
+      "_id": "req_obtener_contactos_de_ciudadano",
+      "_type": "request",
+      "parentId": "fld_contactos",
+      "modified": 1788641889714,
+      "created": 1788641889714,
+      "url": "{{ _.base_url }}/ciudadanos/1/contactos",
+      "name": "Obtener Contactos de Ciudadano",
+      "method": "GET",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token }}"
+        }
+      ],
+      "body": {},
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 350
+    },
+    {
+      "_id": "req_actualizar_contacto",
+      "_type": "request",
+      "parentId": "fld_contactos",
+      "modified": 1788641889714,
+      "created": 1788641889714,
+      "url": "{{ _.base_url }}/contactos/1",
+      "name": "Actualizar Contacto",
+      "method": "PUT",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token }}"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"tipo\": \"TELEFONO\",\n  \"valor\": \"1199998888\"\n}"
+      },
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 360
+    },
+    {
+      "_id": "req_verificar_contacto",
+      "_type": "request",
+      "parentId": "fld_contactos",
+      "modified": 1788641889714,
+      "created": 1788641889714,
+      "url": "{{ _.base_url }}/contactos/1/verificar",
+      "name": "Verificar Contacto",
+      "method": "PATCH",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token }}"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"codigo\": \"123456\"\n}"
+      },
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 370
+    },
+    {
+      "_id": "req_eliminar_contacto",
+      "_type": "request",
+      "parentId": "fld_contactos",
+      "modified": 1788641889714,
+      "created": 1788641889714,
+      "url": "{{ _.base_url }}/contactos/1",
+      "name": "Eliminar Contacto",
+      "method": "DELETE",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token }}"
+        }
+      ],
+      "body": {},
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 380
+    },
+    {
+      "_id": "fld_relaciones",
+      "_type": "request_group",
+      "parentId": "wrk_m1_ciudadanos",
+      "modified": 1788641889714,
+      "created": 1788641889714,
+      "name": "Relaciones",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": 600
+    },
+    {
+      "_id": "req_crear_relación_entre_ciudadanos",
+      "_type": "request",
+      "parentId": "fld_relaciones",
+      "modified": 1788641889714,
+      "created": 1788641889714,
+      "url": "{{ _.base_url }}/relaciones",
+      "name": "Crear Relación entre Ciudadanos",
+      "method": "POST",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token }}"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"ciudadanoId1\": 1,\n  \"ciudadanoId2\": 2,\n  \"relacionCiudadano1\": \"PADRE\",\n  \"relacionCiudadano2\": \"HIJO\",\n  \"esResponsable\": true\n}"
+      },
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 390
+    },
+    {
+      "_id": "req_obtener_relaciones_de_ciudadano",
+      "_type": "request",
+      "parentId": "fld_relaciones",
+      "modified": 1788641889714,
+      "created": 1788641889714,
+      "url": "{{ _.base_url }}/ciudadanos/1/relaciones",
+      "name": "Obtener Relaciones de Ciudadano",
+      "method": "GET",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token }}"
+        }
+      ],
+      "body": {},
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 400
+    },
+    {
+      "_id": "req_actualizar_relación",
+      "_type": "request",
+      "parentId": "fld_relaciones",
+      "modified": 1788641889714,
+      "created": 1788641889714,
+      "url": "{{ _.base_url }}/relaciones/1",
+      "name": "Actualizar Relación",
+      "method": "PUT",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token }}"
+        }
+      ],
+      "body": {},
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 410
+    },
+    {
+      "_id": "req_eliminar_relación",
+      "_type": "request",
+      "parentId": "fld_relaciones",
+      "modified": 1788641889714,
+      "created": 1788641889714,
+      "url": "{{ _.base_url }}/relaciones/1",
+      "name": "Eliminar Relación",
+      "method": "DELETE",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token }}"
+        }
+      ],
+      "body": {},
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 420
+    },
+    {
+      "_id": "fld_representaciones",
+      "_type": "request_group",
+      "parentId": "wrk_m1_ciudadanos",
+      "modified": 1788641889714,
+      "created": 1788641889714,
+      "name": "Representaciones",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": 700
+    },
+    {
+      "_id": "req_crear_representación",
+      "_type": "request",
+      "parentId": "fld_representaciones",
+      "modified": 1788641889714,
+      "created": 1788641889714,
+      "url": "{{ _.base_url }}/representaciones",
+      "name": "Crear Representación",
+      "method": "POST",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token }}"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"personaId\": 1,\n  \"organizacionId\": 1,\n  \"alcances\": [\n    \"LEGAL\",\n    \"ADMINISTRATIVO\"\n  ],\n  \"fechaVencimiento\": \"2027-12-31\"\n}"
+      },
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 430
+    },
+    {
+      "_id": "req_cambiar_estado_de_representación",
+      "_type": "request",
+      "parentId": "fld_representaciones",
+      "modified": 1788641889714,
+      "created": 1788641889714,
+      "url": "{{ _.base_url }}/representaciones/1/estado",
+      "name": "Cambiar Estado de Representación",
+      "method": "PATCH",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token }}"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"estado\": \"ACTIVA\"\n}"
+      },
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 440
+    },
+    {
+      "_id": "req_obtener_representaciones_de_organización",
+      "_type": "request",
+      "parentId": "fld_representaciones",
+      "modified": 1788641889714,
+      "created": 1788641889714,
+      "url": "{{ _.base_url }}/organizaciones/1/representaciones",
+      "name": "Obtener Representaciones de Organización",
+      "method": "GET",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token }}"
+        }
+      ],
+      "body": {},
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 450
+    },
+    {
+      "_id": "req_obtener_representaciones_de_persona",
+      "_type": "request",
+      "parentId": "fld_representaciones",
+      "modified": 1788641889714,
+      "created": 1788641889714,
+      "url": "{{ _.base_url }}/personas/1/representaciones",
+      "name": "Obtener Representaciones de Persona",
+      "method": "GET",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token }}"
+        }
+      ],
+      "body": {},
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 460
+    },
+    {
+      "_id": "req_consultar_vigencia_de_representación",
+      "_type": "request",
+      "parentId": "fld_representaciones",
+      "modified": 1788641889714,
+      "created": 1788641889714,
+      "url": "{{ _.base_url }}/representaciones/vigencia?ciudadanoId=1&organizacionId=1",
+      "name": "Consultar Vigencia de Representación",
+      "method": "GET",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token }}"
+        }
+      ],
+      "body": {},
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 470
+    },
+    {
+      "_id": "fld_documentación",
+      "_type": "request_group",
+      "parentId": "wrk_m1_ciudadanos",
+      "modified": 1788641889714,
+      "created": 1788641889714,
+      "name": "Documentación",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": 800
+    },
+    {
+      "_id": "req_subir_documento_multipart",
+      "_type": "request",
+      "parentId": "fld_documentación",
+      "modified": 1788641889714,
+      "created": 1788641889714,
+      "url": "{{ _.base_url }}/personas/1/documentos",
+      "name": "Subir Documento (Multipart)",
+      "method": "POST",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token }}"
+        }
+      ],
+      "body": {},
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 480
+    },
+    {
+      "_id": "req_obtener_documentos_de_persona",
+      "_type": "request",
+      "parentId": "fld_documentación",
+      "modified": 1788641889714,
+      "created": 1788641889714,
+      "url": "{{ _.base_url }}/personas/1/documentos",
+      "name": "Obtener Documentos de Persona",
+      "method": "GET",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token }}"
+        }
+      ],
+      "body": {},
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 490
+    },
+    {
+      "_id": "req_obtener_detalle_de_documento",
+      "_type": "request",
+      "parentId": "fld_documentación",
+      "modified": 1788641889714,
+      "created": 1788641889714,
+      "url": "{{ _.base_url }}/documentos/1",
+      "name": "Obtener Detalle de Documento",
+      "method": "GET",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token }}"
+        }
+      ],
+      "body": {},
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 500
+    },
+    {
+      "_id": "req_validar_documento",
+      "_type": "request",
+      "parentId": "fld_documentación",
+      "modified": 1788641889714,
+      "created": 1788641889714,
+      "url": "{{ _.base_url }}/documentos/1/validar",
+      "name": "Validar Documento",
+      "method": "PATCH",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token }}"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"aprobado\": true,\n  \"observaciones\": \"Documento legible y v\\u00e1lido\"\n}"
+      },
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 510
+    },
+    {
+      "_id": "fld_expedientes",
+      "_type": "request_group",
+      "parentId": "wrk_m1_ciudadanos",
+      "modified": 1788641889714,
+      "created": 1788641889714,
+      "name": "Expedientes",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": 900
+    },
+    {
+      "_id": "req_listar_expedientes",
+      "_type": "request",
+      "parentId": "fld_expedientes",
+      "modified": 1788641889714,
+      "created": 1788641889714,
+      "url": "{{ _.base_url }}/expedientes",
+      "name": "Listar Expedientes",
+      "method": "GET",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token }}"
+        }
+      ],
+      "body": {},
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 520
+    },
+    {
+      "_id": "req_crear_expediente",
+      "_type": "request",
+      "parentId": "fld_expedientes",
+      "modified": 1788641889714,
+      "created": 1788641889714,
+      "url": "{{ _.base_url }}/expedientes",
+      "name": "Crear Expediente",
+      "method": "POST",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token }}"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"titulo\": \"Solicitud de Permiso Comercial\",\n  \"caratula\": \"Tr\\u00e1mite 2026-001\",\n  \"titularId\": 1\n}"
+      },
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 530
+    },
+    {
+      "_id": "req_obtener_expediente_por_id",
+      "_type": "request",
+      "parentId": "fld_expedientes",
+      "modified": 1788641889714,
+      "created": 1788641889714,
+      "url": "{{ _.base_url }}/expedientes/1",
+      "name": "Obtener Expediente por ID",
+      "method": "GET",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token }}"
+        }
+      ],
+      "body": {},
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 540
+    },
+    {
+      "_id": "req_listar_actuaciones_de_expediente",
+      "_type": "request",
+      "parentId": "fld_expedientes",
+      "modified": 1788641889714,
+      "created": 1788641889714,
+      "url": "{{ _.base_url }}/expedientes/1/actuaciones",
+      "name": "Listar Actuaciones de Expediente",
+      "method": "GET",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token }}"
+        }
+      ],
+      "body": {},
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 550
+    },
+    {
+      "_id": "req_agregar_actuación_a_expediente",
+      "_type": "request",
+      "parentId": "fld_expedientes",
+      "modified": 1788641889714,
+      "created": 1788641889714,
+      "url": "{{ _.base_url }}/expedientes/1/actuaciones",
+      "name": "Agregar Actuación a Expediente",
+      "method": "POST",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token }}"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"tipo\": \"INFORME\",\n  \"detalle\": \"Se adjunta informe t\\u00e9cnico inicial\"\n}"
+      },
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 560
+    },
+    {
+      "_id": "req_cambiar_estado_de_expediente",
+      "_type": "request",
+      "parentId": "fld_expedientes",
+      "modified": 1788641889714,
+      "created": 1788641889714,
+      "url": "{{ _.base_url }}/expedientes/1/estado",
+      "name": "Cambiar Estado de Expediente",
+      "method": "PATCH",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token }}"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"estado\": \"EN_TRAMITE\"\n}"
+      },
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 570
+    },
+    {
+      "_id": "fld_consultas_intermódulo",
+      "_type": "request_group",
+      "parentId": "wrk_m1_ciudadanos",
+      "modified": 1788641889714,
+      "created": 1788641889714,
+      "name": "Consultas Intermódulo",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": 1000
+    },
+    {
+      "_id": "req_consulta_identidad_ciudadano",
+      "_type": "request",
+      "parentId": "fld_consultas_intermódulo",
+      "modified": 1788641889714,
+      "created": 1788641889714,
+      "url": "{{ _.base_url }}/ciudadanos/1/identidad",
+      "name": "Consulta Identidad Ciudadano",
+      "method": "GET",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token }}"
+        }
+      ],
+      "body": {},
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 580
+    },
+    {
+      "_id": "req_consulta_estado_ciudadano",
+      "_type": "request",
+      "parentId": "fld_consultas_intermódulo",
+      "modified": 1788641889714,
+      "created": 1788641889714,
+      "url": "{{ _.base_url }}/ciudadanos/1/estado",
+      "name": "Consulta Estado Ciudadano",
+      "method": "GET",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token }}"
+        }
+      ],
+      "body": {},
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 590
+    },
+    {
+      "_id": "req_consulta_identidad_organización",
+      "_type": "request",
+      "parentId": "fld_consultas_intermódulo",
+      "modified": 1788641889714,
+      "created": 1788641889714,
+      "url": "{{ _.base_url }}/organizaciones/1/identidad",
+      "name": "Consulta Identidad Organización",
+      "method": "GET",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token }}"
+        }
+      ],
+      "body": {},
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 600
+    },
+    {
+      "_id": "req_consulta_domicilio_principal",
+      "_type": "request",
+      "parentId": "fld_consultas_intermódulo",
+      "modified": 1788641889714,
+      "created": 1788641889714,
+      "url": "{{ _.base_url }}/personas/1/domicilio-principal",
+      "name": "Consulta Domicilio Principal",
+      "method": "GET",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token }}"
+        }
+      ],
+      "body": {},
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 610
+    },
+    {
+      "_id": "req_verificar_si_existe_ciudadano_por_dni",
+      "_type": "request",
+      "parentId": "fld_consultas_intermódulo",
+      "modified": 1788641889714,
+      "created": 1788641889714,
+      "url": "{{ _.base_url }}/ciudadanos/existe?dni=40123456",
+      "name": "Verificar si existe Ciudadano por DNI",
+      "method": "GET",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token }}"
+        }
+      ],
+      "body": {},
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 620
+    }
+  ]
+}
