@@ -37,6 +37,11 @@ spring:
       uri: ${MONGO_URI:mongodb://localhost:27017/ciudadanos_m1_eventos}
       auto-index-creation: true
 
+  activemq:
+    broker-url: ${ACTIVEMQ_BROKER_URL:tcp://localhost:61616}
+    user: ${ACTIVEMQ_USER:admin}
+    password: ${ACTIVEMQ_PASSWORD:admin}
+
 server:
   port: ${SERVER_PORT:8080}
   error:
@@ -44,6 +49,13 @@ server:
     include-stacktrace: never
 
 app:
+  mensajeria:
+    # Se habilita solo durante el laboratorio o cuando un ambiente tenga broker.
+    # Con false el resto de la aplicacion sigue arrancando sin ActiveMQ.
+    p2p:
+      enabled: ${MENSAJERIA_P2P_ENABLED:true}
+      cola-solicitudes-documentacion: ${COLA_SOLICITUDES_DOCUMENTACION:documentacion.solicitada}
+
   # Donde se guardan los archivos de POST /personas/{id}/documentos.
   almacenamiento:
     directorio: ${ALMACENAMIENTO_DIR:./archivos-documentos}

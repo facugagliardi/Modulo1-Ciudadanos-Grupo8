@@ -1,0 +1,6 @@
+services:
+  activemq:
+    image: apache/activemq-classic:5.19.2
+    ports:
+      - "61616:61616" # Conexion JMS del backend
+      - "8161:8161"   # Consola web: http://localhost:8161/admin
