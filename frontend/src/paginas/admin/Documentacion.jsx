@@ -17,6 +17,7 @@ import { Identificador } from "@/componentes/Identificador";
 import { Tabla } from "@/componentes/Tabla";
 import { Button } from "@/componentes/ui/button";
 import { Campo, Selector } from "@/componentes/ui/campo";
+import { CampoFecha, hoyISO, sumarDiasISO } from "@/componentes/ui/fecha";
 import { CerrarDialogo, ContenidoDialogo, Dialogo, DisparadorDialogo } from "@/componentes/ui/dialog";
 
 /**
@@ -191,7 +192,7 @@ function PedirDocumentacion({ alGuardar, children }) {
   const [errorGeneral, setErrorGeneral] = useState(null);
   const [enviando, setEnviando] = useState(false);
 
-  const manana = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
+  const manana = sumarDiasISO(hoyISO(), 1);
 
   async function buscar(evento) {
     evento.preventDefault();
@@ -319,10 +320,9 @@ function PedirDocumentacion({ alGuardar, children }) {
               )}
             </Campo>
 
-            <Campo
+            <CampoFecha
               etiqueta="Plazo"
               obligatorio
-              type="date"
               min={manana}
               ayuda="Hasta cuándo tiene tiempo de entregarlo."
               value={plazo}

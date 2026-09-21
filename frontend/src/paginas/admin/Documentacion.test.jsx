@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Documentacion } from "./Documentacion";
-import { conSesion, renderizar } from "@/pruebas/utilidades";
+import { conSesion, elegirOpcion, escribirFecha, renderizar } from "@/pruebas/utilidades";
 import { ErrorApi } from "@/lib/api/cliente";
 
 const listarSolicitudes = vi.fn();
@@ -66,7 +66,7 @@ describe("listado de solicitudes", () => {
   it("filtra por origen", async () => {
     renderizar(<Documentacion />);
     await screen.findByText("Certificado de domicilio");
-    await userEvent.selectOptions(screen.getByLabelText("Origen"), "EVENTO");
+    await elegirOpcion(screen.getByLabelText("Origen"), "EVENTO");
 
     expect(screen.getByText("DNI")).toBeInTheDocument();
     expect(screen.queryByText("Certificado de domicilio")).not.toBeInTheDocument();
@@ -132,7 +132,7 @@ describe("pedir documentación", () => {
     await userEvent.click(screen.getByRole("button", { name: "Buscar" }));
 
     const plazo = await screen.findByLabelText("Plazo");
-    await userEvent.type(plazo, "2020-01-01");
+    await escribirFecha(plazo, "2020-01-01");
     await userEvent.click(screen.getByRole("button", { name: /^pedir documentación$/i }));
 
     expect(await screen.findByText(/posterior a hoy/i)).toBeInTheDocument();
@@ -154,7 +154,7 @@ describe("pedir documentación", () => {
     await userEvent.click(await screen.findByRole("button", { name: /pedir documentación/i }));
     await userEvent.type(await screen.findByLabelText(/dni del titular/i), "34567890");
     await userEvent.click(screen.getByRole("button", { name: "Buscar" }));
-    await userEvent.type(await screen.findByLabelText("Plazo"), "2099-12-31");
+    await escribirFecha(await screen.findByLabelText("Plazo"), "2099-12-31");
     await userEvent.click(screen.getByRole("button", { name: /^pedir documentación$/i }));
 
     await waitFor(() =>
@@ -183,7 +183,7 @@ describe("pedir documentación", () => {
     await userEvent.click(await screen.findByRole("button", { name: /pedir documentación/i }));
     await userEvent.type(await screen.findByLabelText(/dni del titular/i), "34567890");
     await userEvent.click(screen.getByRole("button", { name: "Buscar" }));
-    await userEvent.type(await screen.findByLabelText("Plazo"), "2099-12-31");
+    await escribirFecha(await screen.findByLabelText("Plazo"), "2099-12-31");
     await userEvent.click(screen.getByRole("button", { name: /^pedir documentación$/i }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent(/no existe el titular/i);
