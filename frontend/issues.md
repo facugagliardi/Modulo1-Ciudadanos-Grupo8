@@ -111,26 +111,21 @@ de autorización que el de ciudadanos.
 
 ---
 
-## 4. No se puede descargar ni ver un documento subido
+## 4. ~~No se puede descargar ni ver un documento subido~~ — RESUELTO
 
-**Severidad**: 🟠 Alta — se puede subir documentación pero nadie puede abrirla.
+**Era**: `AlmacenamientoLocal.guardar()` devolvía un
+`file:///C:/.../archivos-documentos/documento-1-v1.pdf`, o sea una ruta del
+**disco del servidor**, y no había ningún endpoint que devolviera el binario. El
+empleado que tenía que validar un documento aprobaba o rechazaba **a ciegas**.
 
-`AlmacenamientoLocal.guardar()` devuelve `destino.toUri().toString()`, o sea un
-`file:///C:/.../archivos-documentos/documento-1-v1.pdf`. Eso es una ruta del
-**disco del servidor**: un navegador no la puede abrir, y no hay ningún endpoint
-que devuelva el binario.
+**Qué se hizo**: se agregó `GET /documentos/{id}/archivo`, que devuelve el
+binario con su `Content-Type` y la misma autorización que `GET /documentos/{id}`.
+`AlmacenamientoArchivos` ganó un `leer(referencia)`; la implementación local
+verifica que la ruta caiga bajo el directorio raíz antes de abrir nada.
 
-**Consecuencia**: el empleado que tiene que validar un documento **no puede
-verlo**. Aprueba o rechaza a ciegas.
-
-**Cómo lo comprobamos**: subimos un PDF desde el portal; quedó en disco como
-`documento-1-v1.pdf` y en la base con ese `file://` en `url_archivo`.
-
-**Mientras tanto**: el front no ofrece el archivo como enlace. Prometer una
-descarga que falla es peor que no ofrecerla.
-
-**Qué haría falta**: `GET /documentos/{id}/archivo` que devuelva el binario con su
-`Content-Type`, con la misma autorización que `GET /documentos/{id}`.
+En el front, el archivo se ve embebido: PDF en un `<iframe>`, fotos en un
+`<img>`. El binario se baja autenticado y se muestra con un `blob:` URL, porque
+`<img src>` e `<iframe src>` no mandan el header `Authorization`.
 
 ---
 

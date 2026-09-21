@@ -1,6 +1,6 @@
 import { useCallback, useState } from "react";
 import { Link } from "react-router-dom";
-import { FilePlus2 } from "lucide-react";
+import { Eye, FilePlus2 } from "lucide-react";
 import { cambiarEstadoSolicitud, crearSolicitud, listarSolicitudes } from "@/lib/api/endpoints/documentacion";
 import { buscarPorDni } from "@/lib/api/endpoints/ciudadanos";
 import { useRecurso } from "@/lib/useRecurso";
@@ -12,6 +12,7 @@ import { ENTIDADES } from "@/lib/dominio/estados";
 import { etiquetaDe, TIPOS_DOCUMENTO } from "@/lib/dominio/listasBlancas";
 import { BadgeEstado } from "@/componentes/BadgeEstado";
 import { CambiarEstado } from "@/componentes/CambiarEstado";
+import { RevisarDocumento } from "@/componentes/documentacion/ListaDocumentos";
 import { Encabezado } from "@/componentes/Encabezado";
 import { Identificador } from "@/componentes/Identificador";
 import { Tabla } from "@/componentes/Tabla";
@@ -24,10 +25,15 @@ import { CerrarDialogo, ContenidoDialogo, Dialogo, DisparadorDialogo } from "@/c
  * Las solicitudes de documentación que emite el municipio.
  *
  * OJO CON EL ALCANCE DE ESTA PANTALLA: el backend **no tiene** un listado
- * global de documentos, sólo `GET /personas/{id}/documentos`. Por eso no hay
- * una bandeja general de validación: validar se hace desde el legajo de cada
- * persona, en su pestaña Documentos. Acá se gestionan las solicitudes, que sí
- * tienen listado propio. Anotado en sitemap.md, sección 6.
+ * global de documentos, sólo `GET /personas/{id}/documentos`. Así que esto no
+ * es una bandeja de validación: es el listado de solicitudes, que sí tiene
+ * endpoint propio.
+ *
+ * La diferencia importa. Desde acá se puede revisar y resolver lo entregado
+ * **contra una solicitud** —la solicitud guarda su `documentoId`—, pero un
+ * documento que alguien subió por su cuenta, sin que se lo pidieran, no
+ * aparece en ninguna solicitud y sólo se ve desde el legajo de esa persona.
+ * Anotado en sitemap.md, sección 6.
  */
 
 const ESTADOS = [
@@ -43,6 +49,7 @@ const ORIGENES = [
 
 export function Documentacion() {
   const puedeSolicitar = usePermiso(PERMISOS.SOLICITAR_DOCUMENTACION);
+  const puedeValidar = usePermiso(PERMISOS.VALIDAR_DOCUMENTACION);
   const puedeLeerTerceros = usePermiso(PERMISOS.LEER_TERCEROS);
   const { datos, cargando, error, recargar } = useRecurso(useCallback((s) => listarSolicitudes(s), []));
 
@@ -106,28 +113,49 @@ export function Documentacion() {
     {
       clave: "acciones",
       titulo: "",
-      ancho: "w-32",
+      ancho: "w-44",
       ordenable: false,
-      render: (s) =>
-        puedeSolicitar && s.estado !== "CUMPLIDA" ? (
-          <CambiarEstado
-            entidad={ENTIDADES.SOLICITUD}
-            estadoActual={s.estado}
-            nombreEntidad="esta solicitud"
-            // Cumplir exige el documentoId del titular, y eso se hace desde el
-            // portal del vecino al entregar. Desde acá sólo se puede vencer.
-            destinosBloqueados={{ CUMPLIDA: "La cumple el titular al entregar" }}
-            alConfirmar={async (nuevo) => {
-              await cambiarEstadoSolicitud(s.solicitudId, { estado: nuevo });
-              recargar();
-            }}
-            disparador={
-              <Button variante="secundario" tamano="chico">
-                Estado
-              </Button>
-            }
-          />
-        ) : null,
+      render: (s) => (
+        <div className="flex items-center justify-end gap-u1">
+          {/* El documento existe sólo si alguien ya entregó algo. En la
+              práctica los dos botones casi nunca conviven: una solicitud
+              cumplida ya no cambia de estado, y una pendiente todavía no tiene
+              nada que mirar. */}
+          {s.documentoId && (
+            <RevisarDocumento
+              personaId={s.titularId}
+              documentoId={s.documentoId}
+              puedeValidar={puedeValidar}
+              alGuardar={recargar}
+              disparador={
+                <Button variante="secundario" tamano="chico">
+                  <Eye aria-hidden="true" />
+                  {puedeValidar ? "Revisar" : "Ver"}
+                </Button>
+              }
+            />
+          )}
+          {puedeSolicitar && s.estado !== "CUMPLIDA" && (
+            <CambiarEstado
+              entidad={ENTIDADES.SOLICITUD}
+              estadoActual={s.estado}
+              nombreEntidad="esta solicitud"
+              // Cumplir exige el documentoId del titular, y eso se hace desde el
+              // portal del vecino al entregar. Desde acá sólo se puede vencer.
+              destinosBloqueados={{ CUMPLIDA: "La cumple el titular al entregar" }}
+              alConfirmar={async (nuevo) => {
+                await cambiarEstadoSolicitud(s.solicitudId, { estado: nuevo });
+                recargar();
+              }}
+              disparador={
+                <Button variante="secundario" tamano="chico">
+                  Estado
+                </Button>
+              }
+            />
+          )}
+        </div>
+      ),
     },
   ];
 
@@ -170,9 +198,10 @@ export function Documentacion() {
       />
 
       <p className="mt-u3 max-w-prose text-sm text-apagado">
-        Para revisar y validar la documentación de una persona, entrá a su legajo desde el
-        padrón: la pestaña <strong className="font-medium text-tinta">Documentos</strong>{" "}
-        muestra lo que cargó.
+        Acá se ve lo entregado contra cada solicitud. Para ver todo lo que cargó una persona
+        —incluso lo que subió por su cuenta, sin que nadie se lo pidiera— entrá a su legajo
+        desde el padrón: la pestaña{" "}
+        <strong className="font-medium text-tinta">Documentos</strong> lo lista completo.
       </p>
     </>
   );

@@ -25,7 +25,6 @@ import { PERMISOS } from "@/lib/auth/permisos";
 import { BadgeEstado } from "@/componentes/BadgeEstado";
 import { BuscadorDePersona, PersonaElegida } from "@/componentes/BuscadorDePersona";
 import { CambiarEstado } from "@/componentes/CambiarEstado";
-import { ConfirmarAccion } from "@/componentes/ConfirmarAccion";
 import { Cargando, ErrorEnPantalla, EstadoVacio } from "@/componentes/Estados";
 import { Identificador } from "@/componentes/Identificador";
 import { Button } from "@/componentes/ui/button";
@@ -225,23 +224,10 @@ export function DetalleOrganizacion({ zona = "admin" }) {
                                 Es el único dueño. Agregá otro antes de quitarlo.
                               </p>
                             ) : (
-                              <ConfirmarAccion
-                                titulo="Quitar a este dueño"
-                                descripcion={`${[d.nombre, d.apellido].filter(Boolean).join(" ")} deja de figurar como titular. Sus datos personales no se tocan.`}
-                                textoConfirmar="Quitar dueño"
-                                alConfirmar={async () => {
-                                  await quitarDueno(o.organizacionId, d.personaId);
-                                  organizacion.recargar();
-                                }}
-                                disparador={
-                                  <Button
-                                    variante="fantasma"
-                                    tamano="chico"
-                                    aria-label={`Quitar a ${d.nombre} ${d.apellido}`}
-                                  >
-                                    <Trash2 aria-hidden="true" />
-                                  </Button>
-                                }
+                              <QuitarDueno
+                                organizacion={o}
+                                dueno={d}
+                                alGuardar={organizacion.recargar}
                               />
                             ))}
                         </CardCuerpo>
@@ -457,6 +443,163 @@ function EditarOrganizacion({ organizacion, alGuardar }) {
 
 /** Valor del selector de origen cuando el porcentaje sale del pool sin asignar. */
 const DESDE_LIBRE = "libre";
+
+/** Y el espejo: el porcentaje del que se va no va a nadie, queda suelto. */
+const QUEDA_LIBRE = "libre";
+
+/**
+ * Baja de un dueño, con transferencia de su titularidad.
+ *
+ * Es el espejo exacto de {@link AgregarDueno}: si alguien entra tomando de
+ * otro, quien sale tiene que poder dejarle lo suyo a alguien. Sin esto, quitar
+ * a un dueño con 40% evaporaba ese 40% —quedaba sin asignar sin que nadie lo
+ * decidiera— y había que acordarse de ir a repartirlo a mano.
+ *
+ * El orden es al revés que en el alta y por la misma razón: acá se quita
+ * primero y después se sube al receptor. Si se subiera antes, en el instante
+ * intermedio la suma pasaría de 100 —el que se va todavía tiene lo suyo— y el
+ * backend contesta 409.
+ */
+function QuitarDueno({ organizacion, dueno, alGuardar }) {
+  const [abierto, setAbierto] = useState(false);
+  const [destino, setDestino] = useState(QUEDA_LIBRE);
+  const [errorGeneral, setErrorGeneral] = useState(null);
+  const [enviando, setEnviando] = useState(false);
+
+  const nombre = nombreDe(dueno);
+  const cede = Number(dueno.porcentajeTitularidad ?? 0);
+  const otros = (organizacion.duenos ?? []).filter((x) => x.personaId !== dueno.personaId);
+  const receptor = otros.find((x) => String(x.personaId) === destino) ?? null;
+
+  const opciones = [
+    { valor: QUEDA_LIBRE, etiqueta: "Que quede sin asignar" },
+    ...otros.map((x) => ({
+      valor: String(x.personaId),
+      etiqueta: `${nombreDe(x)} — tiene ${redondear(x.porcentajeTitularidad ?? 0)}%`,
+    })),
+  ];
+
+  async function enviar(evento) {
+    evento.preventDefault();
+    setErrorGeneral(null);
+    setEnviando(true);
+
+    let yaSeQuito = false;
+    try {
+      await quitarDueno(organizacion.organizacionId, dueno.personaId);
+      yaSeQuito = true;
+
+      if (receptor) {
+        await actualizarDueno(
+          organizacion.organizacionId,
+          receptor.personaId,
+          Number(receptor.porcentajeTitularidad ?? 0) + cede,
+        );
+      }
+
+      alGuardar?.();
+      setAbierto(false);
+    } catch (e) {
+      // Si la baja entró y falló el traspaso, ese porcentaje quedó suelto.
+      // Decirlo evita que la titularidad quede descuadrada sin que se note.
+      e.traspasoAMedias = yaSeQuito;
+      setErrorGeneral(e);
+      if (yaSeQuito) alGuardar?.();
+    } finally {
+      setEnviando(false);
+    }
+  }
+
+  return (
+    <Dialogo
+      open={abierto}
+      onOpenChange={(v) => {
+        setAbierto(v);
+        if (v) {
+          setDestino(QUEDA_LIBRE);
+          setErrorGeneral(null);
+        }
+      }}
+    >
+      <DisparadorDialogo asChild>
+        <Button variante="fantasma" tamano="chico" aria-label={`Quitar a ${nombre}`}>
+          <Trash2 aria-hidden="true" />
+        </Button>
+      </DisparadorDialogo>
+
+      <ContenidoDialogo
+        className="max-w-lg"
+        titulo="Quitar a este dueño"
+        descripcion={`${nombre} deja de figurar como titular. Sus datos personales no se tocan.`}
+      >
+        <form onSubmit={enviar} noValidate className="flex flex-col gap-u2">
+          {cede > 0 ? (
+            <>
+              <Campo etiqueta={`¿A quién le pasa su ${redondear(cede)}%?`}>
+                {(props) => (
+                  <Selector
+                    {...props}
+                    opciones={opciones}
+                    value={destino}
+                    onChange={(e) => setDestino(e.target.value)}
+                  />
+                )}
+              </Campo>
+
+              {receptor ? (
+                <p className="rounded border border-borde bg-papel px-3 py-2 text-[length:var(--texto-dato)]">
+                  <ArrowRightLeft
+                    className="mr-1.5 inline size-4 align-text-bottom text-expediente"
+                    aria-hidden="true"
+                  />
+                  <strong className="font-medium">{nombreDe(receptor)}</strong> pasa de{" "}
+                  {redondear(receptor.porcentajeTitularidad ?? 0)}% a{" "}
+                  <strong className="font-medium">
+                    {redondear(Number(receptor.porcentajeTitularidad ?? 0) + cede)}%
+                  </strong>
+                  .
+                </p>
+              ) : (
+                <p className="text-[length:var(--texto-dato)] text-apagado">
+                  Ese {redondear(cede)}% va a quedar sin asignar. Podés repartirlo después
+                  agregando un dueño.
+                </p>
+              )}
+            </>
+          ) : (
+            <p className="text-[length:var(--texto-dato)] text-apagado">
+              No tiene un porcentaje cargado, así que no hay titularidad que transferir.
+            </p>
+          )}
+
+          {errorGeneral && (
+            <p
+              role="alert"
+              className="rounded border border-sello bg-sello-suave px-3 py-2 text-[length:var(--texto-dato)] font-medium text-sello"
+            >
+              {errorGeneral.traspasoAMedias
+                ? `Se quitó a ${nombre} pero no se pudo pasar su ${redondear(cede)}%. Ese porcentaje quedó sin asignar.`
+                : errorGeneral.status === 409
+                  ? "No se puede quitar: una organización no puede quedarse sin dueños."
+                  : mensajeAmable(errorGeneral)}
+            </p>
+          )}
+
+          <div className="mt-u1 flex justify-end gap-u2">
+            <CerrarDialogo asChild>
+              <Button type="button" variante="secundario">
+                Cancelar
+              </Button>
+            </CerrarDialogo>
+            <Button type="submit" variante="destructivo" disabled={enviando}>
+              {enviando ? "Quitando…" : receptor ? "Quitar y transferir" : "Quitar dueño"}
+            </Button>
+          </div>
+        </form>
+      </ContenidoDialogo>
+    </Dialogo>
+  );
+}
 
 const nombreDe = (d) => [d?.nombre, d?.apellido].filter(Boolean).join(" ") || "—";
 
