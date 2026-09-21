@@ -44,6 +44,15 @@ if (!globalThis.PointerEvent) {
   globalThis.PointerEvent = PointerEventDePrueba;
 }
 
+// jsdom no implementa la API de object URLs. El visor de documentos la usa
+// para mostrar un binario que se bajó autenticado, así que sin esto ni
+// siquiera se puede montar.
+if (!URL.createObjectURL) {
+  let n = 0;
+  URL.createObjectURL = () => `blob:prueba/${++n}`;
+  URL.revokeObjectURL = () => {};
+}
+
 if (!globalThis.ResizeObserver) {
   globalThis.ResizeObserver = class {
     observe() {}
