@@ -13,6 +13,7 @@ import { ARCHIVOS_PERMITIDOS, etiquetaDe, TIPOS_DOCUMENTO } from "@/lib/dominio/
 import { EstadoVacio } from "@/componentes/Estados";
 import { Button } from "@/componentes/ui/button";
 import { Campo, Selector } from "@/componentes/ui/campo";
+import { CampoFecha, hoyISO } from "@/componentes/ui/fecha";
 import { Card, CardCuerpo } from "@/componentes/ui/card";
 import { CerrarDialogo, ContenidoDialogo, Dialogo, DisparadorDialogo } from "@/componentes/ui/dialog";
 
@@ -254,7 +255,7 @@ function ValidarDocumento({ documento, alGuardar }) {
   const [errorGeneral, setErrorGeneral] = useState(null);
   const [enviando, setEnviando] = useState(false);
 
-  const hoy = new Date().toISOString().slice(0, 10);
+  const hoy = hoyISO();
 
   async function enviar(evento) {
     evento.preventDefault();
@@ -319,9 +320,8 @@ function ValidarDocumento({ documento, alGuardar }) {
           </fieldset>
 
           {aprobado && (
-            <Campo
+            <CampoFecha
               etiqueta="Vigente hasta"
-              type="date"
               min={hoy}
               ayuda="Opcional. Dejalo vacío si el documento no vence."
               value={vigenciaHasta}
