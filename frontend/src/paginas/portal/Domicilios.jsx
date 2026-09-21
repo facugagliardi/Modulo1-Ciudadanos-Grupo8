@@ -84,7 +84,15 @@ export function Domicilios() {
       )}
 
       {lista.length > 0 && (
-        <ol className="lista-escalonada flex flex-col">
+        // `aria-busy` mientras se recarga, pero sin sacar la lista de su lugar:
+        // marcar el cambio de domicilio principal no tiene que mover la página.
+        <ol
+          aria-busy={domicilios.recargando || undefined}
+          className={cn(
+            "lista-escalonada flex flex-col transition-opacity duration-150",
+            domicilios.recargando && "opacity-60",
+          )}
+        >
           {lista.map((d, i) => {
             const vigente = !d.vigenteHasta;
             return (

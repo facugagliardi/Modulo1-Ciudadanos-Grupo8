@@ -4,6 +4,7 @@ import ar.edu.uade.ciudadanos.common.ApiException;
 import ar.edu.uade.ciudadanos.common.ListasBlancas;
 import ar.edu.uade.ciudadanos.common.TransicionesEstado;
 import ar.edu.uade.ciudadanos.domicilio.DomicilioService;
+import ar.edu.uade.ciudadanos.organizacion.dto.ActualizarDuenoRequest;
 import ar.edu.uade.ciudadanos.organizacion.dto.ActualizarOrganizacionRequest;
 import ar.edu.uade.ciudadanos.organizacion.dto.AgregarDuenoRequest;
 import ar.edu.uade.ciudadanos.organizacion.dto.CrearOrganizacionRequest;
@@ -11,6 +12,7 @@ import ar.edu.uade.ciudadanos.organizacion.dto.DuenoAgregadoResponse;
 import ar.edu.uade.ciudadanos.organizacion.dto.DuenoResponse;
 import ar.edu.uade.ciudadanos.organizacion.dto.ExistenciaOrganizacionResponse;
 import ar.edu.uade.ciudadanos.organizacion.dto.IdentidadOrganizacionResponse;
+import ar.edu.uade.ciudadanos.organizacion.dto.OrganizacionDeDuenoResponse;
 import ar.edu.uade.ciudadanos.organizacion.dto.OrganizacionResponse;
 import ar.edu.uade.ciudadanos.organizacion.dto.OrganizacionResumenResponse;
 import ar.edu.uade.ciudadanos.organizacion.dto.RepresentanteVigenteResponse;
@@ -29,6 +31,9 @@ import ar.edu.uade.ciudadanos.security.AutorizacionService;
 import ar.edu.uade.ciudadanos.security.Permiso;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -116,6 +121,43 @@ public class OrganizacionService {
         return organizacionRepository.findAll().stream().map(OrganizacionResumenResponse::de).toList();
     }
 
+    /**
+     * Las organizaciones donde la persona es duena (RF-19).
+     *
+     * Existia el listado de representaciones pero no este, y son vinculos
+     * distintos: el alta de una organizacion anota al creador como DUENO, nunca
+     * como representante. Sin esta consulta, quien registraba una organizacion
+     * no tenia forma de volver a encontrarla desde el portal.
+     *
+     * Los ids se resuelven con un findAllById en vez de un findById por
+     * vinculo: son dos consultas en total, no una por organizacion.
+     */
+    @Transactional(readOnly = true)
+    public List<OrganizacionDeDuenoResponse> listarPorDueno(Long personaId) {
+        directorio.exigirQueExista(personaId);
+        autorizacion.exigirLecturaDePersona(personaId);
+
+        List<PersonaOrganizacion> vinculos = duenoRepository.findByIdIdPersona(personaId);
+        if (vinculos.isEmpty()) {
+            return List.of();
+        }
+
+        Map<Long, Organizacion> porId = organizacionRepository
+                .findAllById(vinculos.stream().map(v -> v.getId().getIdOrganizacion()).toList())
+                .stream()
+                .collect(Collectors.toMap(Organizacion::getOrganizacionId, o -> o));
+
+        return vinculos.stream()
+                .map(v -> {
+                    Organizacion o = porId.get(v.getId().getIdOrganizacion());
+                    // Un vinculo sin organizacion solo puede venir de datos
+                    // inconsistentes; se saltea en vez de romper el listado.
+                    return o == null ? null : OrganizacionDeDuenoResponse.de(o, v.getPorcentajeTitularidad());
+                })
+                .filter(Objects::nonNull)
+                .toList();
+    }
+
     @Transactional
     public OrganizacionResponse actualizar(Long id, ActualizarOrganizacionRequest request) {
         Organizacion organizacion = buscar(id);
@@ -196,6 +238,25 @@ public class OrganizacionService {
 
         return new DuenoAgregadoResponse(organizacionId, persona.personaId(), persona.dni(),
                 vinculo.getPorcentajeTitularidad(), vinculo.getAsociadoEn());
+    }
+
+    @Transactional
+    public DuenoResponse actualizarDueno(Long organizacionId, Long personaId, ActualizarDuenoRequest request) {
+        buscar(organizacionId);
+        autorizacion.exigirEscrituraSobreOrganizacion(organizacionId);
+        DatosPersona persona = directorio.resolver(personaId);
+
+        PersonaOrganizacionId clave = new PersonaOrganizacionId(personaId, organizacionId);
+        PersonaOrganizacion vinculo = duenoRepository.findById(clave)
+                .orElseThrow(() -> ApiException.noEncontrado("La persona " + personaId + " no es duena de la organizacion"));
+
+        exigirTitularidadCoherente(organizacionId, request.porcentajeTitularidad(), personaId);
+
+        vinculo.setPorcentajeTitularidad(request.porcentajeTitularidad());
+        duenoRepository.save(vinculo);
+
+        return new DuenoResponse(persona.personaId(), persona.dni(), persona.nombre(), persona.apellido(),
+                vinculo.getPorcentajeTitularidad());
     }
 
     @Transactional(readOnly = true)

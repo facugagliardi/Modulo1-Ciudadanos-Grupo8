@@ -205,7 +205,37 @@
   }
 }
 
+/* Superficies chicas que salen de un control: el panel del Selector y el del
+   calendario. Duran `--dur-2`, que es lo que el sistema le asigna a menús y
+   popovers. Animan `scale`, no `transform`: Radix usa `transform` para
+   posicionar el popper y el keyframe se lo pisaría. Misma trampa que ya está
+   documentada arriba para el diálogo. */
+@keyframes panel-entra {
+  from {
+    opacity: 0;
+    scale: 0.98;
+  }
+  to {
+    opacity: 1;
+    scale: 1;
+  }
+}
+@keyframes panel-sale {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
 @layer components {
+  .panel-flotante[data-state="open"] {
+    animation: panel-entra var(--dur-2) var(--ease-salida);
+  }
+  .panel-flotante[data-state="closed"] {
+    animation: panel-sale var(--dur-1) var(--ease-salida);
+  }
   .fondo-dialogo[data-state="open"] {
     animation: fondo-entra var(--dur-3) var(--ease-salida);
   }
