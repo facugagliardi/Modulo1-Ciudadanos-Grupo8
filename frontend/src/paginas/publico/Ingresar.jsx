@@ -5,7 +5,7 @@ import { ingresar, ingresarEmpleado } from "@/lib/api/endpoints/auth";
 import { mensajeAmable } from "@/lib/api/cliente";
 import { soloDigitos } from "@/lib/dominio/formato";
 import { Button } from "@/componentes/ui/button";
-import { Campo } from "@/componentes/ui/campo";
+import { Campo, CampoContrasena } from "@/componentes/ui/campo";
 
 /**
  * Un solo ingreso para dos públicos.
@@ -19,6 +19,25 @@ import { Campo } from "@/componentes/ui/campo";
 
 const VECINO = "vecino";
 const EMPLEADO = "empleado";
+
+/**
+ * Acá el 401 significa lo contrario que en el resto de la app.
+ *
+ * `mensajeAmable` traduce todo 401 a "tu sesión venció", que es correcto en
+ * cualquier pantalla de adentro: si el token se cayó, la sesión se terminó.
+ * Pero en el login todavía no hay sesión que vencer — un 401 es el backend
+ * diciendo que las credenciales no cierran. Mostrar "tu sesión venció" a
+ * alguien que recién erró la contraseña lo manda a buscar un problema que no
+ * existe. Por eso se resuelve acá y no tocando el mapeo global.
+ */
+function mensajeDeIngreso(error, esVecino) {
+  if (error?.status === 401) {
+    return esVecino
+      ? "CUIT/CUIL o contraseña incorrectos. Revisalos e intentá de nuevo."
+      : "Correo o contraseña incorrectos. Revisalos e intentá de nuevo.";
+  }
+  return mensajeAmable(error);
+}
 
 export function Ingresar() {
   const navegar = useNavigate();
@@ -137,10 +156,8 @@ export function Ingresar() {
           />
         )}
 
-        <Campo
-          etiqueta="Contraseña"
+        <CampoContrasena
           obligatorio
-          type="password"
           autoComplete="current-password"
           value={valores.password}
           onChange={(e) => cambiar("password", e.target.value)}
@@ -152,7 +169,7 @@ export function Ingresar() {
             role="alert"
             className="rounded border border-sello bg-sello-suave px-3 py-2 text-[length:var(--texto-dato)] font-medium text-sello"
           >
-            {mensajeAmable(errorGeneral)}
+            {mensajeDeIngreso(errorGeneral, esVecino)}
           </p>
         )}
 

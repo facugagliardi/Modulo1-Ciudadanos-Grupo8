@@ -1,8 +1,9 @@
 import { useCallback, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { ArrowLeft, Building2, Trash2, UserPlus } from "lucide-react";
+import { ArrowLeft, ArrowRightLeft, Building2, Trash2, UserPlus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
+  actualizarDueno,
   actualizarOrganizacion,
   agregarDueno,
   cambiarEstadoOrganizacion,
@@ -29,6 +30,7 @@ import { Cargando, ErrorEnPantalla, EstadoVacio } from "@/componentes/Estados";
 import { Identificador } from "@/componentes/Identificador";
 import { Button } from "@/componentes/ui/button";
 import { Campo, Selector } from "@/componentes/ui/campo";
+import { CampoFecha, hoyISO } from "@/componentes/ui/fecha";
 import { Card, CardCuerpo, CardEncabezado, CardTitulo } from "@/componentes/ui/card";
 import { CerrarDialogo, ContenidoDialogo, Dialogo, DisparadorDialogo } from "@/componentes/ui/dialog";
 import { ListaPestanias, PanelPestania, Pestania, Pestanias } from "@/componentes/ui/tabs";
@@ -453,37 +455,116 @@ function EditarOrganizacion({ organizacion, alGuardar }) {
   );
 }
 
+/** Valor del selector de origen cuando el porcentaje sale del pool sin asignar. */
+const DESDE_LIBRE = "libre";
+
+const nombreDe = (d) => [d?.nombre, d?.apellido].filter(Boolean).join(" ") || "—";
+
+/**
+ * Los porcentajes vienen del backend como BigDecimal y llegan con decimales que
+ * casi siempre son cero. `50.00%` no aporta nada sobre `50%`, y la resta en
+ * vivo se lee peor. Se muestran los decimales sólo cuando existen de verdad.
+ */
+const redondear = (n) => {
+  const num = Number(n);
+  if (Number.isNaN(num)) return "—";
+  return String(Number(num.toFixed(2)));
+};
+
+/**
+ * Alta de dueño, con transferencia de titularidad.
+ *
+ * Un dueño nuevo puede entrar de dos formas: tomando de lo que todavía no está
+ * asignado, o recibiendo parte de lo que hoy tiene otro dueño. La segunda es la
+ * que pasa en la vida real —entra un socio y los que ya estaban se diluyen— y
+ * antes no se podía expresar: había que quitar al dueño y volver a agregarlo.
+ *
+ * El orden de las dos llamadas no es casual. Primero baja al que cede y después
+ * agrega al nuevo. Al revés, en el instante intermedio la suma pasaría de 100 y
+ * el backend contesta 409. Además, si algo falla entre una y otra, el estado
+ * que queda es "sobra un porcentaje sin asignar", que es válido y se arregla
+ * solo con volver a intentar. La transferencia no es atómica —el backend no
+ * expone una operación única— así que lo que se elige es cuál es el estado
+ * intermedio menos dañino.
+ */
 function AgregarDueno({ organizacion, alGuardar }) {
   const [abierto, setAbierto] = useState(false);
   const [persona, setPersona] = useState(null);
   const [porcentaje, setPorcentaje] = useState("");
+  const [origen, setOrigen] = useState(DESDE_LIBRE);
   const [errorPorcentaje, setErrorPorcentaje] = useState(null);
   const [errorGeneral, setErrorGeneral] = useState(null);
   const [enviando, setEnviando] = useState(false);
 
+  const duenos = organizacion.duenos ?? [];
   // El backend rechaza con 409 si la suma supera 100. Se avisa antes.
-  const asignado = (organizacion.duenos ?? []).reduce(
-    (t, d) => t + Number(d.porcentajeTitularidad ?? 0),
-    0,
-  );
+  const asignado = duenos.reduce((t, d) => t + Number(d.porcentajeTitularidad ?? 0), 0);
   const disponible = Math.max(0, 100 - asignado);
+
+  // Sólo puede ceder quien tiene un porcentaje cargado: de un dueño sin
+  // porcentaje no hay nada que restar.
+  const cedentesPosibles = duenos.filter((d) => Number(d.porcentajeTitularidad ?? 0) > 0);
+  const cedente = duenos.find((d) => String(d.personaId) === origen) ?? null;
+  const desdeLibre = origen === DESDE_LIBRE;
+
+  const num = porcentaje === "" ? null : Number(porcentaje);
+  const numValido = num !== null && !Number.isNaN(num) && num > 0;
+  const tope = desdeLibre ? disponible : Number(cedente?.porcentajeTitularidad ?? 0);
+  const quedaAlCedente = cedente && numValido ? Number(cedente.porcentajeTitularidad) - num : null;
+
+  const opcionesOrigen = [
+    { valor: DESDE_LIBRE, etiqueta: `Sin asignar — hay ${redondear(disponible)}% libre` },
+    ...cedentesPosibles.map((d) => ({
+      valor: String(d.personaId),
+      etiqueta: `${nombreDe(d)} — tiene ${redondear(d.porcentajeTitularidad)}%`,
+    })),
+  ];
+
+  function validar() {
+    if (!desdeLibre) {
+      // Cediendo, el porcentaje deja de ser opcional: sin número no hay nada
+      // que transferir.
+      if (!numValido) {
+        setErrorPorcentaje("Indicá cuánto le transferís.");
+        return false;
+      }
+      if (num > tope) {
+        setErrorPorcentaje(`${nombreDe(cedente)} tiene ${redondear(tope)}%. No puede ceder más.`);
+        return false;
+      }
+      if (quedaAlCedente < 0.01) {
+        setErrorPorcentaje(
+          `${nombreDe(cedente)} quedaría en 0%. Para que ceda todo, quitalo como dueño después de agregar al nuevo.`,
+        );
+        return false;
+      }
+      return true;
+    }
+
+    if (num === null) return true; // desde el pool libre el porcentaje es opcional
+    if (Number.isNaN(num) || num <= 0 || num > 100) {
+      setErrorPorcentaje("Tiene que ser un número entre 0,01 y 100.");
+      return false;
+    }
+    if (num > disponible) {
+      setErrorPorcentaje(`Sólo queda ${redondear(disponible)}% sin asignar.`);
+      return false;
+    }
+    return true;
+  }
 
   async function enviar(evento) {
     evento.preventDefault();
     setErrorGeneral(null);
-    const num = porcentaje === "" ? null : Number(porcentaje);
-    if (num !== null) {
-      if (Number.isNaN(num) || num <= 0 || num > 100) {
-        setErrorPorcentaje("Tiene que ser un número entre 0,01 y 100.");
-        return;
-      }
-      if (num > disponible) {
-        setErrorPorcentaje(`Sólo queda ${disponible}% sin asignar.`);
-        return;
-      }
-    }
+    if (!validar()) return;
+
     setEnviando(true);
+    let cedenteYaBajado = false;
     try {
+      if (cedente) {
+        await actualizarDueno(organizacion.organizacionId, cedente.personaId, quedaAlCedente);
+        cedenteYaBajado = true;
+      }
       await agregarDueno(organizacion.organizacionId, {
         personaId: persona.id,
         porcentajeTitularidad: num ?? undefined,
@@ -492,8 +573,14 @@ function AgregarDueno({ organizacion, alGuardar }) {
       setAbierto(false);
       setPersona(null);
       setPorcentaje("");
+      setOrigen(DESDE_LIBRE);
     } catch (e) {
+      // Si el alta falló con el cedente ya bajado, el porcentaje quedó suelto.
+      // Decirlo explícitamente evita que alguien cierre el diálogo creyendo que
+      // no pasó nada y se encuentre después con la titularidad descuadrada.
+      e.transferenciaAMedias = cedenteYaBajado;
       setErrorGeneral(e);
+      if (cedenteYaBajado) alGuardar?.();
     } finally {
       setEnviando(false);
     }
@@ -507,6 +594,7 @@ function AgregarDueno({ organizacion, alGuardar }) {
         if (v) {
           setPersona(null);
           setPorcentaje("");
+          setOrigen(DESDE_LIBRE);
           setErrorPorcentaje(null);
           setErrorGeneral(null);
         }
@@ -539,11 +627,14 @@ function AgregarDueno({ organizacion, alGuardar }) {
               type="number"
               step="0.01"
               min="0.01"
-              max={disponible || 100}
+              max={tope || 100}
+              obligatorio={!desdeLibre}
               ayuda={
-                asignado > 0
-                  ? `Hay ${asignado}% asignado. Queda ${disponible}% disponible. Podés dejarlo vacío.`
-                  : "Opcional."
+                desdeLibre
+                  ? asignado > 0
+                    ? `Hay ${redondear(asignado)}% asignado. Queda ${redondear(disponible)}% disponible. Podés dejarlo vacío.`
+                    : "Opcional."
+                  : undefined
               }
               value={porcentaje}
               onChange={(e) => {
@@ -553,14 +644,48 @@ function AgregarDueno({ organizacion, alGuardar }) {
               error={errorPorcentaje}
             />
 
+            {cedentesPosibles.length > 0 && (
+              <Campo etiqueta="¿De dónde sale?">
+                {(props) => (
+                  <Selector
+                    {...props}
+                    opciones={opcionesOrigen}
+                    value={origen}
+                    onChange={(e) => {
+                      setOrigen(e.target.value);
+                      setErrorPorcentaje(null);
+                    }}
+                  />
+                )}
+              </Campo>
+            )}
+
+            {/* La resta, en vivo. Es la única forma de que alguien confirme sin
+                tener que hacer la cuenta de cabeza. */}
+            {cedente && numValido && quedaAlCedente >= 0.01 && (
+              <p className="rounded border border-borde bg-papel px-3 py-2 text-[length:var(--texto-dato)]">
+                <ArrowRightLeft
+                  className="mr-1.5 inline size-4 align-text-bottom text-expediente"
+                  aria-hidden="true"
+                />
+                <strong className="font-medium">{nombreDe(cedente)}</strong> pasa de{" "}
+                {redondear(cedente.porcentajeTitularidad)}% a{" "}
+                <strong className="font-medium">{redondear(quedaAlCedente)}%</strong>, y{" "}
+                {persona.nombre} entra con{" "}
+                <strong className="font-medium">{redondear(num)}%</strong>.
+              </p>
+            )}
+
             {errorGeneral && (
               <p
                 role="alert"
                 className="rounded border border-sello bg-sello-suave px-3 py-2 text-[length:var(--texto-dato)] font-medium text-sello"
               >
-                {errorGeneral.status === 409
-                  ? "Esa persona ya es dueña, o la suma de titularidades supera el 100%."
-                  : mensajeAmable(errorGeneral)}
+                {errorGeneral.transferenciaAMedias
+                  ? `Se descontó el porcentaje de ${nombreDe(cedente)} pero no se pudo agregar al nuevo dueño. Ese porcentaje quedó sin asignar: volvé a intentarlo.`
+                  : errorGeneral.status === 409
+                    ? "Esa persona ya es dueña, o la suma de titularidades supera el 100%."
+                    : mensajeAmable(errorGeneral)}
               </p>
             )}
 
@@ -584,7 +709,7 @@ function AgregarDueno({ organizacion, alGuardar }) {
 function OtorgarRepresentacion({ organizacionId, alGuardar }) {
   const [abierto, setAbierto] = useState(false);
   const [persona, setPersona] = useState(null);
-  const hoy = new Date().toISOString().slice(0, 10);
+  const hoy = hoyISO();
   const [valores, setValores] = useState({ alcance: "TRAMITES", desde: hoy, hasta: "" });
   const [errores, setErrores] = useState({});
   const [errorGeneral, setErrorGeneral] = useState(null);
@@ -667,10 +792,9 @@ function OtorgarRepresentacion({ organizacionId, alGuardar }) {
             </Campo>
 
             <div className="grid gap-u2 sm:grid-cols-2">
-              <Campo
+              <CampoFecha
                 etiqueta="Desde"
                 obligatorio
-                type="date"
                 value={valores.desde}
                 onChange={(e) => {
                   setValores((v) => ({ ...v, desde: e.target.value }));
@@ -678,9 +802,8 @@ function OtorgarRepresentacion({ organizacionId, alGuardar }) {
                 }}
                 error={errores.desde}
               />
-              <Campo
+              <CampoFecha
                 etiqueta="Hasta"
-                type="date"
                 min={valores.desde}
                 ayuda="Vacío = sin vencimiento."
                 value={valores.hasta}

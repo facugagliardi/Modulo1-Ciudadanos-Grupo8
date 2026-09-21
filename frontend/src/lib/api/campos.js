@@ -61,6 +61,8 @@ export const CAMPOS = {
   crearOrganizacion: ["cuit", "razonSocial", "nombreFantasia", "tipo", "taxId", "duenos"],
   actualizarOrganizacion: ["razonSocial", "nombreFantasia", "tipo"],
   agregarDueno: ["personaId", "porcentajeTitularidad"],
+  // El PUT sólo mueve el porcentaje: la persona ya viene en la URL.
+  actualizarDueno: ["porcentajeTitularidad"],
 
   // --- representaciones ---
   crearRepresentacion: ["personaId", "organizacionId", "alcance", "desde", "hasta"],

@@ -166,7 +166,7 @@ pueda leerlos.
 | `PUT /organizaciones/{id}` | dueño, representante vigente o `EDITAR_TERCEROS` | — |
 | `PATCH /organizaciones/{id}/estado` | `CAMBIAR_ESTADO_TITULAR` | RF-08 |
 | `GET /organizaciones/cuit/{cuit}` | autenticado | RF-06 |
-| `POST /organizaciones/{id}/duenos` · `DELETE .../{personaId}` | dueño, representante o `EDITAR_TERCEROS` | RF-19 |
+| `POST /organizaciones/{id}/duenos` · `PUT .../{personaId}` · `DELETE .../{personaId}` | dueño, representante o `EDITAR_TERCEROS` | RF-19 |
 | `GET /organizaciones/{id}/duenos` | autenticado | — |
 
 ### Domicilios

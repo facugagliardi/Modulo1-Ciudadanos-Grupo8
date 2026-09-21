@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Padron } from "./Padron";
-import { conSesion, renderizar } from "@/pruebas/utilidades";
+import { conSesion, elegirOpcion, renderizar } from "@/pruebas/utilidades";
 import { ErrorApi } from "@/lib/api/cliente";
 
 const listarCiudadanos = vi.fn();
@@ -64,7 +64,7 @@ describe("padrón", () => {
     renderizar(<Padron />);
     await screen.findByText("Diego Lopez");
 
-    await userEvent.selectOptions(screen.getByLabelText("Estado"), "FALLECIDO");
+    await elegirOpcion(screen.getByLabelText("Estado"), "FALLECIDO");
 
     expect(screen.queryByText("Diego Lopez")).not.toBeInTheDocument();
     expect(screen.getByText("Ana Pérez")).toBeInTheDocument();
