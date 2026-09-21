@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Registro } from "./Registro";
-import { renderizar, sinSesion } from "@/pruebas/utilidades";
+import { escribirFecha, renderizar, sinSesion } from "@/pruebas/utilidades";
 import { ErrorApi } from "@/lib/api/cliente";
 
 const navegar = vi.fn();
@@ -27,7 +27,7 @@ async function completarPersona() {
   await userEvent.type(screen.getByLabelText("Nombre"), "Ana");
   await userEvent.type(screen.getByLabelText("Apellido"), "Pérez");
   await userEvent.type(screen.getByLabelText("DNI"), "40123456");
-  await userEvent.type(screen.getByLabelText(/fecha de nacimiento/i), "1997-03-08");
+  await escribirFecha(screen.getByLabelText(/fecha de nacimiento/i), "1997-03-08");
   await userEvent.type(screen.getByLabelText("CUIL"), "20-40123456-7");
   await userEvent.type(screen.getByLabelText("Contraseña"), "clave-segura-1");
 }
@@ -77,7 +77,7 @@ describe("validación", () => {
     renderizar(<Registro />);
     await completarPersona();
     await userEvent.clear(screen.getByLabelText(/fecha de nacimiento/i));
-    await userEvent.type(screen.getByLabelText(/fecha de nacimiento/i), "2099-01-01");
+    await escribirFecha(screen.getByLabelText(/fecha de nacimiento/i), "2099-01-01");
     await userEvent.click(screen.getByRole("button", { name: /crear cuenta/i }));
 
     expect(await screen.findByText(/anterior a hoy/i)).toBeInTheDocument();

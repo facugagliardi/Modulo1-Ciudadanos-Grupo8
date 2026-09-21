@@ -6,6 +6,7 @@ import { mensajeAmable } from "@/lib/api/cliente";
 import { soloDigitos } from "@/lib/dominio/formato";
 import { Button } from "@/componentes/ui/button";
 import { Campo } from "@/componentes/ui/campo";
+import { CampoFecha, hoyISO } from "@/componentes/ui/fecha";
 
 /**
  * Alta de persona física o jurídica.
@@ -170,11 +171,10 @@ export function Registro() {
                 onChange={(e) => cambiar("dni", e.target.value)}
                 error={errores.dni}
               />
-              <Campo
+              <CampoFecha
                 etiqueta="Fecha de nacimiento"
                 obligatorio
-                type="date"
-                max={new Date().toISOString().slice(0, 10)}
+                max={hoyISO()}
                 value={valores.fechaNacimiento}
                 onChange={(e) => cambiar("fechaNacimiento", e.target.value)}
                 error={errores.fechaNacimiento}

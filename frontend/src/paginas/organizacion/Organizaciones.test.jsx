@@ -5,7 +5,7 @@ import { DetalleOrganizacion } from "./DetalleOrganizacion";
 import { NuevaOrganizacion } from "./NuevaOrganizacion";
 import { Organizaciones } from "../admin/Organizaciones";
 import { MisOrganizaciones } from "../portal/MisOrganizaciones";
-import { conSesion, renderizar } from "@/pruebas/utilidades";
+import { conSesion, elegirOpcion, escribirFecha, renderizar } from "@/pruebas/utilidades";
 import { ErrorApi } from "@/lib/api/cliente";
 
 const navegar = vi.fn();
@@ -21,7 +21,9 @@ const actualizarOrganizacion = vi.fn();
 const cambiarEstadoOrganizacion = vi.fn();
 const buscarPorCuit = vi.fn();
 const agregarDueno = vi.fn();
+const actualizarDueno = vi.fn();
 const quitarDueno = vi.fn();
+const listarOrganizacionesDeDueno = vi.fn();
 const listarRepresentacionesDeOrganizacion = vi.fn();
 const crearRepresentacion = vi.fn();
 const cambiarEstadoRepresentacion = vi.fn();
@@ -36,7 +38,9 @@ vi.mock("@/lib/api/endpoints/organizaciones", () => ({
   cambiarEstadoOrganizacion: (...a) => cambiarEstadoOrganizacion(...a),
   buscarPorCuit: (...a) => buscarPorCuit(...a),
   agregarDueno: (...a) => agregarDueno(...a),
+  actualizarDueno: (...a) => actualizarDueno(...a),
   quitarDueno: (...a) => quitarDueno(...a),
+  listarOrganizacionesDeDueno: (...a) => listarOrganizacionesDeDueno(...a),
 }));
 vi.mock("@/lib/api/endpoints/representaciones", () => ({
   listarRepresentacionesDeOrganizacion: (...a) => listarRepresentacionesDeOrganizacion(...a),
@@ -77,7 +81,8 @@ function detalle(zona = "admin") {
 beforeEach(() => {
   navegar.mockClear();
   [listarOrganizaciones, obtenerOrganizacion, crearOrganizacion, actualizarOrganizacion,
-   cambiarEstadoOrganizacion, buscarPorCuit, agregarDueno, quitarDueno,
+   cambiarEstadoOrganizacion, buscarPorCuit, agregarDueno, actualizarDueno, quitarDueno,
+   listarOrganizacionesDeDueno,
    listarRepresentacionesDeOrganizacion, crearRepresentacion, cambiarEstadoRepresentacion,
    listarRepresentaciones, buscarPorDni].forEach((m) => m.mockReset());
 
@@ -108,7 +113,7 @@ describe("listado del backoffice", () => {
     listarOrganizaciones.mockResolvedValue([ORG, { ...ORG, organizacionId: 2, razonSocial: "Coop El Sol", tipo: "COOPERATIVA" }]);
     renderizar(<Organizaciones />);
     await screen.findByText("Kiosco del Barrio SRL");
-    await userEvent.selectOptions(screen.getByLabelText("Tipo"), "COOPERATIVA");
+    await elegirOpcion(screen.getByLabelText("Tipo"), "COOPERATIVA");
 
     expect(screen.getByText("Coop El Sol")).toBeInTheDocument();
     expect(screen.queryByText("Kiosco del Barrio SRL")).not.toBeInTheDocument();
@@ -247,6 +252,102 @@ describe("dueños", () => {
     expect(await screen.findByText(/queda 40% disponible/i)).toBeInTheDocument();
   });
 
+  /**
+   * La transferencia de titularidad.
+   *
+   * Entra un socio y los que ya estaban se diluyen: el porcentaje del nuevo
+   * sale del de otro dueño, no del pool sin asignar.
+   */
+  async function abrirAgregarDueno() {
+    detalle();
+    await userEvent.click(await screen.findByRole("tab", { name: /dueños/i }));
+    await userEvent.click(await screen.findByRole("button", { name: /agregar dueño/i }));
+    await userEvent.type(await screen.findByLabelText(/dni del nuevo dueño/i), "40123456");
+    await userEvent.click(screen.getByRole("button", { name: "Buscar" }));
+    await screen.findByLabelText(/porcentaje/i);
+  }
+
+  it("transfiere el porcentaje: baja al que cede ANTES de agregar al nuevo", async () => {
+    // El orden importa: al revés, en el instante intermedio la suma pasaría de
+    // 100 y el backend contesta 409.
+    const orden = [];
+    actualizarDueno.mockImplementation(async () => orden.push("PUT"));
+    agregarDueno.mockImplementation(async () => orden.push("POST"));
+
+    await abrirAgregarDueno();
+    await userEvent.type(screen.getByLabelText(/porcentaje/i), "20");
+    await elegirOpcion("¿De dónde sale?", "1");
+    await userEvent.click(screen.getByRole("button", { name: /^agregar dueño$/i }));
+
+    await waitFor(() => expect(agregarDueno).toHaveBeenCalled());
+    expect(actualizarDueno).toHaveBeenCalledWith(1, 1, 40); // Diego: 60 - 20
+    expect(agregarDueno).toHaveBeenCalledWith(1, { personaId: 5, porcentajeTitularidad: 20 });
+    expect(orden).toEqual(["PUT", "POST"]);
+  });
+
+  it("muestra la resta en vivo antes de confirmar", async () => {
+    await abrirAgregarDueno();
+    await userEvent.type(screen.getByLabelText(/porcentaje/i), "20");
+    await elegirOpcion("¿De dónde sale?", "1");
+
+    expect(await screen.findByText(/pasa de 60% a/i)).toBeInTheDocument();
+  });
+
+  it("no deja que el cedente ceda más de lo que tiene", async () => {
+    await abrirAgregarDueno();
+    await userEvent.type(screen.getByLabelText(/porcentaje/i), "80");
+    await elegirOpcion("¿De dónde sale?", "1");
+    await userEvent.click(screen.getByRole("button", { name: /^agregar dueño$/i }));
+
+    expect(await screen.findByText(/no puede ceder más/i)).toBeInTheDocument();
+    expect(actualizarDueno).not.toHaveBeenCalled();
+    expect(agregarDueno).not.toHaveBeenCalled();
+  });
+
+  it("no deja que el cedente quede en 0%: para eso se lo quita", async () => {
+    // El backend exige un porcentaje mayor que 0, así que ceder todo no es
+    // una transferencia: es dar de baja a un dueño.
+    await abrirAgregarDueno();
+    await userEvent.type(screen.getByLabelText(/porcentaje/i), "60");
+    await elegirOpcion("¿De dónde sale?", "1");
+    await userEvent.click(screen.getByRole("button", { name: /^agregar dueño$/i }));
+
+    expect(await screen.findByText(/quedaría en 0%/i)).toBeInTheDocument();
+    expect(actualizarDueno).not.toHaveBeenCalled();
+  });
+
+  it("cediendo, el porcentaje deja de ser opcional", async () => {
+    await abrirAgregarDueno();
+    await elegirOpcion("¿De dónde sale?", "1");
+    await userEvent.click(screen.getByRole("button", { name: /^agregar dueño$/i }));
+
+    expect(await screen.findByText(/indicá cuánto le transferís/i)).toBeInTheDocument();
+  });
+
+  it("si el alta falla después de descontar, avisa que quedó porcentaje suelto", async () => {
+    // La transferencia no es atómica: el backend no expone una sola operación.
+    // Si el segundo paso falla, el porcentaje descontado queda sin asignar, y
+    // callarlo dejaría la titularidad descuadrada sin que nadie se entere.
+    actualizarDueno.mockResolvedValue({});
+    agregarDueno.mockRejectedValue(new ErrorApi({ status: 500, message: "boom" }));
+
+    await abrirAgregarDueno();
+    await userEvent.type(screen.getByLabelText(/porcentaje/i), "20");
+    await elegirOpcion("¿De dónde sale?", "1");
+    await userEvent.click(screen.getByRole("button", { name: /^agregar dueño$/i }));
+
+    expect(await screen.findByText(/quedó sin asignar/i)).toBeInTheDocument();
+  });
+
+  it("sin ceder de nadie, el porcentaje sale del pool sin asignar", async () => {
+    await abrirAgregarDueno();
+    await userEvent.type(screen.getByLabelText(/porcentaje/i), "30");
+    await userEvent.click(screen.getByRole("button", { name: /^agregar dueño$/i }));
+
+    await waitFor(() => expect(agregarDueno).toHaveBeenCalled());
+    expect(actualizarDueno).not.toHaveBeenCalled();
+  });
+
   it("no deja pasarse del 100% antes de llamar al backend", async () => {
     detalle();
     await userEvent.click(await screen.findByRole("tab", { name: /dueños/i }));
@@ -285,7 +386,7 @@ describe("representaciones", () => {
     await userEvent.type(await screen.findByLabelText(/dni del representante/i), "40123456");
     await userEvent.click(screen.getByRole("button", { name: "Buscar" }));
 
-    await userEvent.selectOptions(await screen.findByLabelText("Alcance"), "FIRMA");
+    await elegirOpcion(await screen.findByLabelText("Alcance"), "FIRMA");
     await userEvent.click(screen.getByRole("button", { name: /^otorgar representación$/i }));
 
     await waitFor(() => expect(crearRepresentacion).toHaveBeenCalled());
@@ -304,7 +405,7 @@ describe("representaciones", () => {
     await userEvent.type(await screen.findByLabelText(/dni del representante/i), "40123456");
     await userEvent.click(screen.getByRole("button", { name: "Buscar" }));
 
-    await userEvent.type(await screen.findByLabelText("Hasta"), "2020-01-01");
+    await escribirFecha(await screen.findByLabelText("Hasta"), "2020-01-01");
     await userEvent.click(screen.getByRole("button", { name: /^otorgar representación$/i }));
 
     expect(await screen.findByText(/no puede ser anterior al inicio/i)).toBeInTheDocument();
@@ -381,22 +482,67 @@ describe("alta de organización", () => {
 });
 
 describe("portal: mis organizaciones", () => {
-  it("se arma con las representaciones, que es la consulta que existe", async () => {
+  const comoVecino = () => conSesion({ id: 1, rol: "PERSONA", subType: "CIUDADANO" });
+
+  it("junta los dos vínculos: titularidad y representación", async () => {
+    listarOrganizacionesDeDueno.mockResolvedValue([
+      { organizacionId: 7, razonSocial: "Panaderia La Esquina SRL", porcentajeTitularidad: 100 },
+    ]);
     listarRepresentaciones.mockResolvedValue([
       { representacionId: 1, organizacionId: 1, razonSocial: "Kiosco del Barrio SRL",
         alcance: "TOTAL", desde: "2026-09-06", hasta: null, estado: "VIGENTE" },
     ]);
-    conSesion({ id: 1, rol: "PERSONA", subType: "CIUDADANO" });
+    comoVecino();
     renderizar(<MisOrganizaciones />);
 
-    expect(await screen.findByText("Kiosco del Barrio SRL")).toBeInTheDocument();
+    expect(await screen.findByText("Panaderia La Esquina SRL")).toBeInTheDocument();
+    expect(screen.getByText("Kiosco del Barrio SRL")).toBeInTheDocument();
+    expect(listarOrganizacionesDeDueno).toHaveBeenCalledWith(1, expect.anything());
     expect(listarRepresentaciones).toHaveBeenCalledWith(1, expect.anything());
   });
 
-  it("explica cómo se consigue una representación cuando no hay ninguna", async () => {
-    conSesion({ id: 1, rol: "PERSONA", subType: "CIUDADANO" });
+  /**
+   * La regresión que motivó todo esto.
+   *
+   * Registrar una organización te anota como DUEÑO, nunca como representante.
+   * Mientras la pantalla miraba sólo representaciones, la organización recién
+   * creada no aparecía nunca —ni recargando, ni volviendo a entrar—. Si alguien
+   * vuelve a dejar esta pantalla apoyada sólo en representaciones, esto falla.
+   */
+  it("muestra una organización donde sólo sos dueño, sin representación", async () => {
+    listarOrganizacionesDeDueno.mockResolvedValue([
+      { organizacionId: 7, razonSocial: "Panaderia La Esquina SRL", porcentajeTitularidad: 100 },
+    ]);
+    listarRepresentaciones.mockResolvedValue([]);
+    comoVecino();
     renderizar(<MisOrganizaciones />);
-    expect(await screen.findByText(/no representás a ninguna organización/i)).toBeInTheDocument();
+
+    expect(await screen.findByText("Panaderia La Esquina SRL")).toBeInTheDocument();
+    expect(screen.getByText(/dueño del 100%/i)).toBeInTheDocument();
+  });
+
+  it("no repite la organización donde sos dueño y representante a la vez", async () => {
+    listarOrganizacionesDeDueno.mockResolvedValue([
+      { organizacionId: 1, razonSocial: "Kiosco del Barrio SRL", porcentajeTitularidad: 40 },
+    ]);
+    listarRepresentaciones.mockResolvedValue([
+      { representacionId: 1, organizacionId: 1, razonSocial: "Kiosco del Barrio SRL",
+        alcance: "TOTAL", desde: "2026-09-06", hasta: null, estado: "VIGENTE" },
+    ]);
+    comoVecino();
+    renderizar(<MisOrganizaciones />);
+
+    expect(await screen.findAllByText("Kiosco del Barrio SRL")).toHaveLength(1);
+    expect(screen.getByText(/dueño del 40%/i)).toBeInTheDocument();
+  });
+
+  it("explica las dos formas de tener una organización cuando no hay ninguna", async () => {
+    listarOrganizacionesDeDueno.mockResolvedValue([]);
+    listarRepresentaciones.mockResolvedValue([]);
+    comoVecino();
+    renderizar(<MisOrganizaciones />);
+
+    expect(await screen.findByText(/todavía no tenés organizaciones/i)).toBeInTheDocument();
     expect(screen.getByText(/tiene que otorgarte la representación/i)).toBeInTheDocument();
   });
 });
