@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Familia } from "./Familia";
-import { conSesion, renderizar } from "@/pruebas/utilidades";
+import { conSesion, elegirOpcion, renderizar } from "@/pruebas/utilidades";
 import { ErrorApi } from "@/lib/api/cliente";
 
 const listarRelaciones = vi.fn();
@@ -107,14 +107,16 @@ describe("alta: los dos extremos del vínculo", () => {
     // Una hija puede tener padre o madre. Suponerlo escribiría un dato falso,
     // así que el campo queda vacío y se pregunta.
     await llegarAlPaso2();
-    await userEvent.selectOptions(screen.getByLabelText(/¿qué es ana pérez tuyo\?/i), "HIJA");
-    expect(screen.getByLabelText(/¿y vos qué sos/i)).toHaveValue("");
+    await elegirOpcion(screen.getByLabelText(/¿qué es ana pérez tuyo\?/i), "HIJA");
+    // `toHaveValue` no sirve: el desplegable dejó de ser un <select> y su
+    // disparador es un botón. El valor elegido se lee en `data-valor`.
+    expect(screen.getByLabelText(/¿y vos qué sos/i)).toHaveAttribute("data-valor", "");
     expect(screen.getByText(/no lo podemos deducir/i)).toBeInTheDocument();
   });
 
   it("no deja guardar sin elegir el otro extremo", async () => {
     await llegarAlPaso2();
-    await userEvent.selectOptions(screen.getByLabelText(/¿qué es ana pérez tuyo\?/i), "HIJA");
+    await elegirOpcion(screen.getByLabelText(/¿qué es ana pérez tuyo\?/i), "HIJA");
     await userEvent.click(screen.getByRole("button", { name: /^agregar vínculo$/i }));
 
     expect(await screen.findByText(/elegí qué sos vos/i)).toBeInTheDocument();
@@ -123,14 +125,14 @@ describe("alta: los dos extremos del vínculo", () => {
 
   it("sí propone el recíproco cuando el vínculo lo determina", async () => {
     await llegarAlPaso2();
-    await userEvent.selectOptions(screen.getByLabelText(/¿qué es ana pérez tuyo\?/i), "CONYUGE");
-    expect(screen.getByLabelText(/¿y vos qué sos/i)).toHaveValue("CONYUGE");
+    await elegirOpcion(screen.getByLabelText(/¿qué es ana pérez tuyo\?/i), "CONYUGE");
+    expect(screen.getByLabelText(/¿y vos qué sos/i)).toHaveAttribute("data-valor", "CONYUGE");
   });
 
   it("crea el vínculo declarando los dos extremos", async () => {
     await llegarAlPaso2();
-    await userEvent.selectOptions(screen.getByLabelText(/¿qué es ana pérez tuyo\?/i), "HIJA");
-    await userEvent.selectOptions(screen.getByLabelText(/¿y vos qué sos/i), "PADRE");
+    await elegirOpcion(screen.getByLabelText(/¿qué es ana pérez tuyo\?/i), "HIJA");
+    await elegirOpcion(screen.getByLabelText(/¿y vos qué sos/i), "PADRE");
     await userEvent.click(screen.getByRole("button", { name: /^agregar vínculo$/i }));
 
     await waitFor(() =>
@@ -147,7 +149,7 @@ describe("alta: los dos extremos del vínculo", () => {
   it("explica el 409 de vínculo duplicado", async () => {
     crearRelacion.mockRejectedValue(new ErrorApi({ status: 409, message: "duplicate" }));
     await llegarAlPaso2();
-    await userEvent.selectOptions(screen.getByLabelText(/¿y vos qué sos/i), "PADRE");
+    await elegirOpcion(screen.getByLabelText(/¿y vos qué sos/i), "PADRE");
     await userEvent.click(screen.getByRole("button", { name: /^agregar vínculo$/i }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent(/ya existe un vínculo/i);

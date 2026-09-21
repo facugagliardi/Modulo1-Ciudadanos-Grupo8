@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { AltaDeVecino, generarClave } from "./AltaDeVecino";
-import { conSesion, renderizar } from "@/pruebas/utilidades";
+import { conSesion, escribirFecha, renderizar } from "@/pruebas/utilidades";
 import { ErrorApi } from "@/lib/api/cliente";
 
 const registrarPersona = vi.fn();
@@ -23,7 +23,7 @@ const CREADO = {
 async function completar() {
   await userEvent.type(screen.getByLabelText("Nombre"), "Ana");
   await userEvent.type(screen.getByLabelText("Apellido"), "Pérez");
-  await userEvent.type(screen.getByLabelText(/fecha de nacimiento/i), "1997-03-08");
+  await escribirFecha(screen.getByLabelText(/fecha de nacimiento/i), "1997-03-08");
   await userEvent.type(screen.getByLabelText("CUIL"), "27401234564");
 }
 
@@ -150,7 +150,7 @@ describe("alta", () => {
     await userEvent.type(screen.getByLabelText("DNI"), "40123456");
     await completar();
     await userEvent.clear(screen.getByLabelText(/fecha de nacimiento/i));
-    await userEvent.type(screen.getByLabelText(/fecha de nacimiento/i), "2099-01-01");
+    await escribirFecha(screen.getByLabelText(/fecha de nacimiento/i), "2099-01-01");
     await userEvent.click(screen.getByRole("button", { name: /registrar vecino/i }));
 
     expect(await screen.findByText(/anterior a hoy/i)).toBeInTheDocument();

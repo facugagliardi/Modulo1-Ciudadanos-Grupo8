@@ -10,6 +10,7 @@ import { Cargando, ErrorEnPantalla } from "@/componentes/Estados";
 import { Encabezado } from "@/componentes/Encabezado";
 import { Button } from "@/componentes/ui/button";
 import { Campo } from "@/componentes/ui/campo";
+import { CampoFecha, hoyISO } from "@/componentes/ui/fecha";
 import { Card, CardCuerpo } from "@/componentes/ui/card";
 
 /**
@@ -118,11 +119,10 @@ export function Perfil() {
               </div>
 
               <div className="grid gap-u2 sm:grid-cols-3">
-                <Campo
+                <CampoFecha
                   etiqueta="Fecha de nacimiento"
                   obligatorio
-                  type="date"
-                  max={new Date().toISOString().slice(0, 10)}
+                  max={hoyISO()}
                   value={valores.fechaNacimiento}
                   onChange={(e) => cambiar("fechaNacimiento", e.target.value)}
                   error={errores.fechaNacimiento}

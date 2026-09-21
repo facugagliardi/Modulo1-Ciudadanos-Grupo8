@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Contactos } from "./Contactos";
-import { conSesion, renderizar } from "@/pruebas/utilidades";
+import { conSesion, elegirOpcion, renderizar } from "@/pruebas/utilidades";
 import { ErrorApi } from "@/lib/api/cliente";
 
 const listarContactos = vi.fn();
@@ -73,7 +73,7 @@ describe("alta", () => {
   it("valida el teléfono con la misma regla que el backend", async () => {
     renderizar(<Contactos />);
     await userEvent.click(await screen.findByRole("button", { name: /agregar contacto/i }));
-    await userEvent.selectOptions(await screen.findByLabelText("Tipo"), "TELEFONO");
+    await elegirOpcion(await screen.findByLabelText("Tipo"), "TELEFONO");
     await userEvent.type(screen.getByLabelText(/teléfono/i), "123");
     await userEvent.click(screen.getByRole("button", { name: /^agregar contacto$/i }));
 

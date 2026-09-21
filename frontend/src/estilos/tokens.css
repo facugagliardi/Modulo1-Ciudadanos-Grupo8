@@ -17,7 +17,7 @@
   /* --- Color -------------------------------------------------------------
      Contraste verificado sobre --papel (todos >= 4.5:1):
      tinta 15.9:1 · expediente 10.3:1 · vigente 5.7:1 · sello 5.7:1
-     alerta 5.5:1 · apagado 5.6:1                                          */
+     alerta 5.5:1 · apagado 11.9:1                                         */
   --tinta: #141a22; /* texto: negro de archivo, cast frio */
   --papel: #f8f7f4; /* fondo de la app: neutro calido */
   --superficie: #ffffff; /* tarjetas y tablas */
@@ -34,7 +34,11 @@
   --sello: #b3341f; /* SOLO terminales y destructivo */
   --sello-suave: #f8e7e3;
 
-  --apagado: #5b6472; /* texto secundario, aun legible */
+  /* Texto e iconos secundarios. Era #5b6472 (5.6:1). Se oscurecio a pedido:
+     la jerarquia ya no se apoya en el color sino en el tamano y el peso, que
+     es lo que hace el resto del sistema. Sigue siendo un token unico, asi que
+     texto e iconos secundarios se mueven juntos. */
+  --apagado: #2b333d; /* texto secundario, casi negro */
   --borde: #e4e1da;
   --borde-fuerte: #c9c4b8;
 
