@@ -3,6 +3,7 @@ package ar.edu.uade.ciudadanos.documentacion;
 import ar.edu.uade.ciudadanos.common.ApiException;
 import ar.edu.uade.ciudadanos.common.ListasBlancas;
 import ar.edu.uade.ciudadanos.documentacion.almacenamiento.AlmacenamientoArchivos;
+import ar.edu.uade.ciudadanos.documentacion.almacenamiento.AlmacenamientoLocal;
 import ar.edu.uade.ciudadanos.documentacion.almacenamiento.ArchivosPermitidos;
 import ar.edu.uade.ciudadanos.documentacion.dto.DocumentoCreadoResponse;
 import ar.edu.uade.ciudadanos.documentacion.dto.DocumentoResponse;
@@ -18,6 +19,8 @@ import ar.edu.uade.ciudadanos.security.Permiso;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.List;
+import org.springframework.core.io.Resource;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -102,6 +105,37 @@ public class DocumentoService {
         Documento documento = buscar(documentoId);
         autorizacion.exigirLecturaDePersona(documento.getPersonaId());
         return DocumentoResponse.de(documento);
+    }
+
+    /**
+     * El archivo de la ultima version, para verlo o descargarlo.
+     *
+     * <p>Misma autorizacion que {@link #obtener}: si alguien puede ver la ficha
+     * del documento, puede ver el documento. Separar esos dos permisos seria
+     * una distincion sin sentido -- la ficha ya dice de quien es y de que tipo.
+     */
+    @Transactional(readOnly = true)
+    public ArchivoDeDocumento archivoDe(Long documentoId) {
+        Documento documento = buscar(documentoId);
+        autorizacion.exigirLecturaDePersona(documento.getPersonaId());
+
+        String referencia = documento.getUrlArchivo();
+        return new ArchivoDeDocumento(
+                almacenamiento.leer(referencia),
+                AlmacenamientoLocal.tipoDe(referencia),
+                // Nombre para la descarga: el del documento, no el del disco.
+                documento.getTipoDocumento().toLowerCase() + "-v" + documento.getVersion()
+                        + extensionDe(referencia));
+    }
+
+    private static String extensionDe(String referencia) {
+        if (referencia == null) return "";
+        int punto = referencia.lastIndexOf('.');
+        return punto < 0 ? "" : referencia.substring(punto).toLowerCase();
+    }
+
+    /** Lo que hace falta para responder el binario con sus cabeceras. */
+    public record ArchivoDeDocumento(Resource recurso, MediaType tipo, String nombre) {
     }
 
     /** RF-25, RF-26. Validar es potestad del municipio, no del titular. */
