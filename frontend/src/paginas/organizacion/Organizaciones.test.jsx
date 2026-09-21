@@ -241,6 +241,83 @@ describe("dueños", () => {
     await waitFor(() => expect(quitarDueno).toHaveBeenCalledWith(1, 2));
   });
 
+  /**
+   * El espejo de la transferencia al agregar: quien se va le deja lo suyo a
+   * alguien. Sin esto, quitar a un dueño con 20% evaporaba ese 20%.
+   */
+  async function abrirQuitarAna() {
+    obtenerOrganizacion.mockResolvedValue({
+      ...ORG,
+      duenos: [
+        ...ORG.duenos,
+        { personaId: 2, dni: "40123456", nombre: "Ana", apellido: "Pérez", porcentajeTitularidad: 40 },
+      ],
+    });
+    detalle();
+    await userEvent.click(await screen.findByRole("tab", { name: /dueños/i }));
+    await userEvent.click(await screen.findByRole("button", { name: /quitar a ana/i }));
+    await screen.findByText(/a quién le pasa su 40%/i);
+  }
+
+  it("al quitar un dueño, transfiere su porcentaje al que se elija", async () => {
+    const orden = [];
+    quitarDueno.mockImplementation(async () => orden.push("quitar"));
+    actualizarDueno.mockImplementation(async () => orden.push("actualizar"));
+
+    await abrirQuitarAna();
+    await elegirOpcion(/a quién le pasa su 40%/i, "1");
+    await userEvent.click(screen.getByRole("button", { name: /quitar y transferir/i }));
+
+    await waitFor(() => expect(actualizarDueno).toHaveBeenCalled());
+    expect(quitarDueno).toHaveBeenCalledWith(1, 2);
+    expect(actualizarDueno).toHaveBeenCalledWith(1, 1, 100); // Diego: 60 + 40
+    // Quitar primero: si se subiera al receptor antes, en el instante
+    // intermedio la suma pasaría de 100 y el backend contesta 409.
+    expect(orden).toEqual(["quitar", "actualizar"]);
+  });
+
+  it("muestra a cuánto queda el receptor antes de confirmar", async () => {
+    await abrirQuitarAna();
+    await elegirOpcion(/a quién le pasa su 40%/i, "1");
+
+    expect(await screen.findByText(/pasa de 60% a/i)).toBeInTheDocument();
+  });
+
+  it("se puede quitar sin transferirle a nadie: el porcentaje queda suelto", async () => {
+    await abrirQuitarAna();
+    await userEvent.click(screen.getByRole("button", { name: /^quitar dueño$/i }));
+
+    await waitFor(() => expect(quitarDueno).toHaveBeenCalledWith(1, 2));
+    expect(actualizarDueno).not.toHaveBeenCalled();
+  });
+
+  it("si la baja entró pero el traspaso falló, lo dice", async () => {
+    // Las dos llamadas no son atómicas: callarlo dejaría la titularidad
+    // descuadrada sin que nadie se entere.
+    actualizarDueno.mockRejectedValue(new ErrorApi({ status: 500, message: "boom" }));
+
+    await abrirQuitarAna();
+    await elegirOpcion(/a quién le pasa su 40%/i, "1");
+    await userEvent.click(screen.getByRole("button", { name: /quitar y transferir/i }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(/quedó sin asignar/i);
+  });
+
+  it("si el dueño no tiene porcentaje, no pregunta a quién transferirle", async () => {
+    obtenerOrganizacion.mockResolvedValue({
+      ...ORG,
+      duenos: [
+        ...ORG.duenos,
+        { personaId: 2, dni: "40123456", nombre: "Ana", apellido: "Pérez", porcentajeTitularidad: null },
+      ],
+    });
+    detalle();
+    await userEvent.click(await screen.findByRole("tab", { name: /dueños/i }));
+    await userEvent.click(await screen.findByRole("button", { name: /quitar a ana/i }));
+
+    expect(await screen.findByText(/no hay titularidad que transferir/i)).toBeInTheDocument();
+  });
+
   it("avisa cuánta titularidad queda disponible", async () => {
     // 60% ya asignado: sólo quedan 40.
     detalle();

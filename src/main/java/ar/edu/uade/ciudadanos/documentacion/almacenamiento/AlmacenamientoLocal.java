@@ -3,12 +3,17 @@ package ar.edu.uade.ciudadanos.documentacion.almacenamiento;
 import ar.edu.uade.ciudadanos.common.ApiException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URI;
+import java.nio.file.FileSystemNotFoundException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.FileSystemResource;
+import org.springframework.core.io.Resource;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -49,6 +54,59 @@ public class AlmacenamientoLocal implements AlmacenamientoArchivos {
         }
 
         return destino.toUri().toString();
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * <p>Antes de abrir nada se comprueba que la ruta caiga bajo el directorio
+     * raiz. La referencia viene de la base, y si alguien lograra escribir ahi
+     * un {@code file:///etc/passwd} este metodo lo serviria sin chistar: el
+     * endpoint que lo usa esta autenticado, pero autenticado no quiere decir
+     * autorizado a leer el disco del servidor.
+     */
+    @Override
+    public Resource leer(String referencia) {
+        if (referencia == null || referencia.isBlank()) {
+            throw ApiException.noEncontrado("El documento no tiene archivo asociado");
+        }
+
+        Path archivo;
+        try {
+            archivo = Path.of(URI.create(referencia)).toAbsolutePath().normalize();
+        } catch (IllegalArgumentException | FileSystemNotFoundException e) {
+            log.error("Referencia de archivo ilegible: {}", referencia, e);
+            throw ApiException.noEncontrado("No se pudo ubicar el archivo del documento");
+        }
+
+        if (!archivo.startsWith(raiz)) {
+            log.error("Referencia fuera del directorio de almacenamiento: {}", archivo);
+            throw ApiException.noEncontrado("No se pudo ubicar el archivo del documento");
+        }
+
+        Resource recurso = new FileSystemResource(archivo);
+        if (!recurso.exists() || !recurso.isReadable()) {
+            // El archivo estaba y ya no: la fila quedo apuntando a la nada.
+            throw ApiException.noEncontrado("El archivo del documento ya no esta disponible");
+        }
+        return recurso;
+    }
+
+    /**
+     * El content-type con el que se devuelve el archivo.
+     *
+     * <p>Sale de la extension y no de lo que declaro el navegador al subirlo:
+     * eso ni siquiera se guarda, y ademas es falseable. La lista es la misma
+     * que acepta {@link ArchivosPermitidos}, asi que no puede salir de aca algo
+     * que no se haya dejado entrar.
+     */
+    public static MediaType tipoDe(String referencia) {
+        String ruta = referencia == null ? "" : referencia.toLowerCase();
+        if (ruta.endsWith(".pdf")) return MediaType.APPLICATION_PDF;
+        if (ruta.endsWith(".png")) return MediaType.IMAGE_PNG;
+        if (ruta.endsWith(".jpg") || ruta.endsWith(".jpeg")) return MediaType.IMAGE_JPEG;
+        if (ruta.endsWith(".webp")) return MediaType.parseMediaType("image/webp");
+        return MediaType.APPLICATION_OCTET_STREAM;
     }
 
     /** Toma la extension del nombre original, ya validado contra lista blanca. */
