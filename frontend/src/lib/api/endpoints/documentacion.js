@@ -1,4 +1,4 @@
-import { get, patch, pedir, post } from "../cliente";
+import { get, getBlob, patch, pedir, post } from "../cliente";
 import { cuerpo } from "../campos";
 import { ARCHIVOS_PERMITIDOS } from "../../dominio/listasBlancas";
 
@@ -25,6 +25,17 @@ export function subirVersion(documentoId, archivo) {
 
 export function obtenerDocumento(id, senal) {
   return get(`/documentos/${id}`, senal);
+}
+
+/**
+ * El archivo en sí, como Blob.
+ *
+ * El `Content-Type` viaja en el Blob, así que quien lo muestra puede decidir
+ * con `blob.type` si es un PDF o una imagen sin tener que adivinar por el
+ * nombre.
+ */
+export function obtenerArchivoDocumento(id, senal) {
+  return getBlob(`/documentos/${id}/archivo`, senal);
 }
 
 export function validarDocumento(id, { aprobado, vigenciaHasta }) {
