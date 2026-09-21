@@ -1,4 +1,4 @@
-# Instalación — qué necesitás para correr la API y la base
+q# Instalación — qué necesitás para correr la API y la base
 
 Guía para dejar el proyecto andando desde cero en una máquina nueva.
 Al final hay una [verificación completa](#7-verificación-de-punta-a-punta) para confirmar que quedó bien.
