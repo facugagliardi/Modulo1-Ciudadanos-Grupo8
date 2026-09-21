@@ -17,7 +17,8 @@ DROP DATABASE IF EXISTS ciudadanos_m1;
 CREATE DATABASE ciudadanos_m1
     WITH OWNER = ciudadanos_app
          ENCODING = 'UTF8'
-
+         LC_COLLATE = 'C'
+         LC_CTYPE = 'C'
          TEMPLATE = template0;
 
 COMMENT ON DATABASE ciudadanos_m1 IS 'Modulo 1 - personas, organizaciones, documentacion y expedientes';

@@ -1,10 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { screen, within } from "@testing-library/react";
+import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Expedientes } from "./Expedientes";
 import { NuevoExpediente } from "./NuevoExpediente";
 import { MisExpedientes } from "../portal/MisExpedientes";
-import { conSesion, renderizar } from "@/pruebas/utilidades";
+import { conSesion, elegirOpcion, opcionesDe, renderizar } from "@/pruebas/utilidades";
 
 const navegar = vi.fn();
 vi.mock("react-router-dom", async () => {
@@ -56,15 +56,13 @@ describe("listado del backoffice", () => {
     // areaIniciadora es texto libre en el backend: no hay lista fija que copiar.
     renderizar(<Expedientes />);
     await screen.findByText("EXP-2026-000001");
-    const filtro = screen.getByLabelText("Área");
-    const opciones = [...within(filtro).getAllByRole("option")].map((o) => o.textContent);
-    expect(opciones).toEqual(["Todos", "Habilitaciones", "Obras", "Rentas"]);
+    expect(await opcionesDe("Área")).toEqual(["Todos", "Habilitaciones", "Obras", "Rentas"]);
   });
 
   it("filtra por área", async () => {
     renderizar(<Expedientes />);
     await screen.findByText("EXP-2026-000001");
-    await userEvent.selectOptions(screen.getByLabelText("Área"), "Obras");
+    await elegirOpcion(screen.getByLabelText("Área"), "Obras");
 
     expect(screen.getByText("Reclamo por bache")).toBeInTheDocument();
     expect(screen.queryByText("Habilitación comercial")).not.toBeInTheDocument();

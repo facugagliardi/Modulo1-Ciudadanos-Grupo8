@@ -3,7 +3,7 @@ import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { DocumentacionSolicitada } from "./DocumentacionSolicitada";
 import { MisDocumentos } from "./MisDocumentos";
-import { conSesion, renderizar } from "@/pruebas/utilidades";
+import { conSesion, elegirOpcion, renderizar } from "@/pruebas/utilidades";
 import { ErrorApi } from "@/lib/api/cliente";
 
 const listarSolicitudes = vi.fn();
@@ -138,7 +138,7 @@ describe("entrega: dos pedidos encadenados en una sola acción", () => {
     await userEvent.click(await screen.findByRole("button", { name: /entregar/i }));
 
     const selector = await screen.findByLabelText(/ya lo tenías subido/i);
-    await userEvent.selectOptions(selector, "9");
+    await elegirOpcion(selector, "9");
     await userEvent.click(screen.getByRole("button", { name: /entregar documento/i }));
 
     await waitFor(() =>

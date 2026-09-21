@@ -1,20 +1,20 @@
-===============================================================================
-M1 - Ciudadanos, Organizaciones y Expedientes Digitales
-Colecciones de MongoDB: evento_outbox y evento_procesado
-
-Fuente: diagrama_db_desarrollo_de_apps_2.json (draw.io).
-
-Como ejecutarlo:
-    mongosh "mongodb://localhost:27017" --file mongodb_setup.txt
-
-o pegando el contenido en una sesion de mongosh.
-
-Por que Mongo y no Postgres: el payload de cada evento cambia por eventType
-(ver la tabla de eventos publicados en ARCHITECTURE.md), asi que no tiene un
-esquema fijo. Lo transaccional queda en Postgres.
-
-El schema validator de abajo valida el sobre del evento y deja libre el payload.
-===============================================================================
+// ===============================================================================
+// M1 - Ciudadanos, Organizaciones y Expedientes Digitales
+// Colecciones de MongoDB: evento_outbox y evento_procesado
+//
+// Fuente: diagrama_db_desarrollo_de_apps_2.json (draw.io).
+//
+// Como ejecutarlo:
+//     mongosh "mongodb://localhost:27017" --file mongodb_setup.txt
+//
+// o pegando el contenido en una sesion de mongosh.
+//
+// Por que Mongo y no Postgres: el payload de cada evento cambia por eventType
+// (ver la tabla de eventos publicados en ARCHITECTURE.md), asi que no tiene un
+// esquema fijo. Lo transaccional queda en Postgres.
+//
+// El schema validator de abajo valida el sobre del evento y deja libre el payload.
+// ===============================================================================
 
 // Base de datos del modulo. Coincide con MONGO_URI en application.yml.
 db = db.getSiblingDB("ciudadanos_m1_eventos");
@@ -137,11 +137,11 @@ print("Indices evento_outbox:    " + db.evento_outbox.getIndexes().map(i => i.na
 print("Indices evento_procesado: " + db.evento_procesado.getIndexes().map(i => i.name).join(", "));
 
 
-===============================================================================
-NOTA sobre application.yml
-
-spring.data.mongodb.auto-index-creation esta en true, asi que Spring Data crea
-los indices declarados con @Indexed en las clases del paquete evento.document.
-Este archivo cubre lo que las anotaciones no expresan: los schema validators,
-los indices compuestos y el TTL. Correrlo igual antes del primer arranque.
-===============================================================================
+// ===============================================================================
+// NOTA sobre application.yml
+//
+// spring.data.mongodb.auto-index-creation esta en true, asi que Spring Data crea
+// los indices declarados con @Indexed en las clases del paquete evento.document.
+// Este archivo cubre lo que las anotaciones no expresan: los schema validators,
+// los indices compuestos y el TTL. Correrlo igual antes del primer arranque.
+// ===============================================================================
