@@ -7,6 +7,9 @@ import ar.edu.uade.ciudadanos.documentacion.dto.DocumentoResumenResponse;
 import ar.edu.uade.ciudadanos.documentacion.dto.DocumentoValidadoResponse;
 import ar.edu.uade.ciudadanos.documentacion.dto.ValidarDocumentoRequest;
 import jakarta.validation.Valid;
+import org.springframework.core.io.Resource;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -53,6 +56,22 @@ public class DocumentoController {
     public ResponseEntity<DocumentoCreadoResponse> nuevaVersion(@PathVariable Long id,
                                                                 @RequestPart MultipartFile archivo) {
         return ResponseEntity.status(HttpStatus.CREATED).body(documentoService.nuevaVersion(id, archivo));
+    }
+
+    /**
+     * El binario del documento, para verlo en pantalla.
+     *
+     * <p>Va {@code inline} y no {@code attachment}: quien valida necesita
+     * mirarlo, no bajarlo. El navegador igual deja guardarlo si quiere.
+     */
+    @GetMapping("/documentos/{id}/archivo")
+    public ResponseEntity<Resource> archivo(@PathVariable Long id) {
+        DocumentoService.ArchivoDeDocumento archivo = documentoService.archivoDe(id);
+        return ResponseEntity.ok()
+                .contentType(archivo.tipo())
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        ContentDisposition.inline().filename(archivo.nombre()).build().toString())
+                .body(archivo.recurso());
     }
 
     @PatchMapping("/documentos/{id}/validar")

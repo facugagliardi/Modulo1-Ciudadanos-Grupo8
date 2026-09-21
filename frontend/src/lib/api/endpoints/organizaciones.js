@@ -16,6 +16,20 @@ export async function listarOrganizaciones(senal) {
   return res?.items ?? [];
 }
 
+/**
+ * Las organizaciones donde la persona es dueña.
+ *
+ * No es lo mismo que `listarRepresentaciones`: el alta de una organización
+ * anota al creador como **dueño**, no como representante. Sin esta consulta,
+ * una organización recién registrada no aparecía en ningún lado del portal.
+ *
+ * Cada item trae además el `porcentajeTitularidad` de esa persona.
+ */
+export async function listarOrganizacionesDeDueno(personaId, senal) {
+  const res = await get(`/personas/${personaId}/organizaciones`, senal);
+  return res?.items ?? [];
+}
+
 /** Trae dueños, representantes vigentes y domicilio principal en un solo pedido. */
 export function obtenerOrganizacion(id, senal) {
   return get(`/organizaciones/${id}`, senal);
@@ -52,6 +66,20 @@ export async function listarDuenos(organizacionId, senal) {
 /** 409 si ya es dueño, o si la suma de titularidades supera 100. */
 export function agregarDueno(organizacionId, datos) {
   return post(`/organizaciones/${organizacionId}/duenos`, cuerpo("agregarDueno", datos));
+}
+
+/**
+ * Cambia el porcentaje de un dueño que ya está en la organización.
+ *
+ * Es la pieza que hace posible transferir titularidad: para que entre un dueño
+ * nuevo con 20%, alguien tiene que ceder esos 20 puntos primero. El backend
+ * valida 0,01–100 y rechaza con 409 si la suma pasa de 100.
+ */
+export function actualizarDueno(organizacionId, personaId, porcentajeTitularidad) {
+  return put(
+    `/organizaciones/${organizacionId}/duenos/${personaId}`,
+    cuerpo("actualizarDueno", { porcentajeTitularidad }),
+  );
 }
 
 /** 409 si es el único dueño: una organización no puede quedarse sin ninguno. */
