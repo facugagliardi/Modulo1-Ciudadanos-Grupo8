@@ -6,6 +6,7 @@ import ar.edu.uade.ciudadanos.documentacion.almacenamiento.AlmacenamientoArchivo
 import ar.edu.uade.ciudadanos.documentacion.almacenamiento.AlmacenamientoLocal;
 import ar.edu.uade.ciudadanos.documentacion.almacenamiento.ArchivosPermitidos;
 import ar.edu.uade.ciudadanos.documentacion.dto.DocumentoCreadoResponse;
+import ar.edu.uade.ciudadanos.documentacion.dto.DocumentoPendienteResponse;
 import ar.edu.uade.ciudadanos.documentacion.dto.DocumentoResponse;
 import ar.edu.uade.ciudadanos.documentacion.dto.DocumentoResumenResponse;
 import ar.edu.uade.ciudadanos.documentacion.dto.DocumentoValidadoResponse;
@@ -98,6 +99,14 @@ public class DocumentoService {
         directorio.exigirQueExista(personaId);
         autorizacion.exigirLecturaDePersona(personaId);
         return documentoRepository.findByPersonaId(personaId).stream().map(DocumentoResumenResponse::de).toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<DocumentoPendienteResponse> listarPendientes() {
+        autorizacion.exigir(Permiso.VALIDAR_DOCUMENTACION, "listar documentos pendientes");
+        return documentoRepository.findByResultadoValidacion(ResultadoValidacion.PENDIENTE).stream()
+                .map(DocumentoPendienteResponse::de)
+                .toList();
     }
 
     @Transactional(readOnly = true)

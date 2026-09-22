@@ -12,7 +12,7 @@
 -- (spring.jpa.hibernate.ddl-auto=validate): si cambia una entidad, cambia aca.
 -- Los estados van como VARCHAR + CHECK porque las entidades usan
 -- @Enumerated(EnumType.STRING).
--- =============================================================================
+-- ======
 
 BEGIN;
 
@@ -169,6 +169,8 @@ CREATE TABLE organizacion (
 );
 
 -- Duenos/titulares (RF-19).
+
+
 CREATE TABLE persona_organizacion (
     id_persona             BIGINT      NOT NULL,
     id_organizacion        BIGINT      NOT NULL,
