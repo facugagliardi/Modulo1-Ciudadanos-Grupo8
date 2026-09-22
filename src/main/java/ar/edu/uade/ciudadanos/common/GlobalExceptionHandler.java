@@ -23,6 +23,7 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.multipart.support.MissingServletRequestPartException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
+import org.springframework.web.context.request.async.AsyncRequestNotUsableException;
 
 /** Traduce excepciones al contrato de errores (400/401/403/404/405/409/413/500). */
 @RestControllerAdvice
@@ -142,6 +143,12 @@ public class GlobalExceptionHandler {
                                                                  HttpServletRequest request) {
         return responder(HttpStatus.METHOD_NOT_ALLOWED,
                 "Metodo " + ex.getMethod() + " no permitido en esta ruta", request);
+    }
+
+    /** Cuando el cliente cierra la conexion abruptamente (Tubería rota) durante la descarga. */
+    @ExceptionHandler(AsyncRequestNotUsableException.class)
+    public void handleClienteDesconectado(AsyncRequestNotUsableException ex, HttpServletRequest request) {
+        log.warn("El cliente se desconecto antes de terminar la respuesta en {}: {}", request.getRequestURI(), ex.getMessage());
     }
 
     @ExceptionHandler(Exception.class)
