@@ -61,6 +61,11 @@ export function revisarArchivo(archivo) {
   return null;
 }
 
+export async function listarDocumentosPendientes(senal) {
+  const res = await get("/documentos/pendientes", senal);
+  return res?.items ?? [];
+}
+
 // --- Solicitudes de documentación -------------------------------------------
 
 /**

@@ -1,7 +1,7 @@
 import { useCallback, useState } from "react";
 import { Link } from "react-router-dom";
 import { Eye, FilePlus2 } from "lucide-react";
-import { cambiarEstadoSolicitud, crearSolicitud, listarSolicitudes } from "@/lib/api/endpoints/documentacion";
+import { cambiarEstadoSolicitud, crearSolicitud, listarSolicitudes, listarDocumentosPendientes } from "@/lib/api/endpoints/documentacion";
 import { buscarPorDni } from "@/lib/api/endpoints/ciudadanos";
 import { useRecurso } from "@/lib/useRecurso";
 import { usePermiso } from "@/lib/auth/SesionContext";
@@ -20,6 +20,7 @@ import { Button } from "@/componentes/ui/button";
 import { Campo, Selector } from "@/componentes/ui/campo";
 import { CampoFecha, hoyISO, sumarDiasISO } from "@/componentes/ui/fecha";
 import { CerrarDialogo, ContenidoDialogo, Dialogo, DisparadorDialogo } from "@/componentes/ui/dialog";
+import { Pestanias, ListaPestanias, Pestania, PanelPestania } from "@/componentes/ui/tabs";
 
 /**
  * Las solicitudes de documentación que emite el municipio.
@@ -177,33 +178,121 @@ export function Documentacion() {
         }
       />
 
-      <Tabla
-        columnas={columnas}
-        filas={datos}
-        claveFila={(s) => s.solicitudId}
-        cargando={cargando}
-        error={error}
-        alReintentar={recargar}
-        buscarEn={["tipoDocumento"]}
-        etiquetaBusqueda="Buscar por tipo de documento"
-        filtros={[
-          { clave: "estado", etiqueta: "Estado", opciones: ESTADOS },
-          { clave: "origen", etiqueta: "Origen", opciones: ORIGENES },
-        ]}
-        resumen={vencidasDeHecho > 0 ? `${vencidasDeHecho} con el plazo vencido` : undefined}
-        vacio={{
-          titulo: "No hay solicitudes",
-          descripcion: "Cuando pidas documentación a alguien, va a aparecer acá.",
-        }}
-      />
+      <Pestanias defaultValue="validacion" className="mt-u3">
+        <ListaPestanias>
+          <Pestania value="validacion">Bandeja de validación</Pestania>
+          <Pestania value="solicitudes">Solicitudes emitidas</Pestania>
+        </ListaPestanias>
 
-      <p className="mt-u3 max-w-prose text-sm text-apagado">
-        Acá se ve lo entregado contra cada solicitud. Para ver todo lo que cargó una persona
-        —incluso lo que subió por su cuenta, sin que nadie se lo pidiera— entrá a su legajo
-        desde el padrón: la pestaña{" "}
-        <strong className="font-medium text-tinta">Documentos</strong> lo lista completo.
-      </p>
+        <PanelPestania value="validacion">
+          <BandejaValidacion />
+        </PanelPestania>
+
+        <PanelPestania value="solicitudes">
+          <Tabla
+            columnas={columnas}
+            filas={datos}
+            claveFila={(s) => s.solicitudId}
+            cargando={cargando}
+            error={error}
+            alReintentar={recargar}
+            buscarEn={["tipoDocumento"]}
+            etiquetaBusqueda="Buscar por tipo de documento"
+            filtros={[
+              { clave: "estado", etiqueta: "Estado", opciones: ESTADOS },
+              { clave: "origen", etiqueta: "Origen", opciones: ORIGENES },
+            ]}
+            resumen={vencidasDeHecho > 0 ? `${vencidasDeHecho} con el plazo vencido` : undefined}
+            vacio={{
+              titulo: "No hay solicitudes",
+              descripcion: "Cuando pidas documentación a alguien, va a aparecer acá.",
+            }}
+          />
+
+          <p className="mt-u3 max-w-prose text-sm text-apagado">
+            Acá se ve lo entregado contra cada solicitud. Para ver todo lo que cargó una persona
+            —incluso lo que subió por su cuenta, sin que nadie se lo pidiera— entrá a su legajo
+            desde el padrón: la pestaña{" "}
+            <strong className="font-medium text-tinta">Documentos</strong> lo lista completo.
+          </p>
+        </PanelPestania>
+      </Pestanias>
     </>
+  );
+}
+
+function BandejaValidacion() {
+  const puedeValidar = usePermiso(PERMISOS.VALIDAR_DOCUMENTACION);
+  const puedeLeerTerceros = usePermiso(PERMISOS.LEER_TERCEROS);
+  const { datos, cargando, error, recargar } = useRecurso(useCallback((s) => listarDocumentosPendientes(s), []));
+
+  const columnas = [
+    {
+      clave: "titularId",
+      titulo: "Titular",
+      ancho: "w-32",
+      render: (d) =>
+        puedeLeerTerceros ? (
+          <Link
+            to={`/admin/padron/${d.personaId}`}
+            className="font-medium text-expediente hover:underline"
+          >
+            <Identificador valor={`#${d.personaId}`} />
+          </Link>
+        ) : (
+          <Identificador valor={`#${d.personaId}`} />
+        ),
+    },
+    {
+      clave: "tipoDocumento",
+      titulo: "Documento",
+      render: (d) => etiquetaDe(TIPOS_DOCUMENTO, d.tipoDocumento),
+    },
+    {
+      clave: "version",
+      titulo: "Versión",
+      ancho: "w-24",
+      render: (d) => `v${d.version}`,
+    },
+    {
+      clave: "fechaCreacion",
+      titulo: "Cargado el",
+      ancho: "w-48",
+      render: (d) => formatearFecha(d.fechaCreacion),
+    },
+    {
+      clave: "acciones",
+      titulo: "",
+      ancho: "w-32",
+      ordenable: false,
+      render: (d) => (
+        <div className="flex items-center justify-end gap-u1">
+          <RevisarDocumento
+            personaId={d.personaId}
+            documento={{ ...d, resultadoValidacion: "PENDIENTE" }}
+            puedeValidar={puedeValidar}
+            alGuardar={recargar}
+          />
+        </div>
+      ),
+    },
+  ];
+
+  return (
+    <Tabla
+      columnas={columnas}
+      filas={datos}
+      claveFila={(d) => d.documentoId}
+      cargando={cargando}
+      error={error}
+      alReintentar={recargar}
+      buscarEn={["tipoDocumento"]}
+      etiquetaBusqueda="Buscar por tipo de documento"
+      vacio={{
+        titulo: "Bandeja al día",
+        descripcion: "No hay documentos pendientes de validación.",
+      }}
+    />
   );
 }
 

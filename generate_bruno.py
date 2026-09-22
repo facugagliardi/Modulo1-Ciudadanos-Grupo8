@@ -369,6 +369,10 @@ endpoints = [
         "auth": "bearer_empleado", "status": 200
     },
     {
+        "folder": "08_Documentacion", "name": "04_Get_Documentos_Pendientes",
+        "method": "GET", "path": "/documentos/pendientes", "auth": "bearer_empleado", "status": 200
+    },
+    {
         "folder": "08_Documentacion", "name": "04_Patch_Validar_Documento_Ciudadano_403",
         "method": "PATCH", "path": "/documentos/1/validar",
         "body": {"aprobado": True},

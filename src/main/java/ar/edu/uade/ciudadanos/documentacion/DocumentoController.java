@@ -2,6 +2,7 @@ package ar.edu.uade.ciudadanos.documentacion;
 
 import ar.edu.uade.ciudadanos.common.ListaResponse;
 import ar.edu.uade.ciudadanos.documentacion.dto.DocumentoCreadoResponse;
+import ar.edu.uade.ciudadanos.documentacion.dto.DocumentoPendienteResponse;
 import ar.edu.uade.ciudadanos.documentacion.dto.DocumentoResponse;
 import ar.edu.uade.ciudadanos.documentacion.dto.DocumentoResumenResponse;
 import ar.edu.uade.ciudadanos.documentacion.dto.DocumentoValidadoResponse;
@@ -49,6 +50,11 @@ public class DocumentoController {
     @GetMapping("/documentos/{id}")
     public DocumentoResponse obtener(@PathVariable Long id) {
         return documentoService.obtener(id);
+    }
+
+    @GetMapping("/documentos/pendientes")
+    public ListaResponse<DocumentoPendienteResponse> listarPendientes() {
+        return ListaResponse.de(documentoService.listarPendientes());
     }
 
     /** RF-24: sube el numero de version y deja el documento pendiente de validar. */
