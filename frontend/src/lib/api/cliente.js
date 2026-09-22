@@ -121,7 +121,15 @@ async function refrescarSesion() {
  *   _reintento uso interno del refresh
  */
 export async function pedir(ruta, opciones = {}) {
-  const { metodo = "GET", cuerpo, form, sinAuth = false, senal, _reintento = false } = opciones;
+  const {
+    metodo = "GET",
+    cuerpo,
+    form,
+    sinAuth = false,
+    senal,
+    comoBlob = false,
+    _reintento = false,
+  } = opciones;
 
   const headers = {};
   if (!sinAuth) {
@@ -155,7 +163,7 @@ export async function pedir(ruta, opciones = {}) {
   }
 
   if (!res.ok) throw await comoError(res);
-  return leerCuerpo(res);
+  return comoBlob ? res.blob() : leerCuerpo(res);
 }
 
 /**
@@ -194,6 +202,15 @@ export async function autenticar(ruta, credenciales) {
 }
 
 export const get = (ruta, senal) => pedir(ruta, { senal });
+/**
+ * Para binarios: devuelve un Blob en vez de JSON.
+ *
+ * Hace falta porque `<img src>` y `<iframe src>` no mandan headers, así que no
+ * pueden llevar el token. Se pide el archivo por acá —con Authorization y con
+ * el refresh automático de `pedir`— y recién después se arma un `blob:` URL
+ * para dárselo al elemento.
+ */
+export const getBlob = (ruta, senal) => pedir(ruta, { senal, comoBlob: true });
 export const post = (ruta, cuerpo) => pedir(ruta, { metodo: "POST", cuerpo });
 export const put = (ruta, cuerpo) => pedir(ruta, { metodo: "PUT", cuerpo });
 export const patch = (ruta, cuerpo) => pedir(ruta, { metodo: "PATCH", cuerpo });

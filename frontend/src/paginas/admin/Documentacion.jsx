@@ -1,7 +1,7 @@
 import { useCallback, useState } from "react";
 import { Link } from "react-router-dom";
-import { FilePlus2 } from "lucide-react";
-import { cambiarEstadoSolicitud, crearSolicitud, listarSolicitudes } from "@/lib/api/endpoints/documentacion";
+import { Eye, FilePlus2 } from "lucide-react";
+import { cambiarEstadoSolicitud, crearSolicitud, listarSolicitudes, listarDocumentosPendientes } from "@/lib/api/endpoints/documentacion";
 import { buscarPorDni } from "@/lib/api/endpoints/ciudadanos";
 import { useRecurso } from "@/lib/useRecurso";
 import { usePermiso } from "@/lib/auth/SesionContext";
@@ -12,6 +12,7 @@ import { ENTIDADES } from "@/lib/dominio/estados";
 import { etiquetaDe, TIPOS_DOCUMENTO } from "@/lib/dominio/listasBlancas";
 import { BadgeEstado } from "@/componentes/BadgeEstado";
 import { CambiarEstado } from "@/componentes/CambiarEstado";
+import { RevisarDocumento } from "@/componentes/documentacion/ListaDocumentos";
 import { Encabezado } from "@/componentes/Encabezado";
 import { Identificador } from "@/componentes/Identificador";
 import { Tabla } from "@/componentes/Tabla";
@@ -19,15 +20,21 @@ import { Button } from "@/componentes/ui/button";
 import { Campo, Selector } from "@/componentes/ui/campo";
 import { CampoFecha, hoyISO, sumarDiasISO } from "@/componentes/ui/fecha";
 import { CerrarDialogo, ContenidoDialogo, Dialogo, DisparadorDialogo } from "@/componentes/ui/dialog";
+import { Pestanias, ListaPestanias, Pestania, PanelPestania } from "@/componentes/ui/tabs";
 
 /**
  * Las solicitudes de documentación que emite el municipio.
  *
  * OJO CON EL ALCANCE DE ESTA PANTALLA: el backend **no tiene** un listado
- * global de documentos, sólo `GET /personas/{id}/documentos`. Por eso no hay
- * una bandeja general de validación: validar se hace desde el legajo de cada
- * persona, en su pestaña Documentos. Acá se gestionan las solicitudes, que sí
- * tienen listado propio. Anotado en sitemap.md, sección 6.
+ * global de documentos, sólo `GET /personas/{id}/documentos`. Así que esto no
+ * es una bandeja de validación: es el listado de solicitudes, que sí tiene
+ * endpoint propio.
+ *
+ * La diferencia importa. Desde acá se puede revisar y resolver lo entregado
+ * **contra una solicitud** —la solicitud guarda su `documentoId`—, pero un
+ * documento que alguien subió por su cuenta, sin que se lo pidieran, no
+ * aparece en ninguna solicitud y sólo se ve desde el legajo de esa persona.
+ * Anotado en sitemap.md, sección 6.
  */
 
 const ESTADOS = [
@@ -43,6 +50,7 @@ const ORIGENES = [
 
 export function Documentacion() {
   const puedeSolicitar = usePermiso(PERMISOS.SOLICITAR_DOCUMENTACION);
+  const puedeValidar = usePermiso(PERMISOS.VALIDAR_DOCUMENTACION);
   const puedeLeerTerceros = usePermiso(PERMISOS.LEER_TERCEROS);
   const { datos, cargando, error, recargar } = useRecurso(useCallback((s) => listarSolicitudes(s), []));
 
@@ -106,28 +114,49 @@ export function Documentacion() {
     {
       clave: "acciones",
       titulo: "",
-      ancho: "w-32",
+      ancho: "w-44",
       ordenable: false,
-      render: (s) =>
-        puedeSolicitar && s.estado !== "CUMPLIDA" ? (
-          <CambiarEstado
-            entidad={ENTIDADES.SOLICITUD}
-            estadoActual={s.estado}
-            nombreEntidad="esta solicitud"
-            // Cumplir exige el documentoId del titular, y eso se hace desde el
-            // portal del vecino al entregar. Desde acá sólo se puede vencer.
-            destinosBloqueados={{ CUMPLIDA: "La cumple el titular al entregar" }}
-            alConfirmar={async (nuevo) => {
-              await cambiarEstadoSolicitud(s.solicitudId, { estado: nuevo });
-              recargar();
-            }}
-            disparador={
-              <Button variante="secundario" tamano="chico">
-                Estado
-              </Button>
-            }
-          />
-        ) : null,
+      render: (s) => (
+        <div className="flex items-center justify-end gap-u1">
+          {/* El documento existe sólo si alguien ya entregó algo. En la
+              práctica los dos botones casi nunca conviven: una solicitud
+              cumplida ya no cambia de estado, y una pendiente todavía no tiene
+              nada que mirar. */}
+          {s.documentoId && (
+            <RevisarDocumento
+              personaId={s.titularId}
+              documentoId={s.documentoId}
+              puedeValidar={puedeValidar}
+              alGuardar={recargar}
+              disparador={
+                <Button variante="secundario" tamano="chico">
+                  <Eye aria-hidden="true" />
+                  {puedeValidar ? "Revisar" : "Ver"}
+                </Button>
+              }
+            />
+          )}
+          {puedeSolicitar && s.estado !== "CUMPLIDA" && (
+            <CambiarEstado
+              entidad={ENTIDADES.SOLICITUD}
+              estadoActual={s.estado}
+              nombreEntidad="esta solicitud"
+              // Cumplir exige el documentoId del titular, y eso se hace desde el
+              // portal del vecino al entregar. Desde acá sólo se puede vencer.
+              destinosBloqueados={{ CUMPLIDA: "La cumple el titular al entregar" }}
+              alConfirmar={async (nuevo) => {
+                await cambiarEstadoSolicitud(s.solicitudId, { estado: nuevo });
+                recargar();
+              }}
+              disparador={
+                <Button variante="secundario" tamano="chico">
+                  Estado
+                </Button>
+              }
+            />
+          )}
+        </div>
+      ),
     },
   ];
 
@@ -149,32 +178,121 @@ export function Documentacion() {
         }
       />
 
-      <Tabla
-        columnas={columnas}
-        filas={datos}
-        claveFila={(s) => s.solicitudId}
-        cargando={cargando}
-        error={error}
-        alReintentar={recargar}
-        buscarEn={["tipoDocumento"]}
-        etiquetaBusqueda="Buscar por tipo de documento"
-        filtros={[
-          { clave: "estado", etiqueta: "Estado", opciones: ESTADOS },
-          { clave: "origen", etiqueta: "Origen", opciones: ORIGENES },
-        ]}
-        resumen={vencidasDeHecho > 0 ? `${vencidasDeHecho} con el plazo vencido` : undefined}
-        vacio={{
-          titulo: "No hay solicitudes",
-          descripcion: "Cuando pidas documentación a alguien, va a aparecer acá.",
-        }}
-      />
+      <Pestanias defaultValue="validacion" className="mt-u3">
+        <ListaPestanias>
+          <Pestania value="validacion">Bandeja de validación</Pestania>
+          <Pestania value="solicitudes">Solicitudes emitidas</Pestania>
+        </ListaPestanias>
 
-      <p className="mt-u3 max-w-prose text-sm text-apagado">
-        Para revisar y validar la documentación de una persona, entrá a su legajo desde el
-        padrón: la pestaña <strong className="font-medium text-tinta">Documentos</strong>{" "}
-        muestra lo que cargó.
-      </p>
+        <PanelPestania value="validacion">
+          <BandejaValidacion />
+        </PanelPestania>
+
+        <PanelPestania value="solicitudes">
+          <Tabla
+            columnas={columnas}
+            filas={datos}
+            claveFila={(s) => s.solicitudId}
+            cargando={cargando}
+            error={error}
+            alReintentar={recargar}
+            buscarEn={["tipoDocumento"]}
+            etiquetaBusqueda="Buscar por tipo de documento"
+            filtros={[
+              { clave: "estado", etiqueta: "Estado", opciones: ESTADOS },
+              { clave: "origen", etiqueta: "Origen", opciones: ORIGENES },
+            ]}
+            resumen={vencidasDeHecho > 0 ? `${vencidasDeHecho} con el plazo vencido` : undefined}
+            vacio={{
+              titulo: "No hay solicitudes",
+              descripcion: "Cuando pidas documentación a alguien, va a aparecer acá.",
+            }}
+          />
+
+          <p className="mt-u3 max-w-prose text-sm text-apagado">
+            Acá se ve lo entregado contra cada solicitud. Para ver todo lo que cargó una persona
+            —incluso lo que subió por su cuenta, sin que nadie se lo pidiera— entrá a su legajo
+            desde el padrón: la pestaña{" "}
+            <strong className="font-medium text-tinta">Documentos</strong> lo lista completo.
+          </p>
+        </PanelPestania>
+      </Pestanias>
     </>
+  );
+}
+
+function BandejaValidacion() {
+  const puedeValidar = usePermiso(PERMISOS.VALIDAR_DOCUMENTACION);
+  const puedeLeerTerceros = usePermiso(PERMISOS.LEER_TERCEROS);
+  const { datos, cargando, error, recargar } = useRecurso(useCallback((s) => listarDocumentosPendientes(s), []));
+
+  const columnas = [
+    {
+      clave: "titularId",
+      titulo: "Titular",
+      ancho: "w-32",
+      render: (d) =>
+        puedeLeerTerceros ? (
+          <Link
+            to={`/admin/padron/${d.personaId}`}
+            className="font-medium text-expediente hover:underline"
+          >
+            <Identificador valor={`#${d.personaId}`} />
+          </Link>
+        ) : (
+          <Identificador valor={`#${d.personaId}`} />
+        ),
+    },
+    {
+      clave: "tipoDocumento",
+      titulo: "Documento",
+      render: (d) => etiquetaDe(TIPOS_DOCUMENTO, d.tipoDocumento),
+    },
+    {
+      clave: "version",
+      titulo: "Versión",
+      ancho: "w-24",
+      render: (d) => `v${d.version}`,
+    },
+    {
+      clave: "fechaCreacion",
+      titulo: "Cargado el",
+      ancho: "w-48",
+      render: (d) => formatearFecha(d.fechaCreacion),
+    },
+    {
+      clave: "acciones",
+      titulo: "",
+      ancho: "w-32",
+      ordenable: false,
+      render: (d) => (
+        <div className="flex items-center justify-end gap-u1">
+          <RevisarDocumento
+            personaId={d.personaId}
+            documento={{ ...d, resultadoValidacion: "PENDIENTE" }}
+            puedeValidar={puedeValidar}
+            alGuardar={recargar}
+          />
+        </div>
+      ),
+    },
+  ];
+
+  return (
+    <Tabla
+      columnas={columnas}
+      filas={datos}
+      claveFila={(d) => d.documentoId}
+      cargando={cargando}
+      error={error}
+      alReintentar={recargar}
+      buscarEn={["tipoDocumento"]}
+      etiquetaBusqueda="Buscar por tipo de documento"
+      vacio={{
+        titulo: "Bandeja al día",
+        descripcion: "No hay documentos pendientes de validación.",
+      }}
+    />
   );
 }
 
