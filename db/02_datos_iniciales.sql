@@ -42,3 +42,6 @@ FROM persona WHERE cuit = 20345678901
 ON CONFLICT (persona_id) DO NOTHING;
 
 COMMIT;
+
+
+select * from credencial_empleado;
