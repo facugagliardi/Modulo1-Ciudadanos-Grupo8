@@ -7,7 +7,7 @@ import {
   revisarArchivo,
   subirDocumento,
 } from "@/lib/api/endpoints/documentacion";
-import { listarDocumentos } from "@/lib/api/endpoints/personas";
+import { listarDocumentos } from "@/lib/api/endpoints/ciudadanos";
 import { useRecurso } from "@/lib/useRecurso";
 import { useSesion } from "@/lib/auth/SesionContext";
 import { mensajeAmable } from "@/lib/api/cliente";
@@ -26,10 +26,10 @@ import { CerrarDialogo, ContenidoDialogo, Dialogo, DisparadorDialogo } from "@/c
  * Es la pantalla con el flujo más delicado del sistema. Para cumplir una
  * solicitud hacen falta DOS pedidos al backend:
  *
- *   1. POST /personas/{id}/documentos  → devuelve el documentoId
+ *   1. POST /ciudadanos/{id}/documentos  → devuelve el documentoId
  *   2. PATCH /solicitudes-documentacion/{id}/estado con CUMPLIDA + ese documentoId
  *
- * Para la persona tiene que ser una sola acción: elige el archivo y listo. Si
+ * Para la ciudadano tiene que ser una sola acción: elige el archivo y listo. Si
  * el segundo pedido falla, el documento igual quedó subido, así que la pantalla
  * lo dice y ofrece asociarlo sin volver a subir nada.
  */
@@ -69,7 +69,7 @@ export function DocumentacionSolicitada() {
         <ul className="lista-escalonada flex flex-col gap-u2">
           {pendientes.map((s) => (
             <li key={s.solicitudId}>
-              <Solicitud solicitud={s} personaId={id} alCumplir={() => solicitudes.recargar()} />
+              <Solicitud solicitud={s} ciudadanoId={id} alCumplir={() => solicitudes.recargar()} />
             </li>
           ))}
         </ul>
@@ -106,7 +106,7 @@ export function DocumentacionSolicitada() {
   );
 }
 
-function Solicitud({ solicitud, personaId, alCumplir }) {
+function Solicitud({ solicitud, ciudadanoId, alCumplir }) {
   const dias = diasHasta(solicitud.plazo);
   const vencida = dias !== null && dias < 0;
   const urgente = dias !== null && dias >= 0 && dias <= 3;
@@ -135,7 +135,7 @@ function Solicitud({ solicitud, personaId, alCumplir }) {
           </div>
         </div>
 
-        <EntregarDocumento solicitud={solicitud} personaId={personaId} alCumplir={alCumplir} />
+        <EntregarDocumento solicitud={solicitud} ciudadanoId={ciudadanoId} alCumplir={alCumplir} />
       </CardCuerpo>
     </Card>
   );
@@ -144,7 +144,7 @@ function Solicitud({ solicitud, personaId, alCumplir }) {
 /**
  * El encadenado: subir y asociar. Si el paso 2 falla, no se pierde el paso 1.
  */
-function EntregarDocumento({ solicitud, personaId, alCumplir }) {
+function EntregarDocumento({ solicitud, ciudadanoId, alCumplir }) {
   const [abierto, setAbierto] = useState(false);
   const [archivo, setArchivo] = useState(null);
   const [errorArchivo, setErrorArchivo] = useState(null);
@@ -157,8 +157,8 @@ function EntregarDocumento({ solicitud, personaId, alCumplir }) {
   // Documentos ya cargados: quizá el papel ya está y sólo falta asociarlo.
   const documentos = useRecurso(
     useCallback(
-      (s) => (abierto ? listarDocumentos(personaId, s) : Promise.resolve([])),
-      [abierto, personaId],
+      (s) => (abierto ? listarDocumentos(ciudadanoId, s) : Promise.resolve([])),
+      [abierto, ciudadanoId],
     ),
   );
   const [documentoExistente, setDocumentoExistente] = useState("");
@@ -201,7 +201,7 @@ function EntregarDocumento({ solicitud, personaId, alCumplir }) {
       }
       setEnviando(true);
       try {
-        const creado = await subirDocumento(personaId, {
+        const creado = await subirDocumento(ciudadanoId, {
           archivo,
           tipoDocumento: solicitud.tipoDocumento,
         });

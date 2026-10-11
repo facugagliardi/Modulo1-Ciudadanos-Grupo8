@@ -15,7 +15,7 @@ vi.mock("@/lib/api/endpoints/ciudadanos", () => ({
   obtenerCiudadano: (...a) => obtenerCiudadano(...a),
   actualizarCiudadano: (...a) => actualizarCiudadano(...a),
 }));
-vi.mock("@/lib/api/endpoints/personas", () => ({
+vi.mock("@/lib/api/endpoints/ciudadanos", () => ({
   listarDomicilios: (...a) => listarDomicilios(...a),
   listarRepresentaciones: (...a) => listarRepresentaciones(...a),
 }));
@@ -87,7 +87,7 @@ describe("Mis trámites", () => {
     expect(await screen.findByText(/todavía no cargaste tu domicilio/i)).toBeInTheDocument();
   });
 
-  it("avisa cuando no hay forma de contactar a la persona", async () => {
+  it("avisa cuando no hay forma de contactar a la ciudadano", async () => {
     obtenerCiudadano.mockResolvedValue({ ...VECINO, contactos: [] });
     renderizar(<MisTramites />);
     expect(await screen.findByText(/no tenemos cómo avisarte nada/i)).toBeInTheDocument();
@@ -109,7 +109,7 @@ describe("Mis trámites", () => {
     expect(await screen.findByText(/no tenés nada pendiente/i)).toBeInTheDocument();
   });
 
-  it("una persona jurídica no dispara la consulta de ciudadano, que le daría 404", async () => {
+  it("una ciudadano jurídica no dispara la consulta de ciudadano, que le daría 404", async () => {
     // No existe endpoint de perfil para jurídicas: pedirlo sería un 404 seguro.
     conSesion({ id: 5, rol: "PERSONA", subType: "JURIDICA" });
     renderizar(<MisTramites />);

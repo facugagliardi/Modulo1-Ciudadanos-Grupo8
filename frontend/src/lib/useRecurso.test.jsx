@@ -12,7 +12,7 @@ import { useRecurso } from "./useRecurso";
  * sus dependencias.
  *
  * Se manifestó en la carátula del expediente: el titular se pedía con el
- * `personaId` todavía indefinido y quedaba en "Persona #1" para siempre.
+ * `ciudadanoId` todavía indefinido y quedaba en "Ciudadano #1" para siempre.
  */
 
 function Sonda({ cargar }) {

@@ -26,14 +26,14 @@ import { Pestanias, ListaPestanias, Pestania, PanelPestania } from "@/componente
  * Las solicitudes de documentación que emite el municipio.
  *
  * OJO CON EL ALCANCE DE ESTA PANTALLA: el backend **no tiene** un listado
- * global de documentos, sólo `GET /personas/{id}/documentos`. Así que esto no
+ * global de documentos, sólo `GET /ciudadanos/{id}/documentos`. Así que esto no
  * es una bandeja de validación: es el listado de solicitudes, que sí tiene
  * endpoint propio.
  *
  * La diferencia importa. Desde acá se puede revisar y resolver lo entregado
  * **contra una solicitud** —la solicitud guarda su `documentoId`—, pero un
  * documento que alguien subió por su cuenta, sin que se lo pidieran, no
- * aparece en ninguna solicitud y sólo se ve desde el legajo de esa persona.
+ * aparece en ninguna solicitud y sólo se ve desde el legajo de esa ciudadano.
  * Anotado en sitemap.md, sección 6.
  */
 
@@ -124,7 +124,7 @@ export function Documentacion() {
               nada que mirar. */}
           {s.documentoId && (
             <RevisarDocumento
-              personaId={s.titularId}
+              ciudadanoId={s.titularId}
               documentoId={s.documentoId}
               puedeValidar={puedeValidar}
               alGuardar={recargar}
@@ -210,7 +210,7 @@ export function Documentacion() {
           />
 
           <p className="mt-u3 max-w-prose text-sm text-apagado">
-            Acá se ve lo entregado contra cada solicitud. Para ver todo lo que cargó una persona
+            Acá se ve lo entregado contra cada solicitud. Para ver todo lo que cargó una ciudadano
             —incluso lo que subió por su cuenta, sin que nadie se lo pidiera— entrá a su legajo
             desde el padrón: la pestaña{" "}
             <strong className="font-medium text-tinta">Documentos</strong> lo lista completo.
@@ -234,13 +234,13 @@ function BandejaValidacion() {
       render: (d) =>
         puedeLeerTerceros ? (
           <Link
-            to={`/admin/padron/${d.personaId}`}
+            to={`/admin/padron/${d.ciudadanoId}`}
             className="font-medium text-expediente hover:underline"
           >
-            <Identificador valor={`#${d.personaId}`} />
+            <Identificador valor={`#${d.ciudadanoId}`} />
           </Link>
         ) : (
-          <Identificador valor={`#${d.personaId}`} />
+          <Identificador valor={`#${d.ciudadanoId}`} />
         ),
     },
     {
@@ -268,7 +268,7 @@ function BandejaValidacion() {
       render: (d) => (
         <div className="flex items-center justify-end gap-u1">
           <RevisarDocumento
-            personaId={d.personaId}
+            ciudadanoId={d.ciudadanoId}
             documento={{ ...d, resultadoValidacion: "PENDIENTE" }}
             puedeValidar={puedeValidar}
             alGuardar={recargar}

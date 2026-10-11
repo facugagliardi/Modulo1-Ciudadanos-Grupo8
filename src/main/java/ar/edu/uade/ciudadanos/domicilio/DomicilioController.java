@@ -19,7 +19,7 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
-/** Domicilios de una persona (RF-09 a RF-12). */
+/** Domicilios de un ciudadano (RF-09 a RF-12). */
 @RestController
 public class DomicilioController {
 
@@ -29,15 +29,15 @@ public class DomicilioController {
         this.domicilioService = domicilioService;
     }
 
-    @PostMapping("/personas/{personaId}/domicilios")
-    public ResponseEntity<DomicilioCreadoResponse> crear(@PathVariable Long personaId,
+    @PostMapping("/ciudadanos/{ciudadanoId}/domicilios")
+    public ResponseEntity<DomicilioCreadoResponse> crear(@PathVariable Long ciudadanoId,
                                                          @Valid @RequestBody CrearDomicilioRequest request) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(domicilioService.crear(personaId, request));
+        return ResponseEntity.status(HttpStatus.CREATED).body(domicilioService.crear(ciudadanoId, request));
     }
 
-    @GetMapping("/personas/{personaId}/domicilios")
-    public ListaResponse<DomicilioResponse> listar(@PathVariable Long personaId) {
-        return ListaResponse.de(domicilioService.listar(personaId));
+    @GetMapping("/ciudadanos/{ciudadanoId}/domicilios")
+    public ListaResponse<DomicilioResponse> listar(@PathVariable Long ciudadanoId) {
+        return ListaResponse.de(domicilioService.listar(ciudadanoId));
     }
 
     @PutMapping("/domicilios/{id}")

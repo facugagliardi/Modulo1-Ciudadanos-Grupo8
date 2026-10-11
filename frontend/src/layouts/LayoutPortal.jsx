@@ -12,7 +12,7 @@ import { Marca } from "./Marca";
  * sistema de diseño que el backoffice con otras medidas — lo único que cambia
  * es la clase de densidad en la raíz.
  *
- * Una persona jurídica ve menos secciones que un ciudadano: el backend no
+ * Una ciudadano jurídica ve menos secciones que un ciudadano: el backend no
  * tiene endpoint de perfil ni de grupo familiar para jurídicas.
  */
 

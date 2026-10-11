@@ -25,13 +25,13 @@ vi.mock("@/lib/api/endpoints/ciudadanos", () => ({
 }));
 
 const LISTA = [
-  { expedienteId: 1, numero: "EXP-2026-000001", personaId: 3, caratula: "Habilitación comercial",
+  { expedienteId: 1, numero: "EXP-2026-000001", ciudadanoId: 3, caratula: "Habilitación comercial",
     areaIniciadora: "Habilitaciones", estado: "EN_TRAMITE",
     fechaInicio: "2026-09-06T16:47:00-03:00", actuacionesCount: 2 },
-  { expedienteId: 2, numero: "EXP-2026-000002", personaId: 4, caratula: "Reclamo por bache",
+  { expedienteId: 2, numero: "EXP-2026-000002", ciudadanoId: 4, caratula: "Reclamo por bache",
     areaIniciadora: "Obras", estado: "INICIADO",
     fechaInicio: "2026-09-05T10:00:00-03:00", actuacionesCount: 0 },
-  { expedienteId: 3, numero: "EXP-2025-000099", personaId: 3, caratula: "Exención de tasa",
+  { expedienteId: 3, numero: "EXP-2025-000099", ciudadanoId: 3, caratula: "Exención de tasa",
     areaIniciadora: "Rentas", estado: "ARCHIVADO",
     fechaInicio: "2025-11-02T09:00:00-03:00", actuacionesCount: 5 },
 ];
@@ -152,7 +152,7 @@ describe("alta de expediente", () => {
     await vi.waitFor(() => expect(crearExpediente).toHaveBeenCalled());
     const enviado = crearExpediente.mock.calls[0][0];
     expect(enviado).toEqual({
-      personaId: 3,
+      ciudadanoId: 3,
       caratula: "Habilitación comercial",
       areaIniciadora: "Habilitaciones",
     });

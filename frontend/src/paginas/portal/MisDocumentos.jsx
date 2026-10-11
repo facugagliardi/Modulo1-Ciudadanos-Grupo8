@@ -1,6 +1,6 @@
 import { useCallback } from "react";
 import { Upload } from "lucide-react";
-import { listarDocumentos } from "@/lib/api/endpoints/personas";
+import { listarDocumentos } from "@/lib/api/endpoints/ciudadanos";
 import { useRecurso } from "@/lib/useRecurso";
 import { useSesion } from "@/lib/auth/SesionContext";
 import { Cargando, ErrorEnPantalla } from "@/componentes/Estados";
@@ -12,7 +12,7 @@ import { Button } from "@/componentes/ui/button";
  * La documentación del titular.
  *
  * El vecino sube y versiona; validar es del municipio. Por eso acá no hay
- * ninguna acción de validación aunque la persona sea la dueña del documento.
+ * ninguna acción de validación aunque la ciudadano sea la dueña del documento.
  */
 export function MisDocumentos() {
   const { id } = useSesion();
@@ -25,7 +25,7 @@ export function MisDocumentos() {
         titulo="Mis documentos"
         descripcion="Lo que cargaste en el municipio. Un empleado los revisa y los valida."
         acciones={
-          <SubirDocumento personaId={id} alGuardar={() => documentos.recargar()}>
+          <SubirDocumento ciudadanoId={id} alGuardar={() => documentos.recargar()}>
             <Button>
               <Upload aria-hidden="true" />
               Subir documento
@@ -41,7 +41,7 @@ export function MisDocumentos() {
 
       {documentos.datos && (
         <ListaDocumentos
-          personaId={id}
+          ciudadanoId={id}
           documentos={documentos.datos}
           puedeSubir
           alCambiar={() => documentos.recargar()}

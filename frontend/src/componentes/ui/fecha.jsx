@@ -80,7 +80,7 @@ export const sumarDiasISO = (iso, n) => {
   return f ? aISO(sumarDias(f, n)) : "";
 };
 
-/** ISO -> lo que la persona lee y escribe. */
+/** ISO -> lo que la ciudadano lee y escribe. */
 function aTextoAR(iso) {
   const f = deISO(iso);
   if (!f) return "";
@@ -88,7 +88,7 @@ function aTextoAR(iso) {
 }
 
 /**
- * Lo que la persona escribió -> ISO, o null si todavía no es una fecha.
+ * Lo que la ciudadano escribió -> ISO, o null si todavía no es una fecha.
  * Acepta separadores `/` y `-`, y años de dos dígitos no: "08/03/97" es
  * ambiguo (¿1997 o 2097?) y adivinar sería peor que pedir los cuatro dígitos.
  */
@@ -154,7 +154,7 @@ export function CampoFecha({
    * Una fecha completa se emite siempre, aunque caiga fuera de `min`/`max`.
    *
    * Tragarse el valor por estar fuera de rango parecía prolijo y era peor: el
-   * formulario nunca se enteraba, su validación no corría y la persona no veía
+   * formulario nunca se enteraba, su validación no corría y la ciudadano no veía
    * ningún mensaje — el campo simplemente no reaccionaba. `min` y `max` acá
    * sirven para apagar los días en el calendario; decir *por qué* una fecha no
    * sirve es trabajo de la pantalla, que es la que sabe si el problema es

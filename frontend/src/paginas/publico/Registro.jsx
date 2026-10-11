@@ -9,12 +9,12 @@ import { Campo } from "@/componentes/ui/campo";
 import { CampoFecha, hoyISO } from "@/componentes/ui/fecha";
 
 /**
- * Alta de persona física o jurídica.
+ * Alta de ciudadano física o jurídica.
  *
  * El backend tiene un solo endpoint con un solo cuerpo, donde `tipo` decide
  * qué bloque de campos se exige. La pantalla hace lo mismo: se elige primero
  * qué se está registrando y recién ahí aparecen los campos que corresponden.
- * Mostrar los once campos juntos obligaría a la persona a descartar la mitad.
+ * Mostrar los once campos juntos obligaría a la ciudadano a descartar la mitad.
  *
  * `POST /auth/register` no devuelve tokens, así que después del alta se hace
  * el login automáticamente: se completa un formulario y se queda adentro.
@@ -42,7 +42,7 @@ export function Registro() {
   const [errorGeneral, setErrorGeneral] = useState(null);
   const [enviando, setEnviando] = useState(false);
 
-  const esPersona = valores.tipo === CIUDADANO;
+  const esCiudadano = valores.tipo === CIUDADANO;
 
   function cambiar(campo, valor) {
     setValores((v) => ({ ...v, [campo]: valor }));
@@ -53,13 +53,13 @@ export function Registro() {
     const e = {};
     const cuit = soloDigitos(valores.cuit);
 
-    if (!cuit) e.cuit = esPersona ? "Ingresá tu CUIL." : "Ingresá el CUIT.";
+    if (!cuit) e.cuit = esCiudadano ? "Ingresá tu CUIL." : "Ingresá el CUIT.";
     else if (cuit.length !== 11) e.cuit = "Tiene que tener 11 dígitos.";
 
     if (!valores.password) e.password = "Elegí una contraseña.";
     else if (valores.password.length < 8) e.password = "Tiene que tener al menos 8 caracteres.";
 
-    if (esPersona) {
+    if (esCiudadano) {
       const dni = soloDigitos(valores.dni);
       if (!dni) e.dni = "Ingresá tu DNI.";
       else if (dni.length < 7 || dni.length > 9) e.dni = "El DNI tiene entre 7 y 9 dígitos.";
@@ -108,7 +108,7 @@ export function Registro() {
         <legend className="mb-1.5 text-sm font-medium text-tinta">¿Qué vas a registrar?</legend>
         <div className="grid gap-1 sm:grid-cols-2">
           {[
-            [CIUDADANO, "Una persona", "Con DNI y CUIL"],
+            [CIUDADANO, "Una ciudadano", "Con DNI y CUIL"],
             [JURIDICA, "Una organización", "Empresa, comercio o asociación"],
           ].map(([valor, titulo, detalle]) => (
             <label
@@ -141,7 +141,7 @@ export function Registro() {
       </fieldset>
 
       <form onSubmit={enviar} noValidate className="flex flex-col gap-u2">
-        {esPersona ? (
+        {esCiudadano ? (
           <>
             <div className="grid gap-u2 sm:grid-cols-2">
               <Campo
@@ -203,7 +203,7 @@ export function Registro() {
         )}
 
         <Campo
-          etiqueta={esPersona ? "CUIL" : "CUIT"}
+          etiqueta={esCiudadano ? "CUIL" : "CUIT"}
           obligatorio
           inputMode="numeric"
           ayuda="Once dígitos, con o sin guiones"

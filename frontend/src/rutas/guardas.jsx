@@ -34,9 +34,9 @@ export function RutaDeZona({ zona }) {
 }
 
 /**
- * Pantallas que sólo existen para una persona física.
+ * Pantallas que sólo existen para una ciudadano física.
  *
- * El backend no tiene endpoint de perfil ni de grupo familiar para personas
+ * El backend no tiene endpoint de perfil ni de grupo familiar para ciudadanos
  * jurídicas: `GET /ciudadanos/{id}` resuelve contra el repositorio de
  * ciudadanos y a una jurídica le devuelve 404. En vez de mostrarle una pantalla
  * rota, se la manda a su inicio. Ver sitemap.md, sección 6.

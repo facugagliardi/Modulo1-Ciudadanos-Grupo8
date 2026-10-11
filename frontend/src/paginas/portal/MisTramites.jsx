@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { AlertTriangle, ArrowRight, Building2, FileText, MapPin, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { obtenerCiudadano } from "@/lib/api/endpoints/ciudadanos";
-import { listarDomicilios, listarRepresentaciones } from "@/lib/api/endpoints/personas";
+import { listarDomicilios, listarRepresentaciones } from "@/lib/api/endpoints/ciudadanos";
 import { listarSolicitudes } from "@/lib/api/endpoints/documentacion";
 import { listarExpedientes } from "@/lib/api/endpoints/expedientes";
 import { useRecurso } from "@/lib/useRecurso";
@@ -31,7 +31,7 @@ import { Card, CardCuerpo, CardEncabezado, CardTitulo } from "@/componentes/ui/c
 export function MisTramites() {
   const { id, esCiudadano, esJuridica } = useSesion();
 
-  const persona = useRecurso(
+  const ciudadano = useRecurso(
     useCallback((s) => (esCiudadano ? obtenerCiudadano(id, s) : Promise.resolve(null)), [id, esCiudadano]),
   );
   const domicilios = useRecurso(useCallback((s) => listarDomicilios(id, s), [id]));
@@ -40,7 +40,7 @@ export function MisTramites() {
   const representaciones = useRecurso(useCallback((s) => listarRepresentaciones(id, s), [id]));
 
   const pendientes = (solicitudes.datos ?? []).filter((s) => s.estado === "PENDIENTE");
-  const contactos = persona.datos?.contactos ?? [];
+  const contactos = ciudadano.datos?.contactos ?? [];
   const vigentes = (domicilios.datos ?? []).filter((d) => !d.vigenteHasta);
 
   // Lo que le falta al vecino para tener el legajo en condiciones.
@@ -65,19 +65,19 @@ export function MisTramites() {
   ].filter(Boolean);
 
   const cargandoTodo =
-    persona.cargando && domicilios.cargando && solicitudes.cargando && expedientes.cargando;
+    ciudadano.cargando && domicilios.cargando && solicitudes.cargando && expedientes.cargando;
 
   return (
     <>
       <Encabezado
         seccion="Portal del vecino"
         titulo={
-          persona.datos ? `Hola, ${persona.datos.nombre}` : esJuridica ? "Mis trámites" : "Mis trámites"
+          ciudadano.datos ? `Hola, ${ciudadano.datos.nombre}` : esJuridica ? "Mis trámites" : "Mis trámites"
         }
         descripcion="Acá ves tus datos, lo que el municipio te pide y el estado de tus expedientes."
         acciones={
-          persona.datos && (
-            <BadgeEstado entidad={ENTIDADES.CIUDADANO} estado={persona.datos.estado} />
+          ciudadano.datos && (
+            <BadgeEstado entidad={ENTIDADES.CIUDADANO} estado={ciudadano.datos.estado} />
           )
         }
       />
@@ -147,25 +147,25 @@ export function MisTramites() {
 
       <div className="grid gap-u3 md:grid-cols-2">
         {/* --- Mis datos --- */}
-        {persona.datos && (
+        {ciudadano.datos && (
           <Bloque
             icono={Users}
             titulo="Mis datos"
             a="/portal/perfil"
             textoEnlace="Ver y editar"
           >
-            <p className="font-medium">{nombreCompleto(persona.datos)}</p>
+            <p className="font-medium">{nombreCompleto(ciudadano.datos)}</p>
             <dl className="mt-1 flex flex-wrap gap-x-u3 gap-y-1 text-[length:var(--texto-dato)] text-apagado">
               <div className="flex gap-1.5">
                 <dt>DNI</dt>
                 <dd className="text-tinta">
-                  <Identificador valor={persona.datos.dni} tipo="dni" />
+                  <Identificador valor={ciudadano.datos.dni} tipo="dni" />
                 </dd>
               </div>
               <div className="flex gap-1.5">
                 <dt>CUIL</dt>
                 <dd className="text-tinta">
-                  <Identificador valor={persona.datos.cuil} tipo="cuit" />
+                  <Identificador valor={ciudadano.datos.cuil} tipo="cuit" />
                 </dd>
               </div>
             </dl>

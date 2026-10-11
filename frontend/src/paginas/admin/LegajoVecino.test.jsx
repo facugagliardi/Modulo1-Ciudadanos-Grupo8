@@ -15,7 +15,7 @@ vi.mock("@/lib/api/endpoints/ciudadanos", () => ({
   obtenerCiudadano: (...a) => obtenerCiudadano(...a),
   cambiarEstadoCiudadano: (...a) => cambiarEstadoCiudadano(...a),
 }));
-vi.mock("@/lib/api/endpoints/personas", () => ({
+vi.mock("@/lib/api/endpoints/ciudadanos", () => ({
   listarDomicilios: (...a) => listarDomicilios(...a),
   listarDocumentos: (...a) => listarDocumentos(...a),
 }));
@@ -101,7 +101,7 @@ describe("cabecera del legajo", () => {
 });
 
 describe("pestañas", () => {
-  it("muestra los datos personales con la edad calculada", async () => {
+  it("muestra los datos ciudadanoles con la edad calculada", async () => {
     conSesion();
     renderizarLegajo();
     expect(await screen.findByText(/12\/04\/1989/)).toBeInTheDocument();
@@ -170,7 +170,7 @@ describe("resistencia a fallas parciales", () => {
     expect(await screen.findByRole("button", { name: /reintentar/i })).toBeInTheDocument();
   });
 
-  it("si falla la persona, muestra el error y no una pantalla en blanco", async () => {
+  it("si falla la ciudadano, muestra el error y no una pantalla en blanco", async () => {
     obtenerCiudadano.mockRejectedValue(new ErrorApi({ status: 404, message: "No existe" }));
     conSesion();
     renderizarLegajo();

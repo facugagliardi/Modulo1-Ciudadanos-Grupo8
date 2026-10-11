@@ -45,7 +45,7 @@ const {
   cerrarDomicilio,
   listarDocumentos,
   listarRepresentaciones,
-} = await import("./personas");
+} = await import("./ciudadanos");
 const { listarContactos, crearContacto, verificarContacto, eliminarContacto, actualizarContacto } =
   await import("./contactos");
 const { listarRelaciones, crearRelacion, cambiarResponsable, eliminarRelacion, actualizarRelacion } =
@@ -99,9 +99,9 @@ describe("rutas", () => {
     expect(cliente.get).toHaveBeenCalledWith("/ciudadanos/dni/34567890", undefined);
   });
 
-  it("las rutas de domicilios cuelgan de /personas, así sirven para una jurídica", async () => {
+  it("las rutas de domicilios cuelgan de /ciudadanos, así sirven para una jurídica", async () => {
     await listarDomicilios(7);
-    expect(cliente.get).toHaveBeenCalledWith("/personas/7/domicilios", undefined);
+    expect(cliente.get).toHaveBeenCalledWith("/ciudadanos/7/domicilios", undefined);
 
     await marcarDomicilioPrincipal(12);
     // Sin cuerpo: mandar campos da 400.
@@ -202,9 +202,9 @@ describe("cuerpos filtrados", () => {
   });
 
   it("crearExpediente puede omitir el número para que lo genere el backend", async () => {
-    await crearExpediente({ personaId: 3, caratula: "Habilitación", areaIniciadora: "Mesa" });
+    await crearExpediente({ ciudadanoId: 3, caratula: "Habilitación", areaIniciadora: "Mesa" });
     expect(cliente.post).toHaveBeenCalledWith("/expedientes", {
-      personaId: 3,
+      ciudadanoId: 3,
       caratula: "Habilitación",
       areaIniciadora: "Mesa",
     });

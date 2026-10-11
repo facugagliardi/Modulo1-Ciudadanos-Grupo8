@@ -10,7 +10,7 @@ import ar.edu.uade.ciudadanos.documentacion.entity.EstadoSolicitud;
 import ar.edu.uade.ciudadanos.documentacion.entity.OrigenSolicitud;
 import ar.edu.uade.ciudadanos.documentacion.entity.SolicitudDocumentacion;
 import ar.edu.uade.ciudadanos.documentacion.repository.SolicitudDocumentacionRepository;
-import ar.edu.uade.ciudadanos.persona.PersonaDirectorioService;
+import ar.edu.uade.ciudadanos.persona.CiudadanoDirectorioService;
 import ar.edu.uade.ciudadanos.persona.dto.CambioEstadoResponse;
 import ar.edu.uade.ciudadanos.security.AutorizacionService;
 import ar.edu.uade.ciudadanos.security.Permiso;
@@ -25,12 +25,12 @@ public class SolicitudDocumentacionService {
 
     private final SolicitudDocumentacionRepository solicitudRepository;
     private final DocumentoService documentoService;
-    private final PersonaDirectorioService directorio;
+    private final CiudadanoDirectorioService directorio;
     private final AutorizacionService autorizacion;
 
     public SolicitudDocumentacionService(SolicitudDocumentacionRepository solicitudRepository,
                                          DocumentoService documentoService,
-                                         PersonaDirectorioService directorio,
+                                         CiudadanoDirectorioService directorio,
                                          AutorizacionService autorizacion) {
         this.solicitudRepository = solicitudRepository;
         this.documentoService = documentoService;

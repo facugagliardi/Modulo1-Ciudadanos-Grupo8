@@ -16,8 +16,8 @@ public record CrearExpedienteRequest(
         @Size(max = 100, message = "numero no puede superar los 100 caracteres")
         String numero,
 
-        @NotNull(message = "personaId es obligatorio")
-        Long personaId,
+        @NotNull(message = "ciudadanoId es obligatorio")
+        Long ciudadanoId,
 
         @NotBlank(message = "caratula es obligatoria")
         @Size(max = 255, message = "caratula no puede superar los 255 caracteres")

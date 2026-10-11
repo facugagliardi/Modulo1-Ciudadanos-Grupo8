@@ -37,13 +37,13 @@ public class AuthController {
         this.authService = authService;
     }
 
-    /** RF-01, RF-02, RF-37: alta de persona fisica o juridica. */
+    /** RF-01, RF-37: alta de ciudadano. */
     @PostMapping("/register")
     public ResponseEntity<RegisterResponse> register(@Valid @RequestBody RegisterRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(authService.registrar(request));
     }
 
-    /** RF-36: login de persona con CUIT/CUIL. */
+    /** RF-36: login de ciudadano con CUIL. */
     @PostMapping("/login")
     public ResponseEntity<LoginResponse> login(@Valid @RequestBody LoginRequest request) {
         Sesion<LoginResponse> sesion = authService.login(request);
@@ -65,8 +65,6 @@ public class AuthController {
     /**
      * Los tokens son stateless: no hay lista de revocacion, asi que el logout
      * solo limpia el contexto y le indica al cliente que descarte sus tokens.
-     * Si el equipo necesita corte inmediato de sesion, hace falta una denylist
-     * de jti (ver README).
      */
     @PostMapping("/logout")
     public ResponseEntity<Void> logout() {

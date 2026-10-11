@@ -5,18 +5,18 @@ import { AltaDeVecino, generarClave } from "./AltaDeVecino";
 import { conSesion, escribirFecha, renderizar } from "@/pruebas/utilidades";
 import { ErrorApi } from "@/lib/api/cliente";
 
-const registrarPersona = vi.fn();
+const registrarCiudadano = vi.fn();
 const buscarPorDni = vi.fn();
 
 vi.mock("@/lib/api/endpoints/auth", () => ({
-  registrarPersona: (...a) => registrarPersona(...a),
+  registrarCiudadano: (...a) => registrarCiudadano(...a),
 }));
 vi.mock("@/lib/api/endpoints/ciudadanos", () => ({
   buscarPorDni: (...a) => buscarPorDni(...a),
 }));
 
 const CREADO = {
-  personaId: 9, tipo: "CIUDADANO", dni: "40123456", nombre: "Ana", apellido: "Pérez",
+  ciudadanoId: 9, tipo: "CIUDADANO", dni: "40123456", nombre: "Ana", apellido: "Pérez",
   fechaNacimiento: "1997-03-08", cuil: "27401234564", estado: "ACTIVO",
 };
 
@@ -28,9 +28,9 @@ async function completar() {
 }
 
 beforeEach(() => {
-  registrarPersona.mockReset();
+  registrarCiudadano.mockReset();
   buscarPorDni.mockReset();
-  registrarPersona.mockResolvedValue(CREADO);
+  registrarCiudadano.mockResolvedValue(CREADO);
   buscarPorDni.mockResolvedValue({ existe: false });
   conSesion({ id: 1, rol: "MESA_ENTRADAS", subType: "EMPLEADO" });
 });
@@ -84,7 +84,7 @@ describe("alta", () => {
 
     expect(await screen.findByText(/ingresá el dni/i)).toBeInTheDocument();
     expect(screen.getByText(/ingresá el nombre/i)).toBeInTheDocument();
-    expect(registrarPersona).not.toHaveBeenCalled();
+    expect(registrarCiudadano).not.toHaveBeenCalled();
   });
 
   it("registra sin sacar al empleado de su sesión", async () => {
@@ -95,8 +95,8 @@ describe("alta", () => {
     await completar();
     await userEvent.click(screen.getByRole("button", { name: /registrar vecino/i }));
 
-    await waitFor(() => expect(registrarPersona).toHaveBeenCalled());
-    expect(registrarPersona.mock.calls[0][0]).toMatchObject({
+    await waitFor(() => expect(registrarCiudadano).toHaveBeenCalled());
+    expect(registrarCiudadano.mock.calls[0][0]).toMatchObject({
       tipo: "CIUDADANO",
       dni: "40123456",
       nombre: "Ana",
@@ -136,13 +136,13 @@ describe("alta", () => {
   });
 
   it("explica el 409 sin el mensaje técnico", async () => {
-    registrarPersona.mockRejectedValue(new ErrorApi({ status: 409, message: "duplicate key" }));
+    registrarCiudadano.mockRejectedValue(new ErrorApi({ status: 409, message: "duplicate key" }));
     renderizar(<AltaDeVecino />);
     await userEvent.type(screen.getByLabelText("DNI"), "40123456");
     await completar();
     await userEvent.click(screen.getByRole("button", { name: /registrar vecino/i }));
 
-    expect(await screen.findByRole("alert")).toHaveTextContent(/ya hay una persona registrada/i);
+    expect(await screen.findByRole("alert")).toHaveTextContent(/ya hay una ciudadano registrada/i);
   });
 
   it("rechaza una fecha de nacimiento futura", async () => {
@@ -154,7 +154,7 @@ describe("alta", () => {
     await userEvent.click(screen.getByRole("button", { name: /registrar vecino/i }));
 
     expect(await screen.findByText(/anterior a hoy/i)).toBeInTheDocument();
-    expect(registrarPersona).not.toHaveBeenCalled();
+    expect(registrarCiudadano).not.toHaveBeenCalled();
   });
 });
 
@@ -183,6 +183,6 @@ describe("la contraseña provisoria", () => {
     await userEvent.click(screen.getByRole("button", { name: /registrar vecino/i }));
 
     expect(await screen.findByText(/al menos 8 caracteres/i)).toBeInTheDocument();
-    expect(registrarPersona).not.toHaveBeenCalled();
+    expect(registrarCiudadano).not.toHaveBeenCalled();
   });
 });

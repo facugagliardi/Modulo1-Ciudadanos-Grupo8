@@ -6,7 +6,7 @@ import { soloDigitos } from "../../dominio/formato";
  * Organizaciones: empresas, comercios, asociaciones y cooperativas.
  *
  * Ojo con dos cosas que el backend no perdona:
- *   - `POST /organizaciones` recibe `duenos: [{personaId, porcentajeTitularidad}]`,
+ *   - `POST /organizaciones` recibe `duenos: [{ciudadanoId, porcentajeTitularidad}]`,
  *     NO un array de ids (ARCHITECTURE.md dice mal esto).
  *   - No se puede cambiar el CUIT: el PUT sólo acepta tres campos.
  */
@@ -17,16 +17,16 @@ export async function listarOrganizaciones(senal) {
 }
 
 /**
- * Las organizaciones donde la persona es dueña.
+ * Las organizaciones donde la ciudadano es dueña.
  *
  * No es lo mismo que `listarRepresentaciones`: el alta de una organización
  * anota al creador como **dueño**, no como representante. Sin esta consulta,
  * una organización recién registrada no aparecía en ningún lado del portal.
  *
- * Cada item trae además el `porcentajeTitularidad` de esa persona.
+ * Cada item trae además el `porcentajeTitularidad` de esa ciudadano.
  */
-export async function listarOrganizacionesDeDueno(personaId, senal) {
-  const res = await get(`/personas/${personaId}/organizaciones`, senal);
+export async function listarOrganizacionesDeDueno(ciudadanoId, senal) {
+  const res = await get(`/ciudadanos/${ciudadanoId}/organizaciones`, senal);
   return res?.items ?? [];
 }
 
@@ -75,14 +75,14 @@ export function agregarDueno(organizacionId, datos) {
  * nuevo con 20%, alguien tiene que ceder esos 20 puntos primero. El backend
  * valida 0,01–100 y rechaza con 409 si la suma pasa de 100.
  */
-export function actualizarDueno(organizacionId, personaId, porcentajeTitularidad) {
+export function actualizarDueno(organizacionId, ciudadanoId, porcentajeTitularidad) {
   return put(
-    `/organizaciones/${organizacionId}/duenos/${personaId}`,
+    `/organizaciones/${organizacionId}/duenos/${ciudadanoId}`,
     cuerpo("actualizarDueno", { porcentajeTitularidad }),
   );
 }
 
 /** 409 si es el único dueño: una organización no puede quedarse sin ninguno. */
-export function quitarDueno(organizacionId, personaId) {
-  return del(`/organizaciones/${organizacionId}/duenos/${personaId}`);
+export function quitarDueno(organizacionId, ciudadanoId) {
+  return del(`/organizaciones/${organizacionId}/duenos/${ciudadanoId}`);
 }

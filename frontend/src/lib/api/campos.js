@@ -15,8 +15,7 @@
 
 export const CAMPOS = {
   // --- auth ---
-  registrarCiudadano: ["tipo", "cuit", "password", "dni", "nombre", "apellido", "fechaNacimiento"],
-  registrarJuridica: ["tipo", "cuit", "password", "razonSocial", "nombreFantasia", "fechaDeCreacion"],
+  registrarCiudadano: ["cuit", "password", "dni", "nombre", "apellido", "fechaNacimiento"],
   login: ["cuit", "password"],
   loginEmpleado: ["mail", "password"],
   refrescar: ["refreshToken"],
@@ -60,15 +59,15 @@ export const CAMPOS = {
   // --- organizaciones ---
   crearOrganizacion: ["cuit", "razonSocial", "nombreFantasia", "tipo", "taxId", "duenos"],
   actualizarOrganizacion: ["razonSocial", "nombreFantasia", "tipo"],
-  agregarDueno: ["personaId", "porcentajeTitularidad"],
-  // El PUT sólo mueve el porcentaje: la persona ya viene en la URL.
+  agregarDueno: ["ciudadanoId", "porcentajeTitularidad"],
+  // El PUT sólo mueve el porcentaje: la ciudadano ya viene en la URL.
   actualizarDueno: ["porcentajeTitularidad"],
 
   // --- representaciones ---
-  crearRepresentacion: ["personaId", "organizacionId", "alcance", "desde", "hasta"],
+  crearRepresentacion: ["ciudadanoId", "organizacionId", "alcance", "desde", "hasta"],
 
   // --- expedientes ---
-  crearExpediente: ["numero", "personaId", "caratula", "areaIniciadora"],
+  crearExpediente: ["numero", "ciudadanoId", "caratula", "areaIniciadora"],
   crearActuacion: ["tipo", "descripcion", "moduloOrigen", "adjuntos"],
 
   // --- documentacion ---

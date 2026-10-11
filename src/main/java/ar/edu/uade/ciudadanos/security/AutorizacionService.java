@@ -1,11 +1,9 @@
 package ar.edu.uade.ciudadanos.security;
 
 import ar.edu.uade.ciudadanos.common.ApiException;
-import ar.edu.uade.ciudadanos.organizacion.entity.PersonaOrganizacionId;
-import ar.edu.uade.ciudadanos.organizacion.repository.PersonaOrganizacionRepository;
+import ar.edu.uade.ciudadanos.organizacion.entity.CiudadanoOrganizacionId;
+import ar.edu.uade.ciudadanos.organizacion.repository.CiudadanoOrganizacionRepository;
 import ar.edu.uade.ciudadanos.organizacion.repository.RepresentacionRepository;
-import ar.edu.uade.ciudadanos.persona.entity.IntegrantePersonaJuridicaId;
-import ar.edu.uade.ciudadanos.persona.repository.IntegrantePersonaJuridicaRepository;
 import java.time.LocalDate;
 import java.util.Optional;
 import org.springframework.security.core.Authentication;
@@ -29,16 +27,13 @@ import org.springframework.stereotype.Service;
 @Service("permisos")
 public class AutorizacionService {
 
-    private final PersonaOrganizacionRepository personaOrganizacionRepository;
+    private final CiudadanoOrganizacionRepository ciudadanoOrganizacionRepository;
     private final RepresentacionRepository representacionRepository;
-    private final IntegrantePersonaJuridicaRepository integrantePersonaJuridicaRepository;
 
-    public AutorizacionService(PersonaOrganizacionRepository personaOrganizacionRepository,
-                               RepresentacionRepository representacionRepository,
-                               IntegrantePersonaJuridicaRepository integrantePersonaJuridicaRepository) {
-        this.personaOrganizacionRepository = personaOrganizacionRepository;
+    public AutorizacionService(CiudadanoOrganizacionRepository ciudadanoOrganizacionRepository,
+                               RepresentacionRepository representacionRepository) {
+        this.ciudadanoOrganizacionRepository = ciudadanoOrganizacionRepository;
         this.representacionRepository = representacionRepository;
-        this.integrantePersonaJuridicaRepository = integrantePersonaJuridicaRepository;
     }
 
     // ------------------------------------------------------------- quien llama
@@ -140,35 +135,10 @@ public class AutorizacionService {
 
     private boolean vinculadoALaOrganizacion(Long organizacionId) {
         Long propio = actual().id();
-        boolean esDueno = personaOrganizacionRepository
-                .existsById(new PersonaOrganizacionId(propio, organizacionId));
+        boolean esDueno = ciudadanoOrganizacionRepository
+                .existsById(new CiudadanoOrganizacionId(propio, organizacionId));
         return esDueno || representacionRepository
                 .findVigente(propio, organizacionId, LocalDate.now()).isPresent();
-    }
-
-    // ------------------------------------------------------------ personas juridicas
-
-    public void exigirLecturaSobrePersonaJuridica(Long personaJuridicaId) {
-        if (vinculadoALaPersonaJuridica(personaJuridicaId) || puede(Permiso.LEER_TERCEROS)) {
-            return;
-        }
-        throw ApiException.prohibido("No tenes permiso para ver los datos de esta persona juridica");
-    }
-
-    public void exigirEscrituraSobrePersonaJuridica(Long personaJuridicaId) {
-        if (vinculadoALaPersonaJuridica(personaJuridicaId) || puede(Permiso.EDITAR_TERCEROS)) {
-            return;
-        }
-        throw ApiException.prohibido("No tenes permiso para modificar esta persona juridica");
-    }
-
-    private boolean vinculadoALaPersonaJuridica(Long personaJuridicaId) {
-        Long propio = actual().id();
-        if (propio == null) {
-            return false;
-        }
-        return integrantePersonaJuridicaRepository.existsById(
-                new IntegrantePersonaJuridicaId(propio, personaJuridicaId));
     }
 
     // ------------------------------------------------------------------ auditoria

@@ -25,7 +25,7 @@ vi.mock("@/lib/api/endpoints/documentacion", async () => {
     validarDocumento: (...a) => validarDocumento(...a),
   };
 });
-vi.mock("@/lib/api/endpoints/personas", () => ({
+vi.mock("@/lib/api/endpoints/ciudadanos", () => ({
   listarDocumentos: (...a) => listarDocumentos(...a),
 }));
 
@@ -109,7 +109,7 @@ describe("entrega: dos pedidos encadenados en una sola acción", () => {
   });
 
   it("si falla la asociación, no pierde el archivo ya subido", async () => {
-    // El documento quedó cargado. Pedirle a la persona que lo suba de nuevo
+    // El documento quedó cargado. Pedirle a la ciudadano que lo suba de nuevo
     // sería hacerle pagar un error nuestro.
     cambiarEstadoSolicitud.mockRejectedValueOnce(
       new ErrorApi({ status: 500, message: "Error interno" }),

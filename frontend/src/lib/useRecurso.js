@@ -16,14 +16,14 @@ import { useCallback, useEffect, useRef, useState } from "react";
  *
  * La diferencia importa: una acción que recarga la lista (marcar un domicilio
  * como principal, agregar un dueño) no debería hacer desaparecer y reaparecer
- * lo que la persona está mirando.
+ * lo que la ciudadano está mirando.
  *
  * IMPORTANTE: `cargar` tiene que venir envuelto en `useCallback` con sus
  * propias dependencias. El hook se apoya en la identidad de esa función para
  * decidir cuándo recargar; una función inline nueva en cada render dispararía
  * un pedido infinito.
  *
- *   const persona = useRecurso(useCallback((s) => obtenerCiudadano(id, s), [id]));
+ *   const ciudadano = useRecurso(useCallback((s) => obtenerCiudadano(id, s), [id]));
  *
  * (Antes este hook aceptaba un array `deps` y volvía a memoizar `cargar` con
  * él. Cuando el llamador ya usaba useCallback —siempre— eso congelaba la

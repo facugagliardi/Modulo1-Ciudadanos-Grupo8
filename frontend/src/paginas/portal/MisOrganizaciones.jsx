@@ -1,7 +1,7 @@
 import { useCallback } from "react";
 import { Link } from "react-router-dom";
 import { ArrowRight, Building2 } from "lucide-react";
-import { listarRepresentaciones } from "@/lib/api/endpoints/personas";
+import { listarRepresentaciones } from "@/lib/api/endpoints/ciudadanos";
 import { listarOrganizacionesDeDueno } from "@/lib/api/endpoints/organizaciones";
 import { useRecurso } from "@/lib/useRecurso";
 import { useSesion } from "@/lib/auth/SesionContext";
@@ -17,7 +17,7 @@ import { Card, CardCuerpo } from "@/componentes/ui/card";
 /**
  * Las organizaciones del titular.
  *
- * Hay dos vínculos distintos entre una persona y una organización, y la
+ * Hay dos vínculos distintos entre una ciudadano y una organización, y la
  * pantalla necesita los dos:
  *
  *   - **Dueño**: titularidad. Es lo que deja el alta de una organización.
@@ -130,7 +130,7 @@ export function MisOrganizaciones() {
 }
 
 /**
- * Una fila por organización, aunque la persona tenga los dos vínculos.
+ * Una fila por organización, aunque la ciudadano tenga los dos vínculos.
  *
  * Los dueños van primero: es el vínculo más fuerte, y además es el que se
  * acaba de crear cuando alguien registra una organización y vuelve a esta

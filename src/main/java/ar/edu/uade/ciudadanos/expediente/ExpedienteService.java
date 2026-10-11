@@ -13,7 +13,7 @@ import ar.edu.uade.ciudadanos.expediente.entity.EstadoExpediente;
 import ar.edu.uade.ciudadanos.expediente.entity.Expediente;
 import ar.edu.uade.ciudadanos.expediente.repository.ActuacionRepository;
 import ar.edu.uade.ciudadanos.expediente.repository.ExpedienteRepository;
-import ar.edu.uade.ciudadanos.persona.PersonaDirectorioService;
+import ar.edu.uade.ciudadanos.persona.CiudadanoDirectorioService;
 import ar.edu.uade.ciudadanos.persona.dto.CambioEstadoResponse;
 import ar.edu.uade.ciudadanos.security.AutorizacionService;
 import ar.edu.uade.ciudadanos.security.Permiso;
@@ -35,13 +35,13 @@ public class ExpedienteService {
 
     private final ExpedienteRepository expedienteRepository;
     private final ActuacionRepository actuacionRepository;
-    private final PersonaDirectorioService directorio;
+    private final CiudadanoDirectorioService directorio;
     private final AutorizacionService autorizacion;
     private final ObjectMapper objectMapper;
 
     public ExpedienteService(ExpedienteRepository expedienteRepository,
                              ActuacionRepository actuacionRepository,
-                             PersonaDirectorioService directorio,
+                             CiudadanoDirectorioService directorio,
                              AutorizacionService autorizacion,
                              ObjectMapper objectMapper) {
         this.expedienteRepository = expedienteRepository;
@@ -55,7 +55,7 @@ public class ExpedienteService {
     @Transactional
     public ExpedienteResponse crear(CrearExpedienteRequest request) {
         autorizacion.exigir(Permiso.GESTIONAR_EXPEDIENTES, "iniciar un expediente");
-        directorio.exigirQueExista(request.personaId());
+        directorio.exigirQueExista(request.ciudadanoId());
 
         String numero = request.numero() == null || request.numero().isBlank()
                 ? generarNumero()
@@ -66,7 +66,7 @@ public class ExpedienteService {
 
         Expediente expediente = new Expediente();
         expediente.setNumero(numero);
-        expediente.setPersonaId(request.personaId());
+        expediente.setCiudadanoId(request.ciudadanoId());
         expediente.setCaratula(request.caratula().trim());
         expediente.setAreaIniciadora(request.areaIniciadora().trim());
         expediente.setEstado(EstadoExpediente.INICIADO);
@@ -77,7 +77,7 @@ public class ExpedienteService {
     @Transactional(readOnly = true)
     public ExpedienteResponse obtener(Long id) {
         Expediente expediente = buscar(id);
-        autorizacion.exigirLecturaDePersona(expediente.getPersonaId());
+        autorizacion.exigirLecturaDePersona(expediente.getCiudadanoId());
         return armar(expediente);
     }
 
@@ -86,7 +86,7 @@ public class ExpedienteService {
     public List<ExpedienteResponse> listar() {
         List<Expediente> expedientes = autorizacion.puede(Permiso.LEER_TERCEROS)
                 ? expedienteRepository.findAll()
-                : expedienteRepository.findByPersonaId(autorizacion.actual().id());
+                : expedienteRepository.findByCiudadanoId(autorizacion.actual().id());
         return expedientes.stream().map(this::armar).toList();
     }
 
@@ -133,7 +133,7 @@ public class ExpedienteService {
     @Transactional(readOnly = true)
     public List<ActuacionResponse> listarActuaciones(Long expedienteId) {
         Expediente expediente = buscar(expedienteId);
-        autorizacion.exigirLecturaDePersona(expediente.getPersonaId());
+        autorizacion.exigirLecturaDePersona(expediente.getCiudadanoId());
 
         return actuacionRepository.findByIdExpedienteIdOrderByIdActuacionIdAsc(expedienteId).stream()
                 .map(this::aResponse)
@@ -143,7 +143,7 @@ public class ExpedienteService {
     // ------------------------------------------------------------------ helpers
 
     private ExpedienteResponse armar(Expediente e) {
-        return new ExpedienteResponse(e.getExpedienteId(), e.getNumero(), e.getPersonaId(), e.getCaratula(),
+        return new ExpedienteResponse(e.getExpedienteId(), e.getNumero(), e.getCiudadanoId(), e.getCaratula(),
                 e.getAreaIniciadora(), e.getEstado(), e.getFechaInicio(),
                 actuacionRepository.countByIdExpedienteId(e.getExpedienteId()));
     }

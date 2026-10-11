@@ -24,7 +24,7 @@ import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
-/** Documentacion de personas (RF-23 a RF-26). La carga es multipart. */
+/** Documentacion de ciudadanos (RF-23 a RF-26). La carga es multipart. */
 @RestController
 public class DocumentoController {
 
@@ -34,17 +34,17 @@ public class DocumentoController {
         this.documentoService = documentoService;
     }
 
-    @PostMapping(value = "/personas/{personaId}/documentos", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<DocumentoCreadoResponse> cargar(@PathVariable Long personaId,
+    @PostMapping(value = "/ciudadanos/{ciudadanoId}/documentos", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<DocumentoCreadoResponse> cargar(@PathVariable Long ciudadanoId,
                                                           @RequestParam String tipoDocumento,
                                                           @RequestPart MultipartFile archivo) {
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(documentoService.cargar(personaId, tipoDocumento, archivo));
+                .body(documentoService.cargar(ciudadanoId, tipoDocumento, archivo));
     }
 
-    @GetMapping("/personas/{personaId}/documentos")
-    public ListaResponse<DocumentoResumenResponse> listarDePersona(@PathVariable Long personaId) {
-        return ListaResponse.de(documentoService.listarDePersona(personaId));
+    @GetMapping("/ciudadanos/{ciudadanoId}/documentos")
+    public ListaResponse<DocumentoResumenResponse> listarDeCiudadano(@PathVariable Long ciudadanoId) {
+        return ListaResponse.de(documentoService.listarDeCiudadano(ciudadanoId));
     }
 
     @GetMapping("/documentos/{id}")

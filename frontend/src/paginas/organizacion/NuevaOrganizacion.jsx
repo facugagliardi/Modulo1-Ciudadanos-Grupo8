@@ -5,7 +5,7 @@ import { buscarPorCuit, crearOrganizacion } from "@/lib/api/endpoints/organizaci
 import { mensajeAmable } from "@/lib/api/cliente";
 import { soloDigitos } from "@/lib/dominio/formato";
 import { TIPOS_ORGANIZACION } from "@/lib/dominio/listasBlancas";
-import { BuscadorDePersona } from "@/componentes/BuscadorDePersona";
+import { BuscadorDeCiudadano } from "@/componentes/BuscadorDeCiudadano";
 import { Encabezado } from "@/componentes/Encabezado";
 import { Identificador } from "@/componentes/Identificador";
 import { Button } from "@/componentes/ui/button";
@@ -18,7 +18,7 @@ import { CerrarDialogo, ContenidoDialogo, Dialogo, DisparadorDialogo } from "@/c
  * crear organizaciones a cualquier usuario autenticado.
  *
  * El alta pide **al menos un dueño**, y cada dueño es un objeto
- * `{personaId, porcentajeTitularidad}` — no un id suelto, como dice mal
+ * `{ciudadanoId, porcentajeTitularidad}` — no un id suelto, como dice mal
  * ARCHITECTURE.md.
  */
 export function NuevaOrganizacion({ zona = "admin" }) {
@@ -86,7 +86,7 @@ export function NuevaOrganizacion({ zona = "admin" }) {
       const creada = await crearOrganizacion({
         ...valores,
         duenos: duenos.map((d) => ({
-          personaId: d.personaId,
+          ciudadanoId: d.ciudadanoId,
           porcentajeTitularidad: d.porcentajeTitularidad ?? undefined,
         })),
       });
@@ -182,7 +182,7 @@ export function NuevaOrganizacion({ zona = "admin" }) {
                 <ul className="mb-u2 flex flex-col gap-u1">
                   {duenos.map((d) => (
                     <li
-                      key={d.personaId}
+                      key={d.ciudadanoId}
                       className="flex items-center justify-between gap-u2 rounded border border-borde bg-papel px-3 py-2"
                     >
                       <span className="min-w-0">
@@ -200,7 +200,7 @@ export function NuevaOrganizacion({ zona = "admin" }) {
                         tamano="chico"
                         aria-label={`Quitar a ${d.nombre} ${d.apellido}`}
                         onClick={() =>
-                          setDuenos((ds) => ds.filter((x) => x.personaId !== d.personaId))
+                          setDuenos((ds) => ds.filter((x) => x.ciudadanoId !== d.ciudadanoId))
                         }
                       >
                         <Trash2 aria-hidden="true" />
@@ -217,7 +217,7 @@ export function NuevaOrganizacion({ zona = "admin" }) {
               )}
 
               <ElegirDueno
-                yaElegidos={duenos.map((d) => d.personaId)}
+                yaElegidos={duenos.map((d) => d.ciudadanoId)}
                 disponible={Math.max(0, 100 - totalAsignado)}
                 alAgregar={(d) => setDuenos((ds) => [...ds, d])}
               />
@@ -251,7 +251,7 @@ export function NuevaOrganizacion({ zona = "admin" }) {
 
 function ElegirDueno({ yaElegidos, disponible, alAgregar }) {
   const [abierto, setAbierto] = useState(false);
-  const [persona, setPersona] = useState(null);
+  const [ciudadano, setCiudadano] = useState(null);
   const [porcentaje, setPorcentaje] = useState("");
   const [error, setError] = useState(null);
 
@@ -263,14 +263,14 @@ function ElegirDueno({ yaElegidos, disponible, alAgregar }) {
       return;
     }
     alAgregar({
-      personaId: persona.id,
-      nombre: persona.nombre,
-      apellido: persona.apellido,
-      dni: persona.dni,
+      ciudadanoId: ciudadano.id,
+      nombre: ciudadano.nombre,
+      apellido: ciudadano.apellido,
+      dni: ciudadano.dni,
       porcentajeTitularidad: num,
     });
     setAbierto(false);
-    setPersona(null);
+    setCiudadano(null);
     setPorcentaje("");
   }
 
@@ -280,7 +280,7 @@ function ElegirDueno({ yaElegidos, disponible, alAgregar }) {
       onOpenChange={(v) => {
         setAbierto(v);
         if (v) {
-          setPersona(null);
+          setCiudadano(null);
           setPorcentaje("");
           setError(null);
         }
@@ -296,18 +296,18 @@ function ElegirDueno({ yaElegidos, disponible, alAgregar }) {
       <ContenidoDialogo
         className="max-w-lg"
         titulo="Agregar dueño"
-        descripcion="Buscá a la persona por su DNI."
+        descripcion="Buscá a la ciudadano por su DNI."
       >
-        {!persona ? (
-          <BuscadorDePersona
+        {!ciudadano ? (
+          <BuscadorDeCiudadano
             etiqueta="DNI del dueño"
             alEncontrar={(p) => {
               if (yaElegidos.includes(p.id)) {
                 // No hace falta molestar al backend para saber esto.
-                setError("Esa persona ya está en la lista.");
+                setError("Esa ciudadano ya está en la lista.");
                 return;
               }
-              setPersona(p);
+              setCiudadano(p);
               setError(null);
             }}
             autoFocus
@@ -319,7 +319,7 @@ function ElegirDueno({ yaElegidos, disponible, alAgregar }) {
                 Dueño
               </span>
               <span className="font-medium">
-                {[persona.nombre, persona.apellido].filter(Boolean).join(" ")}
+                {[ciudadano.nombre, ciudadano.apellido].filter(Boolean).join(" ")}
               </span>
             </p>
 
@@ -349,7 +349,7 @@ function ElegirDueno({ yaElegidos, disponible, alAgregar }) {
           </form>
         )}
 
-        {!persona && error && (
+        {!ciudadano && error && (
           <p role="alert" className="mt-u2 text-sm font-medium text-sello">
             {error}
           </p>

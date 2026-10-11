@@ -13,7 +13,7 @@ import ar.edu.uade.ciudadanos.organizacion.entity.Organizacion;
 import ar.edu.uade.ciudadanos.organizacion.entity.Representacion;
 import ar.edu.uade.ciudadanos.organizacion.repository.OrganizacionRepository;
 import ar.edu.uade.ciudadanos.organizacion.repository.RepresentacionRepository;
-import ar.edu.uade.ciudadanos.persona.PersonaDirectorioService;
+import ar.edu.uade.ciudadanos.persona.CiudadanoDirectorioService;
 import ar.edu.uade.ciudadanos.persona.dto.CambioEstadoResponse;
 import ar.edu.uade.ciudadanos.persona.dto.DatosPersona;
 import ar.edu.uade.ciudadanos.security.AutorizacionService;
@@ -28,12 +28,12 @@ public class RepresentacionService {
 
     private final RepresentacionRepository representacionRepository;
     private final OrganizacionRepository organizacionRepository;
-    private final PersonaDirectorioService directorio;
+    private final CiudadanoDirectorioService directorio;
     private final AutorizacionService autorizacion;
 
     public RepresentacionService(RepresentacionRepository representacionRepository,
                                  OrganizacionRepository organizacionRepository,
-                                 PersonaDirectorioService directorio,
+                                 CiudadanoDirectorioService directorio,
                                  AutorizacionService autorizacion) {
         this.representacionRepository = representacionRepository;
         this.organizacionRepository = organizacionRepository;

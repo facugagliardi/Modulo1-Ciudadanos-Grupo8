@@ -31,7 +31,7 @@ describe("autenticación", () => {
       "fetch",
       vi.fn().mockResolvedValue(
         respuestaDeLogin({
-          cuerpo: { personaId: 3, tipoPersona: "CIUDADANO", rol: "PERSONA" },
+          cuerpo: { ciudadanoId: 3, tipoCiudadano: "CIUDADANO", rol: "PERSONA" },
           access,
         }),
       ),
@@ -47,7 +47,7 @@ describe("autenticación", () => {
   });
 
   it("falla claro si el servidor no manda el token", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(respuesta({ personaId: 3 })));
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(respuesta({ ciudadanoId: 3 })));
     await expect(autenticar("/auth/login", {})).rejects.toThrow(/no devolvió el token/i);
   });
 
@@ -191,7 +191,7 @@ describe("respuestas y errores", () => {
 
     const form = new FormData();
     form.append("archivo", new Blob(["x"]), "dni.pdf");
-    await pedir("/personas/3/documentos", { metodo: "POST", form });
+    await pedir("/ciudadanos/3/documentos", { metodo: "POST", form });
 
     expect(fetchMock.mock.calls[0][1].headers).not.toHaveProperty("Content-Type");
   });

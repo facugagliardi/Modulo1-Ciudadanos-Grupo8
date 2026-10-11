@@ -9,13 +9,12 @@ import ar.edu.uade.ciudadanos.domicilio.dto.DomicilioCreadoResponse;
 import ar.edu.uade.ciudadanos.domicilio.dto.DomicilioPrincipalInterModuloResponse;
 import ar.edu.uade.ciudadanos.domicilio.dto.DomicilioPrincipalResponse;
 import ar.edu.uade.ciudadanos.domicilio.dto.DomicilioResponse;
-import ar.edu.uade.ciudadanos.domicilio.entity.PersonaPropiedad;
-import ar.edu.uade.ciudadanos.domicilio.entity.PersonaPropiedadId;
+import ar.edu.uade.ciudadanos.domicilio.entity.CiudadanoPropiedad;
+import ar.edu.uade.ciudadanos.domicilio.entity.CiudadanoPropiedadId;
 import ar.edu.uade.ciudadanos.domicilio.entity.Propiedad;
-import ar.edu.uade.ciudadanos.domicilio.repository.PersonaPropiedadRepository;
+import ar.edu.uade.ciudadanos.domicilio.repository.CiudadanoPropiedadRepository;
 import ar.edu.uade.ciudadanos.domicilio.repository.PropiedadRepository;
 import ar.edu.uade.ciudadanos.persona.repository.CiudadanoRepository;
-import ar.edu.uade.ciudadanos.persona.repository.PersonaRepository;
 import ar.edu.uade.ciudadanos.security.AutorizacionService;
 import ar.edu.uade.ciudadanos.security.Permiso;
 import java.time.LocalDate;
@@ -36,27 +35,24 @@ import org.springframework.transaction.annotation.Transactional;
 public class DomicilioService {
 
     private final PropiedadRepository propiedadRepository;
-    private final PersonaPropiedadRepository vinculoRepository;
-    private final PersonaRepository personaRepository;
+    private final CiudadanoPropiedadRepository vinculoRepository;
     private final CiudadanoRepository ciudadanoRepository;
     private final AutorizacionService autorizacion;
 
     public DomicilioService(PropiedadRepository propiedadRepository,
-                            PersonaPropiedadRepository vinculoRepository,
-                            PersonaRepository personaRepository,
+                            CiudadanoPropiedadRepository vinculoRepository,
                             CiudadanoRepository ciudadanoRepository,
                             AutorizacionService autorizacion) {
         this.propiedadRepository = propiedadRepository;
         this.vinculoRepository = vinculoRepository;
-        this.personaRepository = personaRepository;
         this.ciudadanoRepository = ciudadanoRepository;
         this.autorizacion = autorizacion;
     }
 
     @Transactional
-    public DomicilioCreadoResponse crear(Long personaId, CrearDomicilioRequest request) {
-        exigirPersona(personaId);
-        autorizacion.exigirEscrituraSobrePersona(personaId);
+    public DomicilioCreadoResponse crear(Long ciudadanoId, CrearDomicilioRequest request) {
+        exigirCiudadano(ciudadanoId);
+        autorizacion.exigirEscrituraSobrePersona(ciudadanoId);
 
         Propiedad propiedad = new Propiedad();
         aplicar(propiedad, ListasBlancas.exigir(request.tipo(), ListasBlancas.TIPOS_PROPIEDAD, "tipo"),
@@ -67,35 +63,35 @@ public class DomicilioService {
         // Si todavia no hay principal vigente, este lo es: nadie deberia quedar
         // sin domicilio principal por haber omitido el flag.
         boolean sinPrincipal = vinculoRepository
-                .findByIdIdPersonaAndEsPrincipalTrueAndVigenteHastaIsNull(personaId).isEmpty();
+                .findByIdIdCiudadanoAndEsPrincipalTrueAndVigenteHastaIsNull(ciudadanoId).isEmpty();
         boolean principal = Boolean.TRUE.equals(request.esPrincipal()) || sinPrincipal;
 
         if (principal) {
-            desmarcarPrincipalVigente(personaId);
+            desmarcarPrincipalVigente(ciudadanoId);
         }
 
-        PersonaPropiedad vinculo = new PersonaPropiedad();
-        vinculo.setId(new PersonaPropiedadId(personaId, propiedad.getPropiedadId()));
+        CiudadanoPropiedad vinculo = new CiudadanoPropiedad();
+        vinculo.setId(new CiudadanoPropiedadId(ciudadanoId, propiedad.getPropiedadId()));
         vinculo.setVigenteDesde(LocalDate.now());
         vinculo.setEsPrincipal(principal);
         vinculoRepository.save(vinculo);
 
         if (principal) {
-            sincronizarPunteroCiudadano(personaId, propiedad.getPropiedadId());
+            sincronizarPunteroCiudadano(ciudadanoId, propiedad.getPropiedadId());
         }
 
-        return new DomicilioCreadoResponse(propiedad.getPropiedadId(), personaId, propiedad.getTipo(),
+        return new DomicilioCreadoResponse(propiedad.getPropiedadId(), ciudadanoId, propiedad.getTipo(),
                 propiedad.getCalle(), propiedad.getNumero(), propiedad.getIdBarrio(),
                 vinculo.getVigenteDesde(), principal);
     }
 
     /** RF-11: devuelve tambien los cerrados, que son el historial. */
     @Transactional(readOnly = true)
-    public List<DomicilioResponse> listar(Long personaId) {
-        exigirPersona(personaId);
-        autorizacion.exigirLecturaDePersona(personaId);
+    public List<DomicilioResponse> listar(Long ciudadanoId) {
+        exigirCiudadano(ciudadanoId);
+        autorizacion.exigirLecturaDePersona(ciudadanoId);
 
-        return vinculoRepository.findByIdIdPersona(personaId).stream()
+        return vinculoRepository.findByIdIdCiudadano(ciudadanoId).stream()
                 .map(v -> DomicilioResponse.de(propiedad(v.getId().getIdPropiedad()), v))
                 .sorted(Comparator.comparing(DomicilioResponse::vigenteDesde).reversed())
                 .toList();
@@ -104,7 +100,7 @@ public class DomicilioService {
     @Transactional
     public DomicilioResponse actualizar(Long propiedadId, ActualizarDomicilioRequest request) {
         Propiedad propiedad = propiedad(propiedadId);
-        PersonaPropiedad vinculo = vinculoOperable(propiedadId);
+        CiudadanoPropiedad vinculo = vinculoOperable(propiedadId);
 
         aplicar(propiedad, ListasBlancas.exigir(request.tipo(), ListasBlancas.TIPOS_PROPIEDAD, "tipo"),
                 request.calle(), request.numero(), request.altura(), request.idBarrio(),
@@ -116,8 +112,8 @@ public class DomicilioService {
     /** RF-10 y RF-12. */
     @Transactional
     public DomicilioPrincipalResponse marcarPrincipal(Long propiedadId) {
-        PersonaPropiedad vinculo = vinculoOperable(propiedadId);
-        Long personaId = vinculo.getId().getIdPersona();
+        CiudadanoPropiedad vinculo = vinculoOperable(propiedadId);
+        Long ciudadanoId = vinculo.getId().getIdCiudadano();
 
         if (vinculo.getVigenteHasta() != null) {
             throw ApiException.conflicto("No se puede marcar como principal un domicilio dado de baja");
@@ -126,11 +122,11 @@ public class DomicilioService {
             throw ApiException.conflicto("El domicilio ya es el principal");
         }
 
-        desmarcarPrincipalVigente(personaId);
+        desmarcarPrincipalVigente(ciudadanoId);
         vinculo.setEsPrincipal(true);
-        sincronizarPunteroCiudadano(personaId, propiedadId);
+        sincronizarPunteroCiudadano(ciudadanoId, propiedadId);
 
-        return new DomicilioPrincipalResponse(propiedadId, personaId, true, OffsetDateTime.now());
+        return new DomicilioPrincipalResponse(propiedadId, ciudadanoId, true, OffsetDateTime.now());
     }
 
     /**
@@ -140,17 +136,17 @@ public class DomicilioService {
      */
     @Transactional
     public DomicilioCerradoResponse darDeBaja(Long propiedadId) {
-        PersonaPropiedad vinculo = vinculoOperable(propiedadId);
-        Long personaId = vinculo.getId().getIdPersona();
+        CiudadanoPropiedad vinculo = vinculoOperable(propiedadId);
+        Long ciudadanoId = vinculo.getId().getIdCiudadano();
 
         if (vinculo.getVigenteHasta() != null) {
             throw ApiException.conflicto("El domicilio ya estaba dado de baja");
         }
 
-        Optional<PersonaPropiedad> reemplazo = vinculoRepository
-                .findByIdIdPersonaAndVigenteHastaIsNull(personaId).stream()
+        Optional<CiudadanoPropiedad> reemplazo = vinculoRepository
+                .findByIdIdCiudadanoAndVigenteHastaIsNull(ciudadanoId).stream()
                 .filter(v -> !v.getId().getIdPropiedad().equals(propiedadId))
-                .max(Comparator.comparing(PersonaPropiedad::getVigenteDesde));
+                .max(Comparator.comparing(CiudadanoPropiedad::getVigenteDesde));
 
         if (vinculo.isEsPrincipal() && reemplazo.isEmpty()) {
             throw ApiException.conflicto(
@@ -161,22 +157,22 @@ public class DomicilioService {
         Long nuevoPrincipal = null;
         if (vinculo.isEsPrincipal()) {
             vinculo.setEsPrincipal(false);
-            PersonaPropiedad sucesor = reemplazo.get();
+            CiudadanoPropiedad sucesor = reemplazo.get();
             sucesor.setEsPrincipal(true);
             nuevoPrincipal = sucesor.getId().getIdPropiedad();
-            sincronizarPunteroCiudadano(personaId, nuevoPrincipal);
+            sincronizarPunteroCiudadano(ciudadanoId, nuevoPrincipal);
         }
 
         return new DomicilioCerradoResponse(propiedadId, vinculo.getVigenteHasta(), nuevoPrincipal);
     }
 
-    /** Consulta inter-modulo: 404 si la persona no tiene domicilio principal vigente. */
+    /** Consulta inter-modulo: 404 si el ciudadano no tiene domicilio principal vigente. */
     @Transactional(readOnly = true)
-    public DomicilioPrincipalInterModuloResponse domicilioPrincipal(Long personaId) {
-        exigirPersona(personaId);
-        PersonaPropiedad vinculo = vinculoRepository
-                .findByIdIdPersonaAndEsPrincipalTrueAndVigenteHastaIsNull(personaId)
-                .orElseThrow(() -> ApiException.noEncontrado("La persona no tiene domicilio principal vigente"));
+    public DomicilioPrincipalInterModuloResponse domicilioPrincipal(Long ciudadanoId) {
+        exigirCiudadano(ciudadanoId);
+        CiudadanoPropiedad vinculo = vinculoRepository
+                .findByIdIdCiudadanoAndEsPrincipalTrueAndVigenteHastaIsNull(ciudadanoId)
+                .orElseThrow(() -> ApiException.noEncontrado("El ciudadano no tiene domicilio principal vigente"));
 
         Propiedad p = propiedad(vinculo.getId().getIdPropiedad());
         return new DomicilioPrincipalInterModuloResponse(p.getPropiedadId(), p.getCalle(), p.getNumero(),
@@ -185,8 +181,8 @@ public class DomicilioService {
 
     /** Resumen del domicilio principal, para embeber en otras respuestas. */
     @Transactional(readOnly = true)
-    public Optional<DomicilioResponse> principalDe(Long personaId) {
-        return vinculoRepository.findByIdIdPersonaAndEsPrincipalTrueAndVigenteHastaIsNull(personaId)
+    public Optional<DomicilioResponse> principalDe(Long ciudadanoId) {
+        return vinculoRepository.findByIdIdCiudadanoAndEsPrincipalTrueAndVigenteHastaIsNull(ciudadanoId)
                 .map(v -> DomicilioResponse.de(propiedad(v.getId().getIdPropiedad()), v));
     }
 
@@ -203,8 +199,8 @@ public class DomicilioService {
         propiedad.setLatitud(latitud);
     }
 
-    private void desmarcarPrincipalVigente(Long personaId) {
-        vinculoRepository.findByIdIdPersonaAndEsPrincipalTrueAndVigenteHastaIsNull(personaId)
+    private void desmarcarPrincipalVigente(Long ciudadanoId) {
+        vinculoRepository.findByIdIdCiudadanoAndEsPrincipalTrueAndVigenteHastaIsNull(ciudadanoId)
                 .ifPresent(actual -> actual.setEsPrincipal(false));
         // El indice parcial uk_pp_principal_vigente no tolera dos principales a
         // la vez, asi que hay que bajar el anterior antes de subir el nuevo.
@@ -212,8 +208,8 @@ public class DomicilioService {
     }
 
     /** Mantiene sincronizado el puntero denormalizado ciudadano.domicilio_id. */
-    private void sincronizarPunteroCiudadano(Long personaId, Long propiedadId) {
-        ciudadanoRepository.findById(personaId).ifPresent(c -> c.setDomicilioId(propiedadId));
+    private void sincronizarPunteroCiudadano(Long ciudadanoId, Long propiedadId) {
+        ciudadanoRepository.findById(ciudadanoId).ifPresent(c -> c.setDomicilioId(propiedadId));
     }
 
     private Propiedad propiedad(Long propiedadId) {
@@ -221,19 +217,19 @@ public class DomicilioService {
                 .orElseThrow(() -> ApiException.noEncontrado("No existe el domicilio " + propiedadId));
     }
 
-    private void exigirPersona(Long personaId) {
-        if (!personaRepository.existsById(personaId)) {
-            throw ApiException.noEncontrado("No existe la persona " + personaId);
+    private void exigirCiudadano(Long ciudadanoId) {
+        if (!ciudadanoRepository.existsById(ciudadanoId)) {
+            throw ApiException.noEncontrado("No existe el ciudadano " + ciudadanoId);
         }
     }
 
     /**
-     * Los endpoints /domicilios/{id} no traen personaId, asi que hay que
+     * Los endpoints /domicilios/{id} no traen ciudadanoId, asi que hay que
      * deducir sobre que vinculo se opera: el del propio usuario, o el unico que
      * exista si quien llama es interno.
      */
-    private PersonaPropiedad vinculoOperable(Long propiedadId) {
-        List<PersonaPropiedad> vinculos = vinculoRepository.findByIdIdPropiedad(propiedadId);
+    private CiudadanoPropiedad vinculoOperable(Long propiedadId) {
+        List<CiudadanoPropiedad> vinculos = vinculoRepository.findByIdIdPropiedad(propiedadId);
         if (vinculos.isEmpty()) {
             throw ApiException.noEncontrado("No existe el domicilio " + propiedadId);
         }
@@ -242,7 +238,7 @@ public class DomicilioService {
         if (!autorizacion.puede(Permiso.EDITAR_TERCEROS)) {
             Long propio = autorizacion.actual().id();
             return vinculos.stream()
-                    .filter(v -> v.getId().getIdPersona().equals(propio))
+                    .filter(v -> v.getId().getIdCiudadano().equals(propio))
                     .findFirst()
                     .orElseThrow(() -> ApiException.prohibido("El domicilio no pertenece a tu persona"));
         }

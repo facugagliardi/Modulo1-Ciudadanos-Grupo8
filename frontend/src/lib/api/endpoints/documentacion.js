@@ -9,11 +9,11 @@ import { ARCHIVOS_PERMITIDOS } from "../../dominio/listasBlancas";
  * tipo va aparte. No se fija Content-Type a mano — lo pone el navegador con su
  * boundary, y fijarlo rompe la subida.
  */
-export function subirDocumento(personaId, { archivo, tipoDocumento }) {
+export function subirDocumento(ciudadanoId, { archivo, tipoDocumento }) {
   const form = new FormData();
   form.append("archivo", archivo);
   form.append("tipoDocumento", tipoDocumento);
-  return pedir(`/personas/${personaId}/documentos`, { metodo: "POST", form });
+  return pedir(`/ciudadanos/${ciudadanoId}/documentos`, { metodo: "POST", form });
 }
 
 /** Nueva versión de un documento existente. El único campo es el archivo. */

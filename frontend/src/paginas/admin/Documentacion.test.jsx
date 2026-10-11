@@ -73,7 +73,7 @@ describe("listado de solicitudes", () => {
   });
 
   it("explica dónde se valida, porque no hay bandeja global", async () => {
-    // El backend no tiene listado global de documentos: sólo por persona.
+    // El backend no tiene listado global de documentos: sólo por ciudadano.
     renderizar(<Documentacion />);
     expect(await screen.findByText(/entrá a su legajo desde el padrón/i)).toBeInTheDocument();
   });

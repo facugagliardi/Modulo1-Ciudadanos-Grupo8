@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
  *
  * Reglas que el componente hace cumplir por diseño:
  *   - La etiqueta es SIEMPRE visible. Un placeholder no es una etiqueta:
- *     desaparece justo cuando la persona escribe y necesita recordar qué le
+ *     desaparece justo cuando la ciudadano escribe y necesita recordar qué le
  *     pidieron.
  *   - El error va pegado al campo, no arriba de todo, y se anuncia con
  *     aria-describedby + aria-invalid para que un lector de pantalla lo lea.

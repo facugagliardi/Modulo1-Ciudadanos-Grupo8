@@ -20,10 +20,10 @@ beforeEach(() => {
   sinSesion();
   navegar.mockClear();
   registrarYEntrar.mockReset();
-  registrarYEntrar.mockResolvedValue({ persona: {}, sesion: { subType: "CIUDADANO" } });
+  registrarYEntrar.mockResolvedValue({ ciudadano: {}, sesion: { subType: "CIUDADANO" } });
 });
 
-async function completarPersona() {
+async function completarCiudadano() {
   await userEvent.type(screen.getByLabelText("Nombre"), "Ana");
   await userEvent.type(screen.getByLabelText("Apellido"), "Pérez");
   await userEvent.type(screen.getByLabelText("DNI"), "40123456");
@@ -32,8 +32,8 @@ async function completarPersona() {
   await userEvent.type(screen.getByLabelText("Contraseña"), "clave-segura-1");
 }
 
-describe("elección del tipo de persona", () => {
-  it("arranca en persona física", () => {
+describe("elección del tipo de ciudadano", () => {
+  it("arranca en ciudadano física", () => {
     renderizar(<Registro />);
     expect(screen.getByLabelText("DNI")).toBeInTheDocument();
     expect(screen.queryByLabelText(/razón social/i)).not.toBeInTheDocument();
@@ -64,7 +64,7 @@ describe("validación", () => {
 
   it("exige una contraseña de al menos 8 caracteres, como el backend", async () => {
     renderizar(<Registro />);
-    await completarPersona();
+    await completarCiudadano();
     await userEvent.clear(screen.getByLabelText("Contraseña"));
     await userEvent.type(screen.getByLabelText("Contraseña"), "corta");
     await userEvent.click(screen.getByRole("button", { name: /crear cuenta/i }));
@@ -75,7 +75,7 @@ describe("validación", () => {
 
   it("rechaza una fecha de nacimiento futura", async () => {
     renderizar(<Registro />);
-    await completarPersona();
+    await completarCiudadano();
     await userEvent.clear(screen.getByLabelText(/fecha de nacimiento/i));
     await escribirFecha(screen.getByLabelText(/fecha de nacimiento/i), "2099-01-01");
     await userEvent.click(screen.getByRole("button", { name: /crear cuenta/i }));
@@ -85,7 +85,7 @@ describe("validación", () => {
 
   it("valida el largo del DNI", async () => {
     renderizar(<Registro />);
-    await completarPersona();
+    await completarCiudadano();
     await userEvent.clear(screen.getByLabelText("DNI"));
     await userEvent.type(screen.getByLabelText("DNI"), "123");
     await userEvent.click(screen.getByRole("button", { name: /crear cuenta/i }));
@@ -108,7 +108,7 @@ describe("validación", () => {
 describe("alta", () => {
   it("registra y entra sin pedir un segundo login", async () => {
     renderizar(<Registro />);
-    await completarPersona();
+    await completarCiudadano();
     await userEvent.click(screen.getByRole("button", { name: /crear cuenta/i }));
 
     expect(registrarYEntrar).toHaveBeenCalledWith(
@@ -122,7 +122,7 @@ describe("alta", () => {
       new ErrorApi({ status: 409, message: "El cuit ya existe" }),
     );
     renderizar(<Registro />);
-    await completarPersona();
+    await completarCiudadano();
     await userEvent.click(screen.getByRole("button", { name: /crear cuenta/i }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent(/ya hay una cuenta registrada/i);
@@ -137,14 +137,14 @@ describe("alta", () => {
       }),
     );
     renderizar(<Registro />);
-    await completarPersona();
+    await completarCiudadano();
     await userEvent.click(screen.getByRole("button", { name: /crear cuenta/i }));
 
     expect(await screen.findByText("nombre es obligatorio")).toBeInTheDocument();
   });
 
   it("avisa que el domicilio se carga después", () => {
-    // El backend no lo acepta en el alta; decirlo evita que la persona lo busque.
+    // El backend no lo acepta en el alta; decirlo evita que la ciudadano lo busque.
     renderizar(<Registro />);
     expect(screen.getByText(/el domicilio se carga después/i)).toBeInTheDocument();
   });

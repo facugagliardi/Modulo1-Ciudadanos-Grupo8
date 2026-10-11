@@ -7,7 +7,7 @@ import java.time.OffsetDateTime;
 public record ExpedienteResponse(
         Long expedienteId,
         String numero,
-        Long personaId,
+        Long ciudadanoId,
         String caratula,
         String areaIniciadora,
         EstadoExpediente estado,

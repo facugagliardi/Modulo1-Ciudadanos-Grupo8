@@ -22,7 +22,7 @@ import { Card, CardCuerpo } from "@/componentes/ui/card";
  */
 export function Perfil() {
   const { id } = useSesion();
-  const persona = useRecurso(useCallback((s) => obtenerCiudadano(id, s), [id]));
+  const ciudadano = useRecurso(useCallback((s) => obtenerCiudadano(id, s), [id]));
 
   const [valores, setValores] = useState(null);
   const [errores, setErrores] = useState({});
@@ -31,10 +31,10 @@ export function Perfil() {
   const [guardado, setGuardado] = useState(false);
 
   useEffect(() => {
-    if (!persona.datos) return;
-    const { nombre, apellido, fechaNacimiento, dni, cuil } = persona.datos;
+    if (!ciudadano.datos) return;
+    const { nombre, apellido, fechaNacimiento, dni, cuil } = ciudadano.datos;
     setValores({ nombre: nombre ?? "", apellido: apellido ?? "", fechaNacimiento: fechaNacimiento ?? "", dni: dni ?? "", cuil: cuil ?? "" });
-  }, [persona.datos]);
+  }, [ciudadano.datos]);
 
   function cambiar(campo, valor) {
     setValores((v) => ({ ...v, [campo]: valor }));
@@ -69,7 +69,7 @@ export function Perfil() {
     setGuardando(true);
     try {
       await actualizarCiudadano(id, valores);
-      persona.recargar();
+      ciudadano.recargar();
       setGuardado(true);
     } catch (error) {
       if (error?.tieneErroresDeCampo) setErrores(error.errores);
@@ -86,14 +86,14 @@ export function Perfil() {
         titulo="Mis datos"
         descripcion="Así figurás en el registro municipal. Mantenerlos al día evita demoras en tus trámites."
         acciones={
-          persona.datos && (
-            <BadgeEstado entidad={ENTIDADES.CIUDADANO} estado={persona.datos.estado} />
+          ciudadano.datos && (
+            <BadgeEstado entidad={ENTIDADES.CIUDADANO} estado={ciudadano.datos.estado} />
           )
         }
       />
 
-      {persona.cargando && <Cargando />}
-      {persona.error && <ErrorEnPantalla error={persona.error} alReintentar={persona.recargar} />}
+      {ciudadano.cargando && <Cargando />}
+      {ciudadano.error && <ErrorEnPantalla error={ciudadano.error} alReintentar={ciudadano.recargar} />}
 
       {valores && (
         <Card>
@@ -152,7 +152,7 @@ export function Perfil() {
                   className="rounded border border-sello bg-sello-suave px-3 py-2 text-[length:var(--texto-dato)] font-medium text-sello"
                 >
                   {errorGeneral.status === 409
-                    ? "Ya hay otra persona registrada con ese DNI o CUIL."
+                    ? "Ya hay otra ciudadano registrada con ese DNI o CUIL."
                     : mensajeAmable(errorGeneral)}
                 </p>
               )}

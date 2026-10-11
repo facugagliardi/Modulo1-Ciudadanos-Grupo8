@@ -26,7 +26,7 @@ import { CerrarDialogo, ContenidoDialogo, Dialogo, DisparadorDialogo } from "@/c
  * El grupo familiar del vecino.
  *
  * El vínculo se declara desde los dos extremos, porque así lo guarda el
- * backend: si vos sos el padre, la otra persona es el hijo. La pantalla pide
+ * backend: si vos sos el padre, la otra ciudadano es el hijo. La pantalla pide
  * las dos puntas y propone la recíproca para que no haya que pensarla.
  *
  * Desarrollo Social consume estos vínculos para evaluar vulnerabilidad y
@@ -41,7 +41,7 @@ export function Familia() {
       <Encabezado
         seccion="Portal del vecino"
         titulo="Mi grupo familiar"
-        descripcion="Las personas con las que tenés un vínculo registrado en el municipio."
+        descripcion="Las ciudadanos con las que tenés un vínculo registrado en el municipio."
         acciones={
           <FormularioRelacion
             miId={id}
@@ -131,7 +131,7 @@ export function Familia() {
 
                     <ConfirmarAccion
                       titulo="Eliminar este vínculo"
-                      descripcion={`Se borra la relación con ${[r.nombre, r.apellido].filter(Boolean).join(" ")}. Los datos de esa persona no se tocan.`}
+                      descripcion={`Se borra la relación con ${[r.nombre, r.apellido].filter(Boolean).join(" ")}. Los datos de esa ciudadano no se tocan.`}
                       textoConfirmar="Eliminar vínculo"
                       alConfirmar={async () => {
                         await eliminarRelacion(r.relacionId);
@@ -157,7 +157,7 @@ export function Familia() {
 /**
  * Alta y edición de un vínculo.
  *
- * Para dar de alta hace falta el id de la otra persona, y la única forma de
+ * Para dar de alta hace falta el id de la otra ciudadano, y la única forma de
  * conseguirlo es buscarla por DNI: `GET /ciudadanos/dni/{dni}` nunca devuelve
  * 404, responde `{existe:false}`. Por eso el alta tiene dos pasos.
  */
@@ -209,7 +209,7 @@ function FormularioRelacion({ miId, relacion, disparador, alGuardar }) {
     try {
       const res = await buscarPorDni(limpio);
       if (!res?.existe) {
-        setErrorDni("No encontramos a nadie con ese DNI. Esa persona tiene que registrarse primero.");
+        setErrorDni("No encontramos a nadie con ese DNI. Esa ciudadano tiene que registrarse primero.");
         return;
       }
       if (res.id === miId) {
@@ -228,7 +228,7 @@ function FormularioRelacion({ miId, relacion, disparador, alGuardar }) {
     evento.preventDefault();
     setErrorGeneral(null);
     if (!yoSoy) {
-      setErrorYoSoy("Elegí qué sos vos de esta persona.");
+      setErrorYoSoy("Elegí qué sos vos de esta ciudadano.");
       return;
     }
     setEnviando(true);
@@ -274,13 +274,13 @@ function FormularioRelacion({ miId, relacion, disparador, alGuardar }) {
         descripcion={
           esEdicion
             ? "Corregí cómo se relacionan."
-            : "Buscá a la persona por su DNI. Tiene que estar registrada en el municipio."
+            : "Buscá a la ciudadano por su DNI. Tiene que estar registrada en el municipio."
         }
       >
         {!esEdicion && !otra && (
           <form onSubmit={buscar} noValidate className="flex flex-col gap-u2">
             <Campo
-              etiqueta="DNI de la persona"
+              etiqueta="DNI de la ciudadano"
               obligatorio
               inputMode="numeric"
               ayuda="Sin puntos"
@@ -309,7 +309,7 @@ function FormularioRelacion({ miId, relacion, disparador, alGuardar }) {
             <div className="flex items-center justify-between gap-u2 rounded border border-borde bg-papel px-3 py-2">
               <span>
                 <span className="block text-[11px] font-semibold uppercase tracking-wide text-apagado">
-                  Persona
+                  Ciudadano
                 </span>
                 <span className="font-medium">{nombreOtra || `Vecino #${otra.id}`}</span>
               </span>
@@ -325,7 +325,7 @@ function FormularioRelacion({ miId, relacion, disparador, alGuardar }) {
               )}
             </div>
 
-            <Campo etiqueta={`¿Qué es ${nombreOtra || "esta persona"} tuyo?`} obligatorio>
+            <Campo etiqueta={`¿Qué es ${nombreOtra || "esta ciudadano"} tuyo?`} obligatorio>
               {(props) => (
                 <Selector
                   {...props}
@@ -345,7 +345,7 @@ function FormularioRelacion({ miId, relacion, disparador, alGuardar }) {
             </Campo>
 
             <Campo
-              etiqueta={`¿Y vos qué sos de ${nombreOtra || "esta persona"}?`}
+              etiqueta={`¿Y vos qué sos de ${nombreOtra || "esta ciudadano"}?`}
               obligatorio
               ayuda={
                 reciprocoDe(elOtroEs)
@@ -374,7 +374,7 @@ function FormularioRelacion({ miId, relacion, disparador, alGuardar }) {
                 className="rounded border border-sello bg-sello-suave px-3 py-2 text-[length:var(--texto-dato)] font-medium text-sello"
               >
                 {errorGeneral.status === 409
-                  ? "Ya existe un vínculo registrado con esa persona."
+                  ? "Ya existe un vínculo registrado con esa ciudadano."
                   : mensajeAmable(errorGeneral)}
               </p>
             )}

@@ -12,9 +12,11 @@ import ar.edu.uade.ciudadanos.organizacion.dto.ExistenciaOrganizacionResponse;
 import ar.edu.uade.ciudadanos.organizacion.dto.OrganizacionResponse;
 import ar.edu.uade.ciudadanos.organizacion.dto.OrganizacionResumenResponse;
 import ar.edu.uade.ciudadanos.persona.dto.CambioEstadoResponse;
+import ar.edu.uade.ciudadanos.security.AuthPrincipal;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -38,13 +40,29 @@ public class OrganizacionController {
     }
 
     @PostMapping
-    public ResponseEntity<OrganizacionResponse> crear(@Valid @RequestBody CrearOrganizacionRequest request) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(organizacionService.crear(request));
+    public ResponseEntity<OrganizacionResponse> crear(@AuthenticationPrincipal AuthPrincipal principal,
+                                                      @Valid @RequestBody CrearOrganizacionRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(organizacionService.crear(principal.id(), request));
     }
 
     @GetMapping
     public ListaResponse<OrganizacionResumenResponse> listar() {
         return ListaResponse.de(organizacionService.listar());
+    }
+
+    @GetMapping("/pendientes")
+    public ListaResponse<OrganizacionResumenResponse> listarPendientes() {
+        return ListaResponse.de(organizacionService.listarPendientes());
+    }
+
+    @PatchMapping("/{id}/aprobar")
+    public OrganizacionResponse aprobar(@PathVariable Long id) {
+        return organizacionService.aprobar(id);
+    }
+
+    @PatchMapping("/{id}/rechazar")
+    public OrganizacionResponse rechazar(@PathVariable Long id) {
+        return organizacionService.rechazar(id);
     }
 
     /** RF-06. Ruta literal: matchea antes que /{id}. Nunca devuelve 404. */
