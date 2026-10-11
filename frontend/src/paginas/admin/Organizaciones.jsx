@@ -20,15 +20,19 @@ import { Button } from "@/componentes/ui/button";
  * registrar una organización.
  */
 const ESTADOS = [
+  { valor: "PENDIENTE", etiqueta: "Pendiente" },
   { valor: "ACTIVA", etiqueta: "Activa" },
   { valor: "INACTIVA", etiqueta: "Inactiva" },
   { valor: "BLOQUEADA", etiqueta: "Bloqueada" },
+  { valor: "RECHAZADA", etiqueta: "Rechazada" },
 ];
 
 export function Organizaciones() {
   const { datos, cargando, error, recargar } = useRecurso(
     useCallback((s) => listarOrganizaciones(s), []),
   );
+
+  const pendientes = datos?.filter((o) => o.estado === "PENDIENTE")?.length ?? 0;
 
   const columnas = [
     { clave: "razonSocial", titulo: "Razón social" },
@@ -78,6 +82,17 @@ export function Organizaciones() {
           </Button>
         }
       />
+
+      {pendientes > 0 && (
+        <div className="mb-u3 rounded border border-aviso/40 bg-aviso-suave p-3 text-sm text-tinta flex items-center justify-between gap-u2">
+          <span>
+            Hay <strong>{pendientes}</strong> {pendientes === 1 ? "organización pendiente" : "organizaciones pendientes"} de aprobación administrativa.
+          </span>
+          <span className="text-xs text-apagado">
+            Filtrá por estado "Pendiente" o ingresá al detalle para aprobarla o rechazarla.
+          </span>
+        </div>
+      )}
 
       <Tabla
         columnas={columnas}

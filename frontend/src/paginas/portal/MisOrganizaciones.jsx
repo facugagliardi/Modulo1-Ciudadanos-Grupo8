@@ -103,6 +103,12 @@ export function MisOrganizaciones() {
                             Dueño
                           </span>
                         )}
+                        {v.estado && (
+                          <BadgeEstado
+                            entidad={ENTIDADES.ORGANIZACION}
+                            estado={v.estado}
+                          />
+                        )}
                         {v.representacion && (
                           <BadgeEstado
                             entidad={ENTIDADES.REPRESENTACION}
@@ -143,6 +149,7 @@ function unir(duenoDe, representaciones) {
     porId.set(o.organizacionId, {
       organizacionId: o.organizacionId,
       razonSocial: o.razonSocial,
+      estado: o.estado,
       esDueno: true,
       porcentajeTitularidad: o.porcentajeTitularidad,
       representacion: null,

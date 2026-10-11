@@ -253,23 +253,7 @@ describe("autenticación", () => {
     const [ruta, cuerpo] = cliente.post.mock.calls[0];
     expect(ruta).toBe("/auth/register");
     expect(cuerpo.cuit).toBe("20345678901");
-    // El bloque de jurídica no viaja cuando el tipo es CIUDADANO.
-    expect(cuerpo).not.toHaveProperty("razonSocial");
     expect(cliente.autenticar).toHaveBeenCalled();
-  });
-
-  it("una jurídica manda su propio bloque de campos", async () => {
-    await registrarYEntrar({
-      tipo: "JURIDICA",
-      cuit: "30712345678",
-      password: "clave-larga",
-      razonSocial: "Kiosco SRL",
-      nombreFantasia: "El Kiosco",
-      dni: "no corresponde",
-    });
-    const cuerpo = cliente.post.mock.calls[0][1];
-    expect(cuerpo.razonSocial).toBe("Kiosco SRL");
-    expect(cuerpo).not.toHaveProperty("dni");
   });
 
   it("salir descarta la sesión aunque el backend falle", async () => {

@@ -70,7 +70,8 @@ export function formatearAutor(traza) {
   const [tipo, id, rol] = String(traza).split(":");
   if (!id) return String(traza);
   const quien = tipo === "EMPLEADO" ? "Empleado" : "Titular";
-  const rolLegible = rol ? ` · ${rol.replace(/_/g, " ").toLowerCase()}` : "";
+  const rolTexto = rol === "PERSONA" ? "ciudadano" : rol.replace(/_/g, " ").toLowerCase();
+  const rolLegible = rol ? ` · ${rolTexto}` : "";
   return `${quien} #${id}${rolLegible}`;
 }
 

@@ -1,28 +1,28 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { ArrowLeft, Trash2, UserPlus } from "lucide-react";
+import { ArrowLeft, Building2, ShieldCheck, Clock, UserPlus, Trash2 } from "lucide-react";
 import { buscarPorCuit, crearOrganizacion } from "@/lib/api/endpoints/organizaciones";
 import { mensajeAmable } from "@/lib/api/cliente";
 import { soloDigitos } from "@/lib/dominio/formato";
 import { TIPOS_ORGANIZACION } from "@/lib/dominio/listasBlancas";
-import { BuscadorDeCiudadano } from "@/componentes/BuscadorDeCiudadano";
+import { useSesion } from "@/lib/auth/SesionContext";
 import { Encabezado } from "@/componentes/Encabezado";
-import { Identificador } from "@/componentes/Identificador";
+import { BuscadorDeCiudadano, CiudadanoElegida } from "@/componentes/BuscadorDePersona";
 import { Button } from "@/componentes/ui/button";
 import { Campo, Selector } from "@/componentes/ui/campo";
 import { Card, CardCuerpo } from "@/componentes/ui/card";
-import { CerrarDialogo, ContenidoDialogo, Dialogo, DisparadorDialogo } from "@/componentes/ui/dialog";
+import { Dialogo, DisparadorDialogo, ContenidoDialogo } from "@/componentes/ui/dialog";
 
 /**
- * Alta de organización. La misma pantalla en las dos zonas: el backend deja
- * crear organizaciones a cualquier usuario autenticado.
+ * Alta de organización.
  *
- * El alta pide **al menos un dueño**, y cada dueño es un objeto
- * `{ciudadanoId, porcentajeTitularidad}` — no un id suelto, como dice mal
- * ARCHITECTURE.md.
+ * El creador autenticado queda registrado automáticamente como dueño.
+ * También se pueden agregar otros dueños (copropietarios) y definir porcentajes de titularidad.
+ * La organización queda en estado PENDIENTE hasta ser aprobada por un empleado administrativo.
  */
 export function NuevaOrganizacion({ zona = "admin" }) {
   const navegar = useNavigate();
+  const { id: miId } = useSesion();
   const volverA = zona === "admin" ? "/admin/organizaciones" : "/portal/organizaciones";
 
   const [valores, setValores] = useState({
@@ -31,21 +31,24 @@ export function NuevaOrganizacion({ zona = "admin" }) {
     nombreFantasia: "",
     tipo: "SRL",
   });
-  const [duenos, setDuenos] = useState([]);
   const [errores, setErrores] = useState({});
   const [errorGeneral, setErrorGeneral] = useState(null);
   const [enviando, setEnviando] = useState(false);
   const [avisoCuit, setAvisoCuit] = useState(null);
+
+  // Dueños y co-dueños
+  const [porcentajeCreador, setPorcentajeCreador] = useState("100");
+  const [otrosDuenos, setOtrosDuenos] = useState([]);
+  const [sumandoOtro, setSumandoOtro] = useState(false);
+  const [nuevoDueno, setNuevoDueno] = useState(null);
+  const [nuevoPorcentaje, setNuevoPorcentaje] = useState("");
+  const [errorNuevoDueno, setErrorNuevoDueno] = useState(null);
 
   function cambiar(campo, valor) {
     setValores((v) => ({ ...v, [campo]: valor }));
     setErrores((e) => ({ ...e, [campo]: undefined }));
   }
 
-  /**
-   * Chequeo del CUIT al salir del campo. El endpoint nunca da 404: responde
-   * {existe:false}. Avisar acá evita mandar un alta que termina en 409.
-   */
   async function revisarCuit() {
     const limpio = soloDigitos(valores.cuit);
     setAvisoCuit(null);
@@ -62,16 +65,24 @@ export function NuevaOrganizacion({ zona = "admin" }) {
     }
   }
 
-  const totalAsignado = duenos.reduce((t, d) => t + Number(d.porcentajeTitularidad ?? 0), 0);
-
   function validar() {
     const e = {};
     const cuit = soloDigitos(valores.cuit);
     if (!cuit) e.cuit = "Ingresá el CUIT.";
     else if (cuit.length !== 11) e.cuit = "El CUIT tiene 11 dígitos.";
     if (!valores.razonSocial.trim()) e.razonSocial = "Ingresá la razón social.";
-    if (duenos.length === 0) e.duenos = "Agregá al menos un dueño.";
-    if (totalAsignado > 100) e.duenos = "La suma de titularidades no puede pasar de 100%.";
+
+    const pc = Number(porcentajeCreador);
+    if (isNaN(pc) || pc <= 0 || pc > 100) {
+      e.porcentajeCreador = "El creador debe tener un porcentaje entre 0,01% y 100%.";
+    }
+
+    const sumaOtros = otrosDuenos.reduce((acc, d) => acc + Number(d.porcentajeTitularidad || 0), 0);
+    const total = pc + sumaOtros;
+    if (Math.abs(total - 100) > 0.01) {
+      e.porcentajes = `La suma total de titularidades debe ser exactamente 100% (actualmente es ${Number(total.toFixed(2))}%).`;
+    }
+
     setErrores(e);
     return Object.keys(e).length === 0;
   }
@@ -83,13 +94,16 @@ export function NuevaOrganizacion({ zona = "admin" }) {
 
     setEnviando(true);
     try {
-      const creada = await crearOrganizacion({
+      const payload = {
         ...valores,
-        duenos: duenos.map((d) => ({
-          ciudadanoId: d.ciudadanoId,
-          porcentajeTitularidad: d.porcentajeTitularidad ?? undefined,
+        porcentajeCreador: Number(porcentajeCreador),
+        otrosDuenos: otrosDuenos.map((d) => ({
+          ciudadanoId: d.ciudadano.id,
+          personaId: d.ciudadano.id,
+          porcentajeTitularidad: Number(d.porcentajeTitularidad),
         })),
-      });
+      };
+      const creada = await crearOrganizacion(payload);
       navegar(`${volverA}/${creada.organizacionId}`, { replace: true });
     } catch (error) {
       if (error?.tieneErroresDeCampo) setErrores(error.errores);
@@ -97,6 +111,43 @@ export function NuevaOrganizacion({ zona = "admin" }) {
     } finally {
       setEnviando(false);
     }
+  }
+
+  function agregarCopropietario() {
+    setErrorNuevoDueno(null);
+    const p = Number(nuevoPorcentaje);
+    if (!p || isNaN(p) || p <= 0 || p >= 100) {
+      setErrorNuevoDueno("Ingresá un porcentaje válido entre 0,01% y 99,99%.");
+      return;
+    }
+
+    const sumaOtrosActual = otrosDuenos.reduce((acc, d) => acc + Number(d.porcentajeTitularidad || 0), 0);
+    if (sumaOtrosActual + p >= 100) {
+      setErrorNuevoDueno(`La suma de otros dueños (${sumaOtrosActual + p}%) debe ser menor al 100% para que el creador conserve titularidad.`);
+      return;
+    }
+
+    const actualizados = [...otrosDuenos, { ciudadano: nuevoDueno, porcentajeTitularidad: nuevoPorcentaje }];
+    setOtrosDuenos(actualizados);
+
+    // Ajustar porcentaje del creador automáticamente
+    const nuevoCreador = Math.max(0, 100 - (sumaOtrosActual + p));
+    setPorcentajeCreador(String(Number(nuevoCreador.toFixed(2))));
+
+    setSumandoOtro(false);
+    setNuevoDueno(null);
+    setNuevoPorcentaje("");
+  }
+
+  function quitarCopropietario(index) {
+    const quitado = otrosDuenos[index];
+    const actualizados = otrosDuenos.filter((_, i) => i !== index);
+    setOtrosDuenos(actualizados);
+
+    // Devolver el porcentaje al creador
+    const pQuitado = Number(quitado.porcentajeTitularidad || 0);
+    const actualCreador = Number(porcentajeCreador || 0);
+    setPorcentajeCreador(String(Number(Math.min(100, actualCreador + pQuitado).toFixed(2))));
   }
 
   return (
@@ -129,23 +180,17 @@ export function NuevaOrganizacion({ zona = "admin" }) {
                 onBlur={revisarCuit}
                 error={errores.cuit}
               />
-              <Campo etiqueta="Tipo" obligatorio>
-                {(props) => (
-                  <Selector
-                    {...props}
-                    opciones={TIPOS_ORGANIZACION}
-                    value={valores.tipo}
-                    onChange={(e) => cambiar("tipo", e.target.value)}
-                  />
-                )}
-              </Campo>
+              <Selector
+                etiqueta="Tipo de organización"
+                obligatorio
+                opciones={TIPOS_ORGANIZACION}
+                value={valores.tipo}
+                onChange={(e) => cambiar("tipo", e.target.value)}
+              />
             </div>
 
             {avisoCuit && (
-              <p
-                role="alert"
-                className="rounded border border-alerta bg-alerta-suave px-3 py-2 text-[length:var(--texto-dato)] text-alerta"
-              >
+              <p role="status" className="text-sm font-medium text-aviso">
                 {avisoCuit}
               </p>
             )}
@@ -154,74 +199,189 @@ export function NuevaOrganizacion({ zona = "admin" }) {
               <Campo
                 etiqueta="Razón social"
                 obligatorio
-                ayuda="Como figura en el estatuto."
+                ayuda="Como figura en el estatuto o contrato."
                 value={valores.razonSocial}
                 onChange={(e) => cambiar("razonSocial", e.target.value)}
                 error={errores.razonSocial}
               />
               <Campo
                 etiqueta="Nombre de fantasía"
-                ayuda="Con el que se conoce al comercio."
+                ayuda="Con el que se conoce al comercio o empresa."
                 value={valores.nombreFantasia}
                 onChange={(e) => cambiar("nombreFantasia", e.target.value)}
                 error={errores.nombreFantasia}
               />
             </div>
 
-            {/* --- Dueños --- */}
-            <fieldset>
-              <legend className="mb-1.5 text-sm font-medium text-tinta">
-                Dueños <span className="text-sello">*</span>
-              </legend>
-
-              {duenos.length === 0 ? (
-                <p className="mb-u2 text-[length:var(--texto-dato)] text-apagado">
-                  Toda organización necesita al menos un titular registrado.
-                </p>
-              ) : (
-                <ul className="mb-u2 flex flex-col gap-u1">
-                  {duenos.map((d) => (
-                    <li
-                      key={d.ciudadanoId}
-                      className="flex items-center justify-between gap-u2 rounded border border-borde bg-papel px-3 py-2"
+            {/* --- Sección Dueños y Titularidad --- */}
+            <div className="rounded border border-borde bg-papel p-4 flex flex-col gap-u2">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <h2 className="text-sm font-semibold text-tinta">Dueños y titularidad</h2>
+                  <p className="text-xs text-apagado">
+                    Como creador de la empresa figurás como dueño inicial. Podés sumar otros dueños.
+                  </p>
+                </div>
+                <Dialogo
+                  open={sumandoOtro}
+                  onOpenChange={(v) => {
+                    setSumandoOtro(v);
+                    if (!v) {
+                      setNuevoDueno(null);
+                      setNuevoPorcentaje("");
+                      setErrorNuevoDueno(null);
+                    }
+                  }}
+                >
+                  <DisparadorDialogo asChild>
+                    <Button
+                      type="button"
+                      variante="secundario"
+                      tamano="chico"
                     >
-                      <span className="min-w-0">
-                        <span className="block font-medium">
-                          {[d.nombre, d.apellido].filter(Boolean).join(" ")}
-                        </span>
-                        <span className="block text-sm text-apagado">
-                          DNI <Identificador valor={d.dni} tipo="dni" />
-                          {d.porcentajeTitularidad != null && ` · ${d.porcentajeTitularidad}%`}
-                        </span>
-                      </span>
-                      <Button
-                        type="button"
-                        variante="fantasma"
-                        tamano="chico"
-                        aria-label={`Quitar a ${d.nombre} ${d.apellido}`}
-                        onClick={() =>
-                          setDuenos((ds) => ds.filter((x) => x.ciudadanoId !== d.ciudadanoId))
-                        }
-                      >
-                        <Trash2 aria-hidden="true" />
-                      </Button>
-                    </li>
-                  ))}
-                </ul>
+                      <UserPlus className="size-4 mr-1.5" aria-hidden="true" />
+                      Agregar otro dueño
+                    </Button>
+                  </DisparadorDialogo>
+
+                  <ContenidoDialogo
+                    className="max-w-lg"
+                    titulo="Agregar copropietario"
+                    descripcion="El vecino debe estar registrado en el municipio."
+                  >
+                    {!nuevoDueno ? (
+                      <BuscadorDeCiudadano
+                        etiqueta="DNI del nuevo dueño"
+                        ayuda="Ingresá su DNI sin puntos."
+                        alEncontrar={(c) => {
+                          if (c.id === miId) {
+                            setErrorNuevoDueno("Vos ya sos el creador de la empresa.");
+                            return;
+                          }
+                          if (otrosDuenos.some((o) => o.ciudadano.id === c.id)) {
+                            setErrorNuevoDueno("Este ciudadano ya está en la lista de dueños.");
+                            return;
+                          }
+                          setNuevoDueno(c);
+                          setErrorNuevoDueno(null);
+                        }}
+                      />
+                    ) : (
+                      <div className="flex flex-col gap-u2">
+                        <CiudadanoElegida
+                          ciudadano={nuevoDueno}
+                          alCambiar={() => setNuevoDueno(null)}
+                        />
+                        <div className="flex items-end gap-u2">
+                          <Campo
+                            etiqueta="Porcentaje de titularidad (%)"
+                            obligatorio
+                            type="number"
+                            step="0.01"
+                            min="0.01"
+                            max="99.99"
+                            value={nuevoPorcentaje}
+                            onChange={(e) => {
+                              setNuevoPorcentaje(e.target.value);
+                              setErrorNuevoDueno(null);
+                            }}
+                          />
+                          <Button type="button" onClick={agregarCopropietario}>
+                            Confirmar dueño
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+
+                    {errorNuevoDueno && (
+                      <p role="alert" className="text-xs text-sello font-medium mt-1">
+                        {errorNuevoDueno}
+                      </p>
+                    )}
+                  </ContenidoDialogo>
+                </Dialogo>
+              </div>
+
+              {/* Dueño creador */}
+              <div className="flex flex-wrap items-center justify-between gap-2 rounded border border-borde bg-fondo p-3">
+                <div className="min-w-0">
+                  <span className="block text-xs font-semibold uppercase tracking-wider text-expediente">
+                    Creador (Vos)
+                  </span>
+                  <span className="text-sm text-apagado">Dueño titular principal</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <label htmlFor="porcentaje-creador" className="text-xs text-apagado">
+                    Titularidad (%):
+                  </label>
+                  <input
+                    id="porcentaje-creador"
+                    type="number"
+                    step="0.01"
+                    min="0.01"
+                    max="100"
+                    className="w-24 rounded border border-borde bg-papel px-2 py-1 text-sm text-right font-medium"
+                    value={porcentajeCreador}
+                    onChange={(e) => {
+                      setPorcentajeCreador(e.target.value);
+                      setErrores((prev) => ({ ...prev, porcentajeCreador: undefined, porcentajes: undefined }));
+                    }}
+                  />
+                </div>
+              </div>
+              {errores.porcentajeCreador && (
+                <p className="text-xs text-sello font-medium">{errores.porcentajeCreador}</p>
               )}
 
-              {errores.duenos && (
-                <p role="alert" className="mb-u2 text-sm font-medium text-sello">
-                  {errores.duenos}
+              {/* Lista de otros dueños */}
+              {otrosDuenos.length > 0 && (
+                <div className="flex flex-col gap-2 mt-1">
+                  {otrosDuenos.map((od, idx) => (
+                    <div
+                      key={od.ciudadano.id}
+                      className="flex flex-wrap items-center justify-between gap-2 rounded border border-borde bg-fondo p-3"
+                    >
+                      <div className="min-w-0">
+                        <span className="font-medium text-sm">
+                          {[od.ciudadano.nombre, od.ciudadano.apellido].filter(Boolean).join(" ")}
+                        </span>
+                        <span className="block text-xs text-apagado">
+                          DNI {od.ciudadano.dni || od.ciudadano.id}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="text-sm font-semibold">{od.porcentajeTitularidad}%</span>
+                        <Button
+                          type="button"
+                          variante="fantasma"
+                          tamano="chico"
+                          onClick={() => quitarCopropietario(idx)}
+                          aria-label={`Quitar a ${od.ciudadano.nombre}`}
+                        >
+                          <Trash2 className="size-4 text-sello" aria-hidden="true" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+
+              {errores.porcentajes && (
+                <p role="alert" className="text-xs text-sello font-medium mt-1">
+                  {errores.porcentajes}
                 </p>
               )}
+            </div>
 
-              <ElegirDueno
-                yaElegidos={duenos.map((d) => d.ciudadanoId)}
-                disponible={Math.max(0, 100 - totalAsignado)}
-                alAgregar={(d) => setDuenos((ds) => [...ds, d])}
-              />
-            </fieldset>
+            <div className="rounded border border-borde bg-papel p-3 text-sm text-apagado flex flex-col gap-2">
+              <div className="flex items-start gap-2">
+                <Clock className="size-5 shrink-0 text-aviso" aria-hidden="true" />
+                <span>
+                  <strong>Aprobación requerida:</strong> La organización se creará en estado <em>PENDIENTE</em> y requerirá ser aprobada por el área administrativa antes de estar activa.
+                </span>
+              </div>
+            </div>
 
             {errorGeneral && (
               <p
@@ -246,115 +406,5 @@ export function NuevaOrganizacion({ zona = "admin" }) {
         </CardCuerpo>
       </Card>
     </>
-  );
-}
-
-function ElegirDueno({ yaElegidos, disponible, alAgregar }) {
-  const [abierto, setAbierto] = useState(false);
-  const [ciudadano, setCiudadano] = useState(null);
-  const [porcentaje, setPorcentaje] = useState("");
-  const [error, setError] = useState(null);
-
-  function confirmar(evento) {
-    evento.preventDefault();
-    const num = porcentaje === "" ? null : Number(porcentaje);
-    if (num !== null && (Number.isNaN(num) || num <= 0 || num > disponible)) {
-      setError(`Tiene que ser un número entre 0,01 y ${disponible}.`);
-      return;
-    }
-    alAgregar({
-      ciudadanoId: ciudadano.id,
-      nombre: ciudadano.nombre,
-      apellido: ciudadano.apellido,
-      dni: ciudadano.dni,
-      porcentajeTitularidad: num,
-    });
-    setAbierto(false);
-    setCiudadano(null);
-    setPorcentaje("");
-  }
-
-  return (
-    <Dialogo
-      open={abierto}
-      onOpenChange={(v) => {
-        setAbierto(v);
-        if (v) {
-          setCiudadano(null);
-          setPorcentaje("");
-          setError(null);
-        }
-      }}
-    >
-      <DisparadorDialogo asChild>
-        <Button type="button" variante="secundario" tamano="chico">
-          <UserPlus aria-hidden="true" />
-          Agregar dueño
-        </Button>
-      </DisparadorDialogo>
-
-      <ContenidoDialogo
-        className="max-w-lg"
-        titulo="Agregar dueño"
-        descripcion="Buscá a la ciudadano por su DNI."
-      >
-        {!ciudadano ? (
-          <BuscadorDeCiudadano
-            etiqueta="DNI del dueño"
-            alEncontrar={(p) => {
-              if (yaElegidos.includes(p.id)) {
-                // No hace falta molestar al backend para saber esto.
-                setError("Esa ciudadano ya está en la lista.");
-                return;
-              }
-              setCiudadano(p);
-              setError(null);
-            }}
-            autoFocus
-          />
-        ) : (
-          <form onSubmit={confirmar} noValidate className="flex flex-col gap-u2">
-            <p className="rounded border border-borde bg-papel px-3 py-2">
-              <span className="block text-[11px] font-semibold uppercase tracking-wide text-apagado">
-                Dueño
-              </span>
-              <span className="font-medium">
-                {[ciudadano.nombre, ciudadano.apellido].filter(Boolean).join(" ")}
-              </span>
-            </p>
-
-            <Campo
-              etiqueta="Porcentaje de titularidad"
-              type="number"
-              step="0.01"
-              min="0.01"
-              max={disponible}
-              ayuda={`Opcional. Queda ${disponible}% sin asignar.`}
-              value={porcentaje}
-              onChange={(e) => {
-                setPorcentaje(e.target.value);
-                setError(null);
-              }}
-              error={error}
-            />
-
-            <div className="mt-u1 flex justify-end gap-u2">
-              <CerrarDialogo asChild>
-                <Button type="button" variante="secundario">
-                  Cancelar
-                </Button>
-              </CerrarDialogo>
-              <Button type="submit">Agregar</Button>
-            </div>
-          </form>
-        )}
-
-        {!ciudadano && error && (
-          <p role="alert" className="mt-u2 text-sm font-medium text-sello">
-            {error}
-          </p>
-        )}
-      </ContenidoDialogo>
-    </Dialogo>
   );
 }

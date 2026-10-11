@@ -1,14 +1,20 @@
 import { useCallback, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { ArrowLeft, ArrowRightLeft, Building2, Trash2, UserPlus } from "lucide-react";
+import { ArrowLeft, ArrowRightLeft, Building2, MapPin, Plus, Star, Trash2, UserPlus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   actualizarDueno,
   actualizarOrganizacion,
   agregarDueno,
+  aprobarOrganizacion,
   cambiarEstadoOrganizacion,
+  crearPropiedadOrganizacion,
+  darDeBajaPropiedadOrganizacion,
+  listarPropiedadesDeOrganizacion,
+  marcarPropiedadOrganizacionPrincipal,
   obtenerOrganizacion,
   quitarDueno,
+  rechazarOrganizacion,
 } from "@/lib/api/endpoints/organizaciones";
 import {
   cambiarEstadoRepresentacion,
@@ -23,8 +29,9 @@ import { ENTIDADES } from "@/lib/dominio/estados";
 import { ALCANCES_REPRESENTACION, etiquetaDe, TIPOS_ORGANIZACION, TIPOS_PROPIEDAD } from "@/lib/dominio/listasBlancas";
 import { PERMISOS } from "@/lib/auth/permisos";
 import { BadgeEstado } from "@/componentes/BadgeEstado";
-import { BuscadorDeCiudadano, CiudadanoElegida } from "@/componentes/BuscadorDeCiudadano";
+import { BuscadorDeCiudadano, CiudadanoElegida } from "@/componentes/BuscadorDePersona";
 import { CambiarEstado } from "@/componentes/CambiarEstado";
+import { ConfirmarAccion } from "@/componentes/ConfirmarAccion";
 import { Cargando, ErrorEnPantalla, EstadoVacio } from "@/componentes/Estados";
 import { Identificador } from "@/componentes/Identificador";
 import { Button } from "@/componentes/ui/button";
@@ -49,15 +56,20 @@ export function DetalleOrganizacion({ zona = "admin" }) {
   const puedeEditarTerceros = usePermisoSeguro(PERMISOS.EDITAR_TERCEROS);
   const puedeCambiarEstado = usePermisoSeguro(PERMISOS.CAMBIAR_ESTADO_TITULAR);
   const puedeGestionarRepr = usePermisoSeguro(PERMISOS.GESTIONAR_REPRESENTACIONES);
+  const puedeAprobarOrg = usePermisoSeguro(PERMISOS.APROBAR_ORGANIZACION);
+  const [procesandoAprobacion, setProcesandoAprobacion] = useState(false);
 
   const organizacion = useRecurso(useCallback((s) => obtenerOrganizacion(id, s), [id]));
   const representaciones = useRecurso(
     useCallback((s) => listarRepresentacionesDeOrganizacion(id, s), [id]),
   );
+  const propiedades = useRecurso(
+    useCallback((s) => listarPropiedadesDeOrganizacion(id, s), [id]),
+  );
 
   const o = organizacion.datos;
-  const esDueno = Boolean(o?.duenos?.some((d) => d.ciudadanoId === miId));
-  const esRepresentante = Boolean(o?.representantesVigentes?.some((r) => r.ciudadanoId === miId));
+  const esDueno = Boolean(o?.duenos?.some((d) => (d.ciudadanoId ?? d.personaId) === miId));
+  const esRepresentante = Boolean(o?.representantesVigentes?.some((r) => (r.ciudadanoId ?? r.personaId) === miId));
   // La misma condición que aplica AutorizacionService del backend.
   const puedeEditar = esDueno || esRepresentante || puedeEditarTerceros;
   const puedeRepresentaciones = esDueno || esRepresentante || puedeGestionarRepr;
@@ -108,6 +120,41 @@ export function DetalleOrganizacion({ zona = "admin" }) {
             </div>
 
             <div className="flex flex-wrap items-center gap-u2">
+              {o.estado === "PENDIENTE" && puedeAprobarOrg && (
+                <>
+                  <Button
+                    type="button"
+                    disabled={procesandoAprobacion}
+                    onClick={async () => {
+                      setProcesandoAprobacion(true);
+                      try {
+                        await aprobarOrganizacion(o.organizacionId);
+                        organizacion.recargar();
+                      } finally {
+                        setProcesandoAprobacion(false);
+                      }
+                    }}
+                  >
+                    Aprobar organización
+                  </Button>
+                  <Button
+                    type="button"
+                    variante="destructivo"
+                    disabled={procesandoAprobacion}
+                    onClick={async () => {
+                      setProcesandoAprobacion(true);
+                      try {
+                        await rechazarOrganizacion(o.organizacionId);
+                        organizacion.recargar();
+                      } finally {
+                        setProcesandoAprobacion(false);
+                      }
+                    }}
+                  >
+                    Rechazar
+                  </Button>
+                </>
+              )}
               {puedeEditar && (
                 <EditarOrganizacion organizacion={o} alGuardar={organizacion.recargar} />
               )}
@@ -125,6 +172,12 @@ export function DetalleOrganizacion({ zona = "admin" }) {
             </div>
           </header>
 
+          {o.estado === "PENDIENTE" && (
+            <div className="mb-u3 rounded border border-aviso/40 bg-aviso-suave p-3 text-sm text-tinta">
+              <strong>Organización pendiente de aprobación:</strong> Esta entidad fue registrada y requiere ser aprobada por el área administrativa para quedar activa.
+            </div>
+          )}
+
           <Pestanias defaultValue="datos">
             <ListaPestanias>
               <Pestania value="datos">Datos</Pestania>
@@ -136,6 +189,12 @@ export function DetalleOrganizacion({ zona = "admin" }) {
                 Representantes
                 {representaciones.datos && (
                   <span className="ml-1.5 text-apagado">{representaciones.datos.length}</span>
+                )}
+              </Pestania>
+              <Pestania value="propiedades">
+                Propiedades
+                {propiedades.datos && (
+                  <span className="ml-1.5 text-apagado">{propiedades.datos.length}</span>
                 )}
               </Pestania>
             </ListaPestanias>
@@ -195,14 +254,14 @@ export function DetalleOrganizacion({ zona = "admin" }) {
               ) : (
                 <ul className="lista-escalonada flex flex-col gap-u2">
                   {o.duenos.map((d) => (
-                    <li key={d.ciudadanoId}>
+                    <li key={d.ciudadanoId ?? d.personaId}>
                       <Card>
                         <CardCuerpo className="flex flex-wrap items-center justify-between gap-u2">
                           <div className="min-w-0">
                             <p className="font-medium">
                               {zona === "admin" && puedeEditarTerceros ? (
                                 <Link
-                                  to={`/admin/padron/${d.ciudadanoId}`}
+                                  to={`/admin/padron/${d.ciudadanoId ?? d.personaId}`}
                                   className="text-expediente hover:underline"
                                 >
                                   {[d.nombre, d.apellido].filter(Boolean).join(" ")}
@@ -276,7 +335,7 @@ export function DetalleOrganizacion({ zona = "admin" }) {
                           <div className="min-w-0">
                             <p className="flex flex-wrap items-center gap-u2 font-medium">
                               {[r.nombre, r.apellido].filter(Boolean).join(" ") ||
-                                `Ciudadano #${r.ciudadanoId}`}
+                                `Ciudadano #${r.ciudadanoId ?? r.personaId}`}
                               <BadgeEstado entidad={ENTIDADES.REPRESENTACION} estado={r.estado} />
                             </p>
                             <p className="text-[length:var(--texto-dato)] text-apagado">
@@ -307,6 +366,134 @@ export function DetalleOrganizacion({ zona = "admin" }) {
                       </Card>
                     </li>
                   ))}
+                </ul>
+              )}
+            </PanelPestania>
+
+            {/* --- Propiedades --- */}
+            <PanelPestania value="propiedades">
+              {puedeEditar && (
+                <div className="mb-u2 flex justify-end">
+                  <FormularioPropiedadOrganizacion
+                    organizacionId={o.organizacionId}
+                    alGuardar={() => {
+                      propiedades.recargar();
+                      organizacion.recargar();
+                    }}
+                    disparador={
+                      <Button>
+                        <Plus className="size-4 mr-1.5" aria-hidden="true" />
+                        Agregar propiedad
+                      </Button>
+                    }
+                  />
+                </div>
+              )}
+
+              {propiedades.cargando && <Cargando />}
+              {propiedades.error && (
+                <ErrorEnPantalla
+                  error={propiedades.error}
+                  alReintentar={propiedades.recargar}
+                />
+              )}
+
+              {propiedades.datos?.length === 0 && (
+                <EstadoVacio
+                  titulo="Sin propiedades registradas"
+                  descripcion="Esta organización no tiene domicilios o inmuebles registrados."
+                  accion={
+                    puedeEditar && (
+                      <FormularioPropiedadOrganizacion
+                        organizacionId={o.organizacionId}
+                        sinPropiedadesAun
+                        alGuardar={() => {
+                          propiedades.recargar();
+                          organizacion.recargar();
+                        }}
+                        disparador={<Button>Cargar primera propiedad</Button>}
+                      />
+                    )
+                  }
+                />
+              )}
+
+              {propiedades.datos?.length > 0 && (
+                <ul className="lista-escalonada flex flex-col gap-u2">
+                  {propiedades.datos.map((p) => {
+                    const vigente = !p.vigenteHasta;
+                    return (
+                      <li key={p.propiedadId}>
+                        <Card className={cn(!vigente && "opacity-75")}>
+                          <CardCuerpo className="flex flex-wrap items-center justify-between gap-u2">
+                            <div className="min-w-0">
+                              <p className="flex flex-wrap items-center gap-u2 font-medium">
+                                <MapPin className="size-4 text-apagado" aria-hidden="true" />
+                                {p.calle} {p.numero}
+                                {p.altura ? `, ${p.altura}` : ""}
+                                {p.esPrincipal && (
+                                  <span className="inline-flex items-center gap-1 rounded bg-expediente-suave px-2 py-0.5 text-xs font-semibold text-expediente">
+                                    <Star className="size-3 fill-current" aria-hidden="true" />
+                                    Principal
+                                  </span>
+                                )}
+                                {!vigente && (
+                                  <span className="inline-flex items-center rounded bg-apagado/15 px-2 py-0.5 text-xs font-medium text-apagado">
+                                    Baja
+                                  </span>
+                                )}
+                              </p>
+                              <p className="text-[length:var(--texto-dato)] text-apagado">
+                                {etiquetaDe(TIPOS_PROPIEDAD, p.tipo)} · vigente desde{" "}
+                                {formatearFecha(p.vigenteDesde)}
+                                {p.vigenteHasta ? ` hasta el ${formatearFecha(p.vigenteHasta)}` : ""}
+                              </p>
+                            </div>
+
+                            {puedeEditar && vigente && (
+                              <div className="flex items-center gap-2">
+                                {!p.esPrincipal && (
+                                  <Button
+                                    type="button"
+                                    variante="secundario"
+                                    tamano="chico"
+                                    onClick={async () => {
+                                      await marcarPropiedadOrganizacionPrincipal(o.organizacionId, p.propiedadId);
+                                      propiedades.recargar();
+                                      organizacion.recargar();
+                                    }}
+                                  >
+                                    <Star className="size-4 mr-1 text-aviso" aria-hidden="true" />
+                                    Hacer principal
+                                  </Button>
+                                )}
+                                <ConfirmarAccion
+                                  titulo="¿Dar de baja esta propiedad?"
+                                  descripcion="El inmueble quedará en el historial de la organización con su fecha de cese."
+                                  textoBotonConfirmar="Dar de baja"
+                                  alConfirmar={async () => {
+                                    await darDeBajaPropiedadOrganizacion(o.organizacionId, p.propiedadId);
+                                    propiedades.recargar();
+                                    organizacion.recargar();
+                                  }}
+                                  disparador={
+                                    <Button
+                                      type="button"
+                                      variante="fantasma"
+                                      tamano="chico"
+                                      aria-label={`Dar de baja propiedad ${p.calle} ${p.numero}`}
+                                    >
+                                      <Trash2 className="size-4 text-sello" aria-hidden="true" />
+                                    </Button>
+                                  }
+                                />
+                              </div>
+                            )}
+                          </CardCuerpo>
+                        </Card>
+                      </li>
+                    );
+                  })}
                 </ul>
               )}
             </PanelPestania>
@@ -468,13 +655,14 @@ function QuitarDueno({ organizacion, dueno, alGuardar }) {
 
   const nombre = nombreDe(dueno);
   const cede = Number(dueno.porcentajeTitularidad ?? 0);
-  const otros = (organizacion.duenos ?? []).filter((x) => x.ciudadanoId !== dueno.ciudadanoId);
-  const receptor = otros.find((x) => String(x.ciudadanoId) === destino) ?? null;
+  const duenoId = dueno.ciudadanoId ?? dueno.personaId;
+  const otros = (organizacion.duenos ?? []).filter((x) => (x.ciudadanoId ?? x.personaId) !== duenoId);
+  const receptor = otros.find((x) => String(x.ciudadanoId ?? x.personaId) === destino) ?? null;
 
   const opciones = [
     { valor: QUEDA_LIBRE, etiqueta: "Que quede sin asignar" },
     ...otros.map((x) => ({
-      valor: String(x.ciudadanoId),
+      valor: String(x.ciudadanoId ?? x.personaId),
       etiqueta: `${nombreDe(x)} — tiene ${redondear(x.porcentajeTitularidad ?? 0)}%`,
     })),
   ];
@@ -486,13 +674,13 @@ function QuitarDueno({ organizacion, dueno, alGuardar }) {
 
     let yaSeQuito = false;
     try {
-      await quitarDueno(organizacion.organizacionId, dueno.ciudadanoId);
+      await quitarDueno(organizacion.organizacionId, duenoId);
       yaSeQuito = true;
 
       if (receptor) {
         await actualizarDueno(
           organizacion.organizacionId,
-          receptor.ciudadanoId,
+          receptor.ciudadanoId ?? receptor.personaId,
           Number(receptor.porcentajeTitularidad ?? 0) + cede,
         );
       }
@@ -647,7 +835,7 @@ function AgregarDueno({ organizacion, alGuardar }) {
   // Sólo puede ceder quien tiene un porcentaje cargado: de un dueño sin
   // porcentaje no hay nada que restar.
   const cedentesPosibles = duenos.filter((d) => Number(d.porcentajeTitularidad ?? 0) > 0);
-  const cedente = duenos.find((d) => String(d.ciudadanoId) === origen) ?? null;
+  const cedente = duenos.find((d) => String(d.ciudadanoId ?? d.personaId) === origen) ?? null;
   const desdeLibre = origen === DESDE_LIBRE;
 
   const num = porcentaje === "" ? null : Number(porcentaje);
@@ -658,7 +846,7 @@ function AgregarDueno({ organizacion, alGuardar }) {
   const opcionesOrigen = [
     { valor: DESDE_LIBRE, etiqueta: `Sin asignar — hay ${redondear(disponible)}% libre` },
     ...cedentesPosibles.map((d) => ({
-      valor: String(d.ciudadanoId),
+      valor: String(d.ciudadanoId ?? d.personaId),
       etiqueta: `${nombreDe(d)} — tiene ${redondear(d.porcentajeTitularidad)}%`,
     })),
   ];
@@ -705,7 +893,7 @@ function AgregarDueno({ organizacion, alGuardar }) {
     let cedenteYaBajado = false;
     try {
       if (cedente) {
-        await actualizarDueno(organizacion.organizacionId, cedente.ciudadanoId, quedaAlCedente);
+        await actualizarDueno(organizacion.organizacionId, cedente.ciudadanoId ?? cedente.personaId, quedaAlCedente);
         cedenteYaBajado = true;
       }
       await agregarDueno(organizacion.organizacionId, {
@@ -873,6 +1061,7 @@ function OtorgarRepresentacion({ organizacionId, alGuardar }) {
     try {
       await crearRepresentacion({
         ciudadanoId: ciudadano.id,
+        personaId: ciudadano.id,
         organizacionId: Number(organizacionId),
         alcance: valores.alcance,
         desde: valores.desde,
@@ -985,3 +1174,165 @@ function OtorgarRepresentacion({ organizacionId, alGuardar }) {
     </Dialogo>
   );
 }
+
+function FormularioPropiedadOrganizacion({ organizacionId, sinPropiedadesAun, disparador, alGuardar }) {
+  const [abierto, setAbierto] = useState(false);
+  const [valores, setValores] = useState({
+    tipo: "LOCAL",
+    calle: "",
+    numero: "",
+    altura: "",
+    longitud: "",
+    latitud: "",
+    esPrincipal: false,
+  });
+  const [errores, setErrores] = useState({});
+  const [errorGeneral, setErrorGeneral] = useState(null);
+  const [enviando, setEnviando] = useState(false);
+
+  function cambiar(campo, valor) {
+    setValores((v) => ({ ...v, [campo]: valor }));
+    setErrores((e) => ({ ...e, [campo]: undefined }));
+  }
+
+  function validar() {
+    const e = {};
+    if (!valores.calle.trim()) e.calle = "Ingresá la calle.";
+    if (!valores.numero.trim()) e.numero = "Ingresá la altura.";
+    setErrores(e);
+    return Object.keys(e).length === 0;
+  }
+
+  async function enviar(evento) {
+    evento.preventDefault();
+    setErrorGeneral(null);
+    if (!validar()) return;
+
+    setEnviando(true);
+    try {
+      await crearPropiedadOrganizacion(organizacionId, {
+        ...valores,
+        esPrincipal: sinPropiedadesAun || valores.esPrincipal,
+      });
+      alGuardar?.();
+      setAbierto(false);
+    } catch (error) {
+      if (error?.tieneErroresDeCampo) setErrores(error.errores);
+      setErrorGeneral(error);
+    } finally {
+      setEnviando(false);
+    }
+  }
+
+  return (
+    <Dialogo
+      open={abierto}
+      onOpenChange={(v) => {
+        setAbierto(v);
+        if (v) {
+          setValores({
+            tipo: "LOCAL",
+            calle: "",
+            numero: "",
+            altura: "",
+            longitud: "",
+            latitud: "",
+            esPrincipal: false,
+          });
+          setErrores({});
+          setErrorGeneral(null);
+        }
+      }}
+    >
+      <DisparadorDialogo asChild>{disparador}</DisparadorDialogo>
+
+      <ContenidoDialogo
+        className="max-w-lg"
+        titulo="Agregar propiedad a la organización"
+        descripcion="Registrá una sede, sucursal, local o depósito de la empresa."
+      >
+        <form onSubmit={enviar} noValidate className="flex flex-col gap-u2">
+          <Campo etiqueta="Tipo de inmueble" obligatorio>
+            {(props) => (
+              <Selector
+                {...props}
+                opciones={TIPOS_PROPIEDAD}
+                value={valores.tipo}
+                onChange={(e) => cambiar("tipo", e.target.value)}
+              />
+            )}
+          </Campo>
+
+          <div className="grid gap-u2 sm:grid-cols-[2fr_1fr_1fr]">
+            <Campo
+              etiqueta="Calle"
+              obligatorio
+              value={valores.calle}
+              onChange={(e) => cambiar("calle", e.target.value)}
+              error={errores.calle}
+            />
+            <Campo
+              etiqueta="Número"
+              obligatorio
+              inputMode="numeric"
+              value={valores.numero}
+              onChange={(e) => cambiar("numero", e.target.value)}
+              error={errores.numero}
+            />
+            <Campo
+              etiqueta="Piso y depto."
+              ayuda="Opcional"
+              value={valores.altura}
+              onChange={(e) => cambiar("altura", e.target.value)}
+              error={errores.altura}
+            />
+          </div>
+
+          {!sinPropiedadesAun && (
+            <label className="flex cursor-pointer items-start gap-2 rounded border border-borde-fuerte p-3">
+              <input
+                type="checkbox"
+                checked={valores.esPrincipal}
+                onChange={(e) => cambiar("esPrincipal", e.target.checked)}
+                className="mt-0.5 size-4 accent-[color:var(--expediente)]"
+              />
+              <span>
+                <span className="font-medium text-tinta">Que sea la sede o domicilio principal</span>
+                <span className="block text-sm text-apagado">
+                  Reemplaza al anterior domicilio principal como sede legal de la organización.
+                </span>
+              </span>
+            </label>
+          )}
+
+          {sinPropiedadesAun && (
+            <p className="text-sm text-apagado">
+              Como es la primera propiedad de la empresa, queda como domicilio principal.
+            </p>
+          )}
+
+          {errorGeneral && (
+            <p
+              role="alert"
+              className="rounded border border-sello bg-sello-suave px-3 py-2 text-[length:var(--texto-dato)] font-medium text-sello"
+            >
+              {mensajeAmable(errorGeneral)}
+            </p>
+          )}
+
+          <div className="mt-u1 flex justify-end gap-u2">
+            <CerrarDialogo asChild>
+              <Button type="button" variante="secundario">
+                Cancelar
+              </Button>
+            </CerrarDialogo>
+            <Button type="submit" disabled={enviando}>
+              {enviando ? "Guardando…" : "Agregar propiedad"}
+            </Button>
+          </div>
+        </form>
+      </ContenidoDialogo>
+    </Dialogo>
+  );
+}
+
