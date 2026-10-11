@@ -178,7 +178,7 @@ export function Documentacion() {
         }
       />
 
-      <Pestanias defaultValue="validacion" className="mt-u3">
+      <Pestanias defaultValue="solicitudes" className="mt-u3">
         <ListaPestanias>
           <Pestania value="validacion">Bandeja de validación</Pestania>
           <Pestania value="solicitudes">Solicitudes emitidas</Pestania>

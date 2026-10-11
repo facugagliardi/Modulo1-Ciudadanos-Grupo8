@@ -14,8 +14,6 @@ const listarDocumentos = vi.fn();
 vi.mock("@/lib/api/endpoints/ciudadanos", () => ({
   obtenerCiudadano: (...a) => obtenerCiudadano(...a),
   cambiarEstadoCiudadano: (...a) => cambiarEstadoCiudadano(...a),
-}));
-vi.mock("@/lib/api/endpoints/ciudadanos", () => ({
   listarDomicilios: (...a) => listarDomicilios(...a),
   listarDocumentos: (...a) => listarDocumentos(...a),
 }));

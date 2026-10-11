@@ -8,12 +8,14 @@ import { ErrorApi } from "@/lib/api/cliente";
 const listarSolicitudes = vi.fn();
 const crearSolicitud = vi.fn();
 const cambiarEstadoSolicitud = vi.fn();
+const listarDocumentosPendientes = vi.fn();
 const buscarPorDni = vi.fn();
 
 vi.mock("@/lib/api/endpoints/documentacion", () => ({
   listarSolicitudes: (...a) => listarSolicitudes(...a),
   crearSolicitud: (...a) => crearSolicitud(...a),
   cambiarEstadoSolicitud: (...a) => cambiarEstadoSolicitud(...a),
+  listarDocumentosPendientes: (...a) => listarDocumentosPendientes(...a),
 }));
 vi.mock("@/lib/api/endpoints/ciudadanos", () => ({
   buscarPorDni: (...a) => buscarPorDni(...a),
@@ -29,8 +31,9 @@ const SOLICITUDES = [
 ];
 
 beforeEach(() => {
-  [listarSolicitudes, crearSolicitud, cambiarEstadoSolicitud, buscarPorDni].forEach((m) => m.mockReset());
+  [listarSolicitudes, crearSolicitud, cambiarEstadoSolicitud, listarDocumentosPendientes, buscarPorDni].forEach((m) => m.mockReset());
   listarSolicitudes.mockResolvedValue(SOLICITUDES);
+  listarDocumentosPendientes.mockResolvedValue([]);
   crearSolicitud.mockResolvedValue({ solicitudId: 9 });
   cambiarEstadoSolicitud.mockResolvedValue({});
   buscarPorDni.mockResolvedValue({ existe: true, id: 3, nombre: "Diego", apellido: "Lopez", estado: "ACTIVO" });

@@ -12,13 +12,16 @@ vi.mock("../cliente", () => ({
 const {
   agregarDueno,
   actualizarOrganizacion,
+  aprobarOrganizacion,
   buscarPorCuit,
   cambiarEstadoOrganizacion,
   crearOrganizacion,
   listarDuenos,
   listarOrganizaciones,
+  listarOrganizacionesPendientes,
   obtenerOrganizacion,
   quitarDueno,
+  rechazarOrganizacion,
 } = await import("./organizaciones");
 
 const {
@@ -55,6 +58,15 @@ describe("rutas", () => {
     await obtenerOrganizacion(3);
     expect(cliente.get).toHaveBeenCalledWith("/organizaciones/3", undefined);
 
+    await listarOrganizacionesPendientes();
+    expect(cliente.get).toHaveBeenCalledWith("/organizaciones/pendientes", undefined);
+
+    await aprobarOrganizacion(5);
+    expect(cliente.patch).toHaveBeenCalledWith("/organizaciones/5/aprobar");
+
+    await rechazarOrganizacion(5);
+    expect(cliente.patch).toHaveBeenCalledWith("/organizaciones/5/rechazar");
+
     await listarDuenos(3);
     expect(cliente.get).toHaveBeenCalledWith("/organizaciones/3/duenos", undefined);
 
@@ -74,14 +86,12 @@ describe("rutas", () => {
 });
 
 describe("cuerpos filtrados", () => {
-  it("el alta manda los dueños como objetos y normaliza el CUIT", async () => {
-    // ARCHITECTURE.md dice `ciudadanoId[]`; el backend recibe objetos.
+  it("el alta normaliza el CUIT y filtra campos desconocidos", async () => {
     await crearOrganizacion({
       cuit: "30-71234567-8",
       razonSocial: "Kiosco SRL",
       nombreFantasia: "El Kiosco",
       tipo: "SRL",
-      duenos: [{ ciudadanoId: 1, porcentajeTitularidad: 60 }],
       basura: "x",
     });
     expect(cliente.post).toHaveBeenCalledWith("/organizaciones", {
@@ -89,7 +99,6 @@ describe("cuerpos filtrados", () => {
       razonSocial: "Kiosco SRL",
       nombreFantasia: "El Kiosco",
       tipo: "SRL",
-      duenos: [{ ciudadanoId: 1, porcentajeTitularidad: 60 }],
     });
   });
 

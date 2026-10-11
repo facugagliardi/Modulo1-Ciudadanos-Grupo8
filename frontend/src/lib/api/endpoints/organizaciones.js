@@ -16,6 +16,22 @@ export async function listarOrganizaciones(senal) {
   return res?.items ?? [];
 }
 
+/** Organizaciones pendientes de aprobacion administrativa. */
+export async function listarOrganizacionesPendientes(senal) {
+  const res = await get("/organizaciones/pendientes", senal);
+  return res?.items ?? [];
+}
+
+/** Aprueba la creacion de una organizacion (solo ADMINISTRATIVO / RESPONSABLE_AREA). */
+export function aprobarOrganizacion(id) {
+  return patch(`/organizaciones/${id}/aprobar`);
+}
+
+/** Rechaza la creacion de una organizacion (solo ADMINISTRATIVO / RESPONSABLE_AREA). */
+export function rechazarOrganizacion(id) {
+  return patch(`/organizaciones/${id}/rechazar`);
+}
+
 /**
  * Las organizaciones donde la ciudadano es dueña.
  *
@@ -26,8 +42,16 @@ export async function listarOrganizaciones(senal) {
  * Cada item trae además el `porcentajeTitularidad` de esa ciudadano.
  */
 export async function listarOrganizacionesDeDueno(ciudadanoId, senal) {
-  const res = await get(`/ciudadanos/${ciudadanoId}/organizaciones`, senal);
-  return res?.items ?? [];
+  try {
+    const res = await get(`/ciudadanos/${ciudadanoId}/organizaciones`, senal);
+    return res?.items ?? [];
+  } catch (err) {
+    if (err?.status === 404) {
+      const res = await get(`/personas/${ciudadanoId}/organizaciones`, senal);
+      return res?.items ?? [];
+    }
+    throw err;
+  }
 }
 
 /** Trae dueños, representantes vigentes y domicilio principal en un solo pedido. */
@@ -85,4 +109,23 @@ export function actualizarDueno(organizacionId, ciudadanoId, porcentajeTitularid
 /** 409 si es el único dueño: una organización no puede quedarse sin ninguno. */
 export function quitarDueno(organizacionId, ciudadanoId) {
   return del(`/organizaciones/${organizacionId}/duenos/${ciudadanoId}`);
+}
+
+// --- Propiedades / Domicilios de la organización ----------------------------
+
+export async function listarPropiedadesDeOrganizacion(organizacionId, senal) {
+  const res = await get(`/organizaciones/${organizacionId}/domicilios`, senal);
+  return res?.items ?? [];
+}
+
+export function crearPropiedadOrganizacion(organizacionId, datos) {
+  return post(`/organizaciones/${organizacionId}/domicilios`, cuerpo("crearDomicilio", datos));
+}
+
+export function marcarPropiedadOrganizacionPrincipal(organizacionId, propiedadId) {
+  return patch(`/organizaciones/${organizacionId}/domicilios/${propiedadId}/principal`);
+}
+
+export function darDeBajaPropiedadOrganizacion(organizacionId, propiedadId) {
+  return del(`/organizaciones/${organizacionId}/domicilios/${propiedadId}`);
 }

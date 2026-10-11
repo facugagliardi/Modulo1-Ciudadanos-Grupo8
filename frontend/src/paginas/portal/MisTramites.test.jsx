@@ -14,8 +14,6 @@ const listarExpedientes = vi.fn();
 vi.mock("@/lib/api/endpoints/ciudadanos", () => ({
   obtenerCiudadano: (...a) => obtenerCiudadano(...a),
   actualizarCiudadano: (...a) => actualizarCiudadano(...a),
-}));
-vi.mock("@/lib/api/endpoints/ciudadanos", () => ({
   listarDomicilios: (...a) => listarDomicilios(...a),
   listarRepresentaciones: (...a) => listarRepresentaciones(...a),
 }));

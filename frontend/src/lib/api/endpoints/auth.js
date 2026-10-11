@@ -31,8 +31,7 @@ export async function registrarYEntrar(datos) {
  * propia sesion y lo dejaria dentro de la cuenta del vecino.
  */
 export function registrarCiudadano(datos) {
-  const nombreCampos = datos.tipo === "JURIDICA" ? "registrarJuridica" : "registrarCiudadano";
-  return post("/auth/register", cuerpo(nombreCampos, { ...datos, cuit: soloDigitos(datos.cuit) }));
+  return post("/auth/register", cuerpo("registrarCiudadano", { ...datos, cuit: soloDigitos(datos.cuit) }));
 }
 
 /**

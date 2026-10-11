@@ -19,11 +19,17 @@ const obtenerOrganizacion = vi.fn();
 const crearOrganizacion = vi.fn();
 const actualizarOrganizacion = vi.fn();
 const cambiarEstadoOrganizacion = vi.fn();
+const aprobarOrganizacion = vi.fn();
+const rechazarOrganizacion = vi.fn();
 const buscarPorCuit = vi.fn();
 const agregarDueno = vi.fn();
 const actualizarDueno = vi.fn();
 const quitarDueno = vi.fn();
 const listarOrganizacionesDeDueno = vi.fn();
+const listarPropiedadesDeOrganizacion = vi.fn();
+const crearPropiedadOrganizacion = vi.fn();
+const marcarPropiedadOrganizacionPrincipal = vi.fn();
+const darDeBajaPropiedadOrganizacion = vi.fn();
 const listarRepresentacionesDeOrganizacion = vi.fn();
 const crearRepresentacion = vi.fn();
 const cambiarEstadoRepresentacion = vi.fn();
@@ -36,11 +42,17 @@ vi.mock("@/lib/api/endpoints/organizaciones", () => ({
   crearOrganizacion: (...a) => crearOrganizacion(...a),
   actualizarOrganizacion: (...a) => actualizarOrganizacion(...a),
   cambiarEstadoOrganizacion: (...a) => cambiarEstadoOrganizacion(...a),
+  aprobarOrganizacion: (...a) => aprobarOrganizacion(...a),
+  rechazarOrganizacion: (...a) => rechazarOrganizacion(...a),
   buscarPorCuit: (...a) => buscarPorCuit(...a),
   agregarDueno: (...a) => agregarDueno(...a),
   actualizarDueno: (...a) => actualizarDueno(...a),
   quitarDueno: (...a) => quitarDueno(...a),
   listarOrganizacionesDeDueno: (...a) => listarOrganizacionesDeDueno(...a),
+  listarPropiedadesDeOrganizacion: (...a) => listarPropiedadesDeOrganizacion(...a),
+  crearPropiedadOrganizacion: (...a) => crearPropiedadOrganizacion(...a),
+  marcarPropiedadOrganizacionPrincipal: (...a) => marcarPropiedadOrganizacionPrincipal(...a),
+  darDeBajaPropiedadOrganizacion: (...a) => darDeBajaPropiedadOrganizacion(...a),
 }));
 vi.mock("@/lib/api/endpoints/representaciones", () => ({
   listarRepresentacionesDeOrganizacion: (...a) => listarRepresentacionesDeOrganizacion(...a),
@@ -49,8 +61,6 @@ vi.mock("@/lib/api/endpoints/representaciones", () => ({
 }));
 vi.mock("@/lib/api/endpoints/ciudadanos", () => ({
   listarRepresentaciones: (...a) => listarRepresentaciones(...a),
-}));
-vi.mock("@/lib/api/endpoints/ciudadanos", () => ({
   buscarPorDni: (...a) => buscarPorDni(...a),
 }));
 
@@ -81,8 +91,10 @@ function detalle(zona = "admin") {
 beforeEach(() => {
   navegar.mockClear();
   [listarOrganizaciones, obtenerOrganizacion, crearOrganizacion, actualizarOrganizacion,
-   cambiarEstadoOrganizacion, buscarPorCuit, agregarDueno, actualizarDueno, quitarDueno,
-   listarOrganizacionesDeDueno,
+   cambiarEstadoOrganizacion, aprobarOrganizacion, rechazarOrganizacion, buscarPorCuit,
+   agregarDueno, actualizarDueno, quitarDueno, listarOrganizacionesDeDueno,
+   listarPropiedadesDeOrganizacion, crearPropiedadOrganizacion,
+   marcarPropiedadOrganizacionPrincipal, darDeBajaPropiedadOrganizacion,
    listarRepresentacionesDeOrganizacion, crearRepresentacion, cambiarEstadoRepresentacion,
    listarRepresentaciones, buscarPorDni].forEach((m) => m.mockReset());
 
@@ -91,9 +103,15 @@ beforeEach(() => {
   crearOrganizacion.mockResolvedValue({ organizacionId: 9 });
   actualizarOrganizacion.mockResolvedValue({});
   cambiarEstadoOrganizacion.mockResolvedValue({});
+  aprobarOrganizacion.mockResolvedValue({});
+  rechazarOrganizacion.mockResolvedValue({});
   buscarPorCuit.mockResolvedValue({ existe: false });
   agregarDueno.mockResolvedValue({});
   quitarDueno.mockResolvedValue(null);
+  listarPropiedadesDeOrganizacion.mockResolvedValue([]);
+  crearPropiedadOrganizacion.mockResolvedValue({ propiedadId: 10 });
+  marcarPropiedadOrganizacionPrincipal.mockResolvedValue({});
+  darDeBajaPropiedadOrganizacion.mockResolvedValue({});
   listarRepresentacionesDeOrganizacion.mockResolvedValue(REPRESENTACIONES);
   crearRepresentacion.mockResolvedValue({});
   cambiarEstadoRepresentacion.mockResolvedValue({});
@@ -126,6 +144,7 @@ describe("detalle", () => {
     expect(await screen.findByRole("heading", { name: /kiosco del barrio srl/i })).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: /dueños/i })).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: /representantes/i })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: /propiedades/i })).toBeInTheDocument();
   });
 
   it("el auditor no puede editar ni cambiar el estado", async () => {
@@ -503,13 +522,12 @@ describe("representaciones", () => {
 });
 
 describe("alta de organización", () => {
-  it("exige CUIT, razón social y al menos un dueño", async () => {
+  it("exige CUIT y razón social", async () => {
     renderizar(<NuevaOrganizacion zona="admin" />);
     await userEvent.click(screen.getByRole("button", { name: /^registrar organización$/i }));
 
     expect(await screen.findByText(/ingresá el cuit/i)).toBeInTheDocument();
     expect(screen.getByText(/ingresá la razón social/i)).toBeInTheDocument();
-    expect(screen.getByText(/agregá al menos un dueño/i)).toBeInTheDocument();
     expect(crearOrganizacion).not.toHaveBeenCalled();
   });
 
@@ -520,41 +538,73 @@ describe("alta de organización", () => {
     await userEvent.type(cuit, "30712345678");
     await userEvent.tab();
 
-    expect(await screen.findByRole("alert")).toHaveTextContent(/ya hay una organización con ese cuit: otra sa/i);
+    expect(await screen.findByRole("status")).toHaveTextContent(/ya hay una organización con ese cuit: otra sa/i);
   });
 
-  it("manda los dueños como objetos, no como ids sueltos", async () => {
-    // ARCHITECTURE.md dice `ciudadanoId[]`; el backend recibe objetos.
+  it("registra la organización asignando al creador y navega al detalle", async () => {
     renderizar(<NuevaOrganizacion zona="admin" />);
     await userEvent.type(screen.getByLabelText("CUIT"), "30712345678");
     await userEvent.type(screen.getByLabelText(/razón social/i), "Kiosco SRL");
-
-    await userEvent.click(screen.getByRole("button", { name: /agregar dueño/i }));
-    await userEvent.type(await screen.findByLabelText(/dni del dueño/i), "40123456");
-    await userEvent.click(screen.getByRole("button", { name: "Buscar" }));
-    await userEvent.type(await screen.findByLabelText(/porcentaje/i), "100");
-    await userEvent.click(screen.getByRole("button", { name: /^agregar$/i }));
+    await userEvent.type(screen.getByLabelText(/nombre de fantasía/i), "El Kiosco");
 
     await userEvent.click(screen.getByRole("button", { name: /^registrar organización$/i }));
 
     await waitFor(() => expect(crearOrganizacion).toHaveBeenCalled());
-    expect(crearOrganizacion.mock.calls[0][0].duenos).toEqual([
-      { ciudadanoId: 5, porcentajeTitularidad: 100 },
-    ]);
+    expect(crearOrganizacion).toHaveBeenCalledWith(expect.objectContaining({
+      cuit: "30712345678",
+      razonSocial: "Kiosco SRL",
+      nombreFantasia: "El Kiosco",
+      tipo: "SRL",
+    }));
     expect(navegar).toHaveBeenCalledWith("/admin/organizaciones/9", { replace: true });
   });
 
-  it("no deja agregar dos veces a la misma ciudadano", async () => {
+  it("permite agregar otro dueño durante el alta de la organización", async () => {
+    buscarPorDni.mockResolvedValue({ existe: true, id: 5, nombre: "Ana", apellido: "Pérez", dni: "40123456" });
     renderizar(<NuevaOrganizacion zona="admin" />);
-    for (let i = 0; i < 2; i += 1) {
-      await userEvent.click(screen.getByRole("button", { name: /agregar dueño/i }));
-      await userEvent.type(await screen.findByLabelText(/dni del dueño/i), "40123456");
-      await userEvent.click(screen.getByRole("button", { name: "Buscar" }));
-      if (i === 0) {
-        await userEvent.click(await screen.findByRole("button", { name: /^agregar$/i }));
-      }
-    }
-    expect(await screen.findByText(/ya está en la lista/i)).toBeInTheDocument();
+    await userEvent.type(screen.getByLabelText("CUIT"), "30712345678");
+    await userEvent.type(screen.getByLabelText(/razón social/i), "Kiosco Compartido SRL");
+
+    await userEvent.click(screen.getByRole("button", { name: /agregar otro dueño/i }));
+    await userEvent.type(screen.getByLabelText(/dni del nuevo dueño/i), "40123456");
+    await userEvent.click(screen.getByRole("button", { name: /^buscar$/i }));
+
+    const campoPorcentaje = await screen.findByLabelText(/porcentaje de titularidad/i);
+    await userEvent.type(campoPorcentaje, "40");
+    await userEvent.click(screen.getByRole("button", { name: /confirmar dueño/i }));
+
+    expect(screen.getByText("Ana Pérez")).toBeInTheDocument();
+    expect(screen.getByText("40%")).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: /^registrar organización$/i }));
+
+    await waitFor(() => expect(crearOrganizacion).toHaveBeenCalled());
+    expect(crearOrganizacion).toHaveBeenCalledWith(expect.objectContaining({
+      cuit: "30712345678",
+      razonSocial: "Kiosco Compartido SRL",
+      porcentajeCreador: 60,
+      otrosDuenos: [
+        expect.objectContaining({
+          ciudadanoId: 5,
+          porcentajeTitularidad: 40,
+        }),
+      ],
+    }));
+  });
+
+  it("permite a un empleado administrativo aprobar una organización pendiente", async () => {
+    obtenerOrganizacion.mockResolvedValue({
+      ...ORG,
+      estado: "PENDIENTE",
+    });
+    conSesion({ id: 10, rol: "ADMINISTRATIVO", subType: "EMPLEADO" });
+    detalle("admin");
+
+    const botonAprobar = await screen.findByRole("button", { name: /aprobar organización/i });
+    expect(botonAprobar).toBeInTheDocument();
+    await userEvent.click(botonAprobar);
+
+    expect(aprobarOrganizacion).toHaveBeenCalledWith(1);
   });
 });
 
@@ -622,4 +672,27 @@ describe("portal: mis organizaciones", () => {
     expect(await screen.findByText(/todavía no tenés organizaciones/i)).toBeInTheDocument();
     expect(screen.getByText(/tiene que otorgarte la representación/i)).toBeInTheDocument();
   });
+
+  describe("propiedades de la organización", () => {
+    it("muestra las propiedades y permite agregar una", async () => {
+      listarPropiedadesDeOrganizacion.mockResolvedValue([
+        {
+          propiedadId: 101,
+          tipo: "LOCAL",
+          calle: "Av. Corrientes",
+          numero: "1234",
+          altura: "PB",
+          esPrincipal: true,
+          vigenteDesde: "2026-01-01",
+          vigenteHasta: null,
+        },
+      ]);
+      detalle();
+      await userEvent.click(await screen.findByRole("tab", { name: /propiedades/i }));
+      expect(await screen.findByText(/Av. Corrientes 1234/i)).toBeInTheDocument();
+      expect(screen.getByText(/Principal/i)).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /agregar propiedad/i })).toBeInTheDocument();
+    });
+  });
 });
+
