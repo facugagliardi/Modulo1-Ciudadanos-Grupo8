@@ -9,7 +9,7 @@ export async function listarContactos(ciudadanoId, senal) {
 /**
  * El backend normaliza: el mail se guarda en minusculas y el telefono sin
  * espacios ni guiones. Siempre mostrar lo que devuelve la respuesta, no lo
- * que escribio la persona.
+ * que escribio la ciudadano.
  */
 export function crearContacto(ciudadanoId, datos) {
   return post(`/ciudadanos/${ciudadanoId}/contactos`, cuerpo("crearContacto", datos));

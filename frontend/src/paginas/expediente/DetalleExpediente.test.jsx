@@ -24,7 +24,7 @@ vi.mock("@/lib/api/endpoints/ciudadanos", () => ({
 const EXPEDIENTE = {
   expedienteId: 1,
   numero: "EXP-2026-000001",
-  personaId: 3,
+  ciudadanoId: 3,
   caratula: "Habilitación comercial — kiosco de Av. Rivadavia 4520",
   areaIniciadora: "Habilitaciones",
   estado: "EN_TRAMITE",
@@ -69,8 +69,8 @@ describe("carátula", () => {
     expect(screen.getByText("06/09/2026 16:47")).toBeInTheDocument();
   });
 
-  it("resuelve el nombre del titular cuando llega el personaId", async () => {
-    // Esta es la regresión de useRecurso: el titular se pedía con personaId
+  it("resuelve el nombre del titular cuando llega el ciudadanoId", async () => {
+    // Esta es la regresión de useRecurso: el titular se pedía con ciudadanoId
     // indefinido y quedaba en el número para siempre.
     renderizarDetalle();
     expect(await screen.findByRole("link", { name: "Diego Lopez" })).toHaveAttribute(
@@ -80,11 +80,11 @@ describe("carátula", () => {
   });
 
   it("si el titular no se puede consultar, muestra su número sin romperse", async () => {
-    // Pasa con las personas jurídicas: no hay endpoint para consultarlas.
+    // Pasa con las ciudadanos jurídicas: no hay endpoint para consultarlas.
     obtenerCiudadano.mockRejectedValue(new ErrorApi({ status: 404, message: "No existe" }));
     renderizarDetalle();
     await screen.findByText("EXP-2026-000001");
-    expect(await screen.findByText(/Persona #3/)).toBeInTheDocument();
+    expect(await screen.findByText(/Ciudadano #3/)).toBeInTheDocument();
   });
 
   it("en el portal no enlaza al legajo, que el vecino no puede ver", async () => {

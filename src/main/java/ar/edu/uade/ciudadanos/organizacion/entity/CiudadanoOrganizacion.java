@@ -9,24 +9,23 @@ import java.time.OffsetDateTime;
 
 /** Duenos/titulares de una organizacion (RF-19). */
 @Entity
-@Table(name = "persona_organizacion")
-public class PersonaOrganizacion {
+@Table(name = "ciudadano_organizacion")
+public class CiudadanoOrganizacion {
 
     @EmbeddedId
-    private PersonaOrganizacionId id;
+    private CiudadanoOrganizacionId id;
 
-    /** Agregado sobre el ERD: lo devuelven los endpoints de duenos. */
     @Column(name = "porcentaje_titularidad", precision = 5, scale = 2)
     private BigDecimal porcentajeTitularidad;
 
     @Column(name = "asociado_en", nullable = false)
     private OffsetDateTime asociadoEn = OffsetDateTime.now();
 
-    public PersonaOrganizacionId getId() {
+    public CiudadanoOrganizacionId getId() {
         return id;
     }
 
-    public void setId(PersonaOrganizacionId id) {
+    public void setId(CiudadanoOrganizacionId id) {
         this.id = id;
     }
 

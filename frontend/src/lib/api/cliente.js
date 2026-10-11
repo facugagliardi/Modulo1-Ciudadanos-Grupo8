@@ -217,7 +217,7 @@ export const patch = (ruta, cuerpo) => pedir(ruta, { metodo: "PATCH", cuerpo });
 export const del = (ruta) => pedir(ruta, { metodo: "DELETE" });
 
 /**
- * Traduce el mensaje del backend a algo que le sirva a la persona.
+ * Traduce el mensaje del backend a algo que le sirva a la ciudadano.
  *
  * Los mensajes de "campo no permitido" y "valor invalido en enum" son bugs
  * NUESTROS, no errores del usuario: si aparecen, mandamos un campo de mas.

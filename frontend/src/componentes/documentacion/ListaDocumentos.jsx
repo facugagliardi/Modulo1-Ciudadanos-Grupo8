@@ -21,7 +21,7 @@ import { Card, CardCuerpo } from "@/componentes/ui/card";
 import { CerrarDialogo, ContenidoDialogo, Dialogo, DisparadorDialogo } from "@/componentes/ui/dialog";
 
 /**
- * La documentación de una persona. La usan el portal y el legajo del
+ * La documentación de una ciudadano. La usan el portal y el legajo del
  * backoffice; lo que cambia es quién puede validar.
  *
  * El archivo se abre desde acá, con `GET /documentos/{id}/archivo`. Antes no se
@@ -41,7 +41,7 @@ const RESULTADO = {
 };
 
 export function ListaDocumentos({
-  personaId,
+  ciudadanoId,
   documentos,
   puedeSubir = false,
   puedeValidar = false,
@@ -57,7 +57,7 @@ export function ListaDocumentos({
             descripcion={vacio?.descripcion}
             accion={
               puedeSubir && (
-                <SubirDocumento personaId={personaId} alGuardar={alCambiar}>
+                <SubirDocumento ciudadanoId={ciudadanoId} alGuardar={alCambiar}>
                   <Button>Subir el primero</Button>
                 </SubirDocumento>
               )
@@ -117,7 +117,7 @@ export function ListaDocumentos({
                     </SubirDocumento>
                   )}
                   <RevisarDocumento
-                    personaId={personaId}
+                    ciudadanoId={ciudadanoId}
                     documento={d}
                     alGuardar={alCambiar}
                     puedeValidar={puedeValidar}
@@ -133,11 +133,11 @@ export function ListaDocumentos({
 }
 
 /**
- * Alta de documento y nueva versión: el mismo diálogo, porque para la persona
+ * Alta de documento y nueva versión: el mismo diálogo, porque para la ciudadano
  * es la misma acción. Si viene `documento`, sube una versión (y entonces el
  * tipo ya está fijado y no se elige).
  */
-export function SubirDocumento({ personaId, documento, alGuardar, children }) {
+export function SubirDocumento({ ciudadanoId, documento, alGuardar, children }) {
   const esVersion = Boolean(documento);
   const [abierto, setAbierto] = useState(false);
   const [tipo, setTipo] = useState("DNI");
@@ -165,7 +165,7 @@ export function SubirDocumento({ personaId, documento, alGuardar, children }) {
     setEnviando(true);
     try {
       if (esVersion) await subirVersion(documento.documentoId, archivo);
-      else await subirDocumento(personaId, { archivo, tipoDocumento: tipo });
+      else await subirDocumento(ciudadanoId, { archivo, tipoDocumento: tipo });
       alGuardar?.();
       setAbierto(false);
       setArchivo(null);
@@ -291,7 +291,7 @@ const DECISIONES = [
  * tenía forma de volver a ver lo que había subido.
  */
 export function RevisarDocumento({
-  personaId,
+  ciudadanoId,
   documento: dado,
   documentoId,
   alGuardar,
@@ -312,7 +312,7 @@ export function RevisarDocumento({
 
   const id = dado?.documentoId ?? documentoId;
   const documento = dado ?? traido;
-  const titular = personaId ?? documento?.personaId;
+  const titular = ciudadanoId ?? documento?.ciudadanoId;
 
   const manana = sumarDiasISO(hoyISO(), 1);
   const decide = puedeValidar && documento?.resultadoValidacion === "PENDIENTE";

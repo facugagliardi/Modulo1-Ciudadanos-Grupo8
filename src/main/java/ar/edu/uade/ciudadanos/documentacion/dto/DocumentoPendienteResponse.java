@@ -6,7 +6,7 @@ import java.time.OffsetDateTime;
 /** Item devuelto en el panel de administrador para documentos pendientes. */
 public record DocumentoPendienteResponse(
         Long documentoId,
-        Long personaId,
+        Long ciudadanoId,
         String tipoDocumento,
         Integer version,
         OffsetDateTime fechaCreacion) {
@@ -14,7 +14,7 @@ public record DocumentoPendienteResponse(
     public static DocumentoPendienteResponse de(Documento d) {
         return new DocumentoPendienteResponse(
                 d.getDocumentoId(),
-                d.getPersonaId(),
+                d.getCiudadanoId(),
                 d.getTipoDocumento(),
                 d.getVersion(),
                 d.getFechaCreacion()

@@ -23,7 +23,7 @@ import { ENTIDADES } from "@/lib/dominio/estados";
 import { ALCANCES_REPRESENTACION, etiquetaDe, TIPOS_ORGANIZACION, TIPOS_PROPIEDAD } from "@/lib/dominio/listasBlancas";
 import { PERMISOS } from "@/lib/auth/permisos";
 import { BadgeEstado } from "@/componentes/BadgeEstado";
-import { BuscadorDePersona, PersonaElegida } from "@/componentes/BuscadorDePersona";
+import { BuscadorDeCiudadano, CiudadanoElegida } from "@/componentes/BuscadorDeCiudadano";
 import { CambiarEstado } from "@/componentes/CambiarEstado";
 import { Cargando, ErrorEnPantalla, EstadoVacio } from "@/componentes/Estados";
 import { Identificador } from "@/componentes/Identificador";
@@ -56,8 +56,8 @@ export function DetalleOrganizacion({ zona = "admin" }) {
   );
 
   const o = organizacion.datos;
-  const esDueno = Boolean(o?.duenos?.some((d) => d.personaId === miId));
-  const esRepresentante = Boolean(o?.representantesVigentes?.some((r) => r.personaId === miId));
+  const esDueno = Boolean(o?.duenos?.some((d) => d.ciudadanoId === miId));
+  const esRepresentante = Boolean(o?.representantesVigentes?.some((r) => r.ciudadanoId === miId));
   // La misma condición que aplica AutorizacionService del backend.
   const puedeEditar = esDueno || esRepresentante || puedeEditarTerceros;
   const puedeRepresentaciones = esDueno || esRepresentante || puedeGestionarRepr;
@@ -195,14 +195,14 @@ export function DetalleOrganizacion({ zona = "admin" }) {
               ) : (
                 <ul className="lista-escalonada flex flex-col gap-u2">
                   {o.duenos.map((d) => (
-                    <li key={d.personaId}>
+                    <li key={d.ciudadanoId}>
                       <Card>
                         <CardCuerpo className="flex flex-wrap items-center justify-between gap-u2">
                           <div className="min-w-0">
                             <p className="font-medium">
                               {zona === "admin" && puedeEditarTerceros ? (
                                 <Link
-                                  to={`/admin/padron/${d.personaId}`}
+                                  to={`/admin/padron/${d.ciudadanoId}`}
                                   className="text-expediente hover:underline"
                                 >
                                   {[d.nombre, d.apellido].filter(Boolean).join(" ")}
@@ -276,7 +276,7 @@ export function DetalleOrganizacion({ zona = "admin" }) {
                           <div className="min-w-0">
                             <p className="flex flex-wrap items-center gap-u2 font-medium">
                               {[r.nombre, r.apellido].filter(Boolean).join(" ") ||
-                                `Persona #${r.personaId}`}
+                                `Ciudadano #${r.ciudadanoId}`}
                               <BadgeEstado entidad={ENTIDADES.REPRESENTACION} estado={r.estado} />
                             </p>
                             <p className="text-[length:var(--texto-dato)] text-apagado">
@@ -468,13 +468,13 @@ function QuitarDueno({ organizacion, dueno, alGuardar }) {
 
   const nombre = nombreDe(dueno);
   const cede = Number(dueno.porcentajeTitularidad ?? 0);
-  const otros = (organizacion.duenos ?? []).filter((x) => x.personaId !== dueno.personaId);
-  const receptor = otros.find((x) => String(x.personaId) === destino) ?? null;
+  const otros = (organizacion.duenos ?? []).filter((x) => x.ciudadanoId !== dueno.ciudadanoId);
+  const receptor = otros.find((x) => String(x.ciudadanoId) === destino) ?? null;
 
   const opciones = [
     { valor: QUEDA_LIBRE, etiqueta: "Que quede sin asignar" },
     ...otros.map((x) => ({
-      valor: String(x.personaId),
+      valor: String(x.ciudadanoId),
       etiqueta: `${nombreDe(x)} — tiene ${redondear(x.porcentajeTitularidad ?? 0)}%`,
     })),
   ];
@@ -486,13 +486,13 @@ function QuitarDueno({ organizacion, dueno, alGuardar }) {
 
     let yaSeQuito = false;
     try {
-      await quitarDueno(organizacion.organizacionId, dueno.personaId);
+      await quitarDueno(organizacion.organizacionId, dueno.ciudadanoId);
       yaSeQuito = true;
 
       if (receptor) {
         await actualizarDueno(
           organizacion.organizacionId,
-          receptor.personaId,
+          receptor.ciudadanoId,
           Number(receptor.porcentajeTitularidad ?? 0) + cede,
         );
       }
@@ -530,7 +530,7 @@ function QuitarDueno({ organizacion, dueno, alGuardar }) {
       <ContenidoDialogo
         className="max-w-lg"
         titulo="Quitar a este dueño"
-        descripcion={`${nombre} deja de figurar como titular. Sus datos personales no se tocan.`}
+        descripcion={`${nombre} deja de figurar como titular. Sus datos ciudadanoles no se tocan.`}
       >
         <form onSubmit={enviar} noValidate className="flex flex-col gap-u2">
           {cede > 0 ? (
@@ -632,7 +632,7 @@ const redondear = (n) => {
  */
 function AgregarDueno({ organizacion, alGuardar }) {
   const [abierto, setAbierto] = useState(false);
-  const [persona, setPersona] = useState(null);
+  const [ciudadano, setCiudadano] = useState(null);
   const [porcentaje, setPorcentaje] = useState("");
   const [origen, setOrigen] = useState(DESDE_LIBRE);
   const [errorPorcentaje, setErrorPorcentaje] = useState(null);
@@ -647,7 +647,7 @@ function AgregarDueno({ organizacion, alGuardar }) {
   // Sólo puede ceder quien tiene un porcentaje cargado: de un dueño sin
   // porcentaje no hay nada que restar.
   const cedentesPosibles = duenos.filter((d) => Number(d.porcentajeTitularidad ?? 0) > 0);
-  const cedente = duenos.find((d) => String(d.personaId) === origen) ?? null;
+  const cedente = duenos.find((d) => String(d.ciudadanoId) === origen) ?? null;
   const desdeLibre = origen === DESDE_LIBRE;
 
   const num = porcentaje === "" ? null : Number(porcentaje);
@@ -658,7 +658,7 @@ function AgregarDueno({ organizacion, alGuardar }) {
   const opcionesOrigen = [
     { valor: DESDE_LIBRE, etiqueta: `Sin asignar — hay ${redondear(disponible)}% libre` },
     ...cedentesPosibles.map((d) => ({
-      valor: String(d.personaId),
+      valor: String(d.ciudadanoId),
       etiqueta: `${nombreDe(d)} — tiene ${redondear(d.porcentajeTitularidad)}%`,
     })),
   ];
@@ -705,16 +705,16 @@ function AgregarDueno({ organizacion, alGuardar }) {
     let cedenteYaBajado = false;
     try {
       if (cedente) {
-        await actualizarDueno(organizacion.organizacionId, cedente.personaId, quedaAlCedente);
+        await actualizarDueno(organizacion.organizacionId, cedente.ciudadanoId, quedaAlCedente);
         cedenteYaBajado = true;
       }
       await agregarDueno(organizacion.organizacionId, {
-        personaId: persona.id,
+        ciudadanoId: ciudadano.id,
         porcentajeTitularidad: num ?? undefined,
       });
       alGuardar?.();
       setAbierto(false);
-      setPersona(null);
+      setCiudadano(null);
       setPorcentaje("");
       setOrigen(DESDE_LIBRE);
     } catch (e) {
@@ -735,7 +735,7 @@ function AgregarDueno({ organizacion, alGuardar }) {
       onOpenChange={(v) => {
         setAbierto(v);
         if (v) {
-          setPersona(null);
+          setCiudadano(null);
           setPorcentaje("");
           setOrigen(DESDE_LIBRE);
           setErrorPorcentaje(null);
@@ -753,16 +753,16 @@ function AgregarDueno({ organizacion, alGuardar }) {
       <ContenidoDialogo
         className="max-w-lg"
         titulo="Agregar dueño"
-        descripcion="Tiene que ser una persona ya registrada en el municipio."
+        descripcion="Tiene que ser una ciudadano ya registrada en el municipio."
       >
-        {!persona ? (
-          <BuscadorDePersona etiqueta="DNI del nuevo dueño" alEncontrar={setPersona} autoFocus />
+        {!ciudadano ? (
+          <BuscadorDeCiudadano etiqueta="DNI del nuevo dueño" alEncontrar={setCiudadano} autoFocus />
         ) : (
           <form onSubmit={enviar} noValidate className="flex flex-col gap-u2">
-            <PersonaElegida
-              persona={persona}
+            <CiudadanoElegida
+              ciudadano={ciudadano}
               etiqueta="Nuevo dueño"
-              alCambiar={() => setPersona(null)}
+              alCambiar={() => setCiudadano(null)}
             />
 
             <Campo
@@ -814,7 +814,7 @@ function AgregarDueno({ organizacion, alGuardar }) {
                 <strong className="font-medium">{nombreDe(cedente)}</strong> pasa de{" "}
                 {redondear(cedente.porcentajeTitularidad)}% a{" "}
                 <strong className="font-medium">{redondear(quedaAlCedente)}%</strong>, y{" "}
-                {persona.nombre} entra con{" "}
+                {ciudadano.nombre} entra con{" "}
                 <strong className="font-medium">{redondear(num)}%</strong>.
               </p>
             )}
@@ -827,7 +827,7 @@ function AgregarDueno({ organizacion, alGuardar }) {
                 {errorGeneral.transferenciaAMedias
                   ? `Se descontó el porcentaje de ${nombreDe(cedente)} pero no se pudo agregar al nuevo dueño. Ese porcentaje quedó sin asignar: volvé a intentarlo.`
                   : errorGeneral.status === 409
-                    ? "Esa persona ya es dueña, o la suma de titularidades supera el 100%."
+                    ? "Esa ciudadano ya es dueña, o la suma de titularidades supera el 100%."
                     : mensajeAmable(errorGeneral)}
               </p>
             )}
@@ -851,7 +851,7 @@ function AgregarDueno({ organizacion, alGuardar }) {
 
 function OtorgarRepresentacion({ organizacionId, alGuardar }) {
   const [abierto, setAbierto] = useState(false);
-  const [persona, setPersona] = useState(null);
+  const [ciudadano, setCiudadano] = useState(null);
   const hoy = hoyISO();
   const [valores, setValores] = useState({ alcance: "TRAMITES", desde: hoy, hasta: "" });
   const [errores, setErrores] = useState({});
@@ -872,7 +872,7 @@ function OtorgarRepresentacion({ organizacionId, alGuardar }) {
     setEnviando(true);
     try {
       await crearRepresentacion({
-        personaId: persona.id,
+        ciudadanoId: ciudadano.id,
         organizacionId: Number(organizacionId),
         alcance: valores.alcance,
         desde: valores.desde,
@@ -894,7 +894,7 @@ function OtorgarRepresentacion({ organizacionId, alGuardar }) {
       onOpenChange={(v) => {
         setAbierto(v);
         if (v) {
-          setPersona(null);
+          setCiudadano(null);
           setValores({ alcance: "TRAMITES", desde: hoy, hasta: "" });
           setErrores({});
           setErrorGeneral(null);
@@ -911,16 +911,16 @@ function OtorgarRepresentacion({ organizacionId, alGuardar }) {
       <ContenidoDialogo
         className="max-w-lg"
         titulo="Otorgar representación"
-        descripcion="La persona va a poder hacer trámites en nombre de la organización ante otras áreas."
+        descripcion="La ciudadano va a poder hacer trámites en nombre de la organización ante otras áreas."
       >
-        {!persona ? (
-          <BuscadorDePersona etiqueta="DNI del representante" alEncontrar={setPersona} autoFocus />
+        {!ciudadano ? (
+          <BuscadorDeCiudadano etiqueta="DNI del representante" alEncontrar={setCiudadano} autoFocus />
         ) : (
           <form onSubmit={enviar} noValidate className="flex flex-col gap-u2">
-            <PersonaElegida
-              persona={persona}
+            <CiudadanoElegida
+              ciudadano={ciudadano}
               etiqueta="Representante"
-              alCambiar={() => setPersona(null)}
+              alCambiar={() => setCiudadano(null)}
             />
 
             <Campo etiqueta="Alcance" obligatorio ayuda="Qué puede hacer en nombre de la organización.">
@@ -964,7 +964,7 @@ function OtorgarRepresentacion({ organizacionId, alGuardar }) {
                 className="rounded border border-sello bg-sello-suave px-3 py-2 text-[length:var(--texto-dato)] font-medium text-sello"
               >
                 {errorGeneral.status === 409
-                  ? "Esa persona ya tiene una representación activa en esta organización."
+                  ? "Esa ciudadano ya tiene una representación activa en esta organización."
                   : mensajeAmable(errorGeneral)}
               </p>
             )}

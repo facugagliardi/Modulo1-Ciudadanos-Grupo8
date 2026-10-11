@@ -66,7 +66,7 @@ export function App() {
               <Route path="domicilios" element={<Domicilios />} />
 
               {/* El backend no tiene endpoints de perfil ni de familia para
-                  personas jurídicas: ver sitemap.md, sección 6. */}
+                  ciudadanos jurídicas: ver sitemap.md, sección 6. */}
               <Route
                 path="perfil"
                 element={

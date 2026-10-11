@@ -73,7 +73,7 @@ describe("traza de auditoría", () => {
     expect(formatearAutor("EMPLEADO:42:RESPONSABLE_AREA")).toBe(
       "Empleado #42 · responsable area",
     );
-    expect(formatearAutor("CIUDADANO:3:PERSONA")).toBe("Titular #3 · persona");
+    expect(formatearAutor("CIUDADANO:3:PERSONA")).toBe("Titular #3 · ciudadano");
   });
 
   it("muestra un guión cuando no hay traza", () => {

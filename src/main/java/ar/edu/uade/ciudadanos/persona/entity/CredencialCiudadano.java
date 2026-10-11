@@ -9,39 +9,36 @@ import jakarta.persistence.MapsId;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 
-/** {@code contrasenasPersonas} del ERD: hash BCrypt de la clave de una persona. */
 @Entity
-@Table(name = "credencial_persona")
-public class CredencialPersona {
+@Table(name = "credencial_ciudadano")
+public class CredencialCiudadano {
 
     @Id
-    @Column(name = "persona_id")
-    private Long personaId;
+    @Column(name = "ciudadano_id")
+    private Long id;
 
     @MapsId
     @OneToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "persona_id")
-    private Persona persona;
+    @JoinColumn(name = "ciudadano_id")
+    private Ciudadano ciudadano;
 
-    /** Hash BCrypt, nunca la clave en claro. */
     @Column(name = "password", nullable = false, length = 100)
     private String password;
 
-
-    public Long getPersonaId() {
-        return personaId;
+    public Long getId() {
+        return id;
     }
 
-    public void setPersonaId(Long personaId) {
-        this.personaId = personaId;
+    public void setId(Long id) {
+        this.id = id;
     }
 
-    public Persona getPersona() {
-        return persona;
+    public Ciudadano getCiudadano() {
+        return ciudadano;
     }
 
-    public void setPersona(Persona persona) {
-        this.persona = persona;
+    public void setCiudadano(Ciudadano ciudadano) {
+        this.ciudadano = ciudadano;
     }
 
     public String getPassword() {

@@ -12,11 +12,7 @@ import java.time.LocalDate;
 import java.time.OffsetDateTime;
 
 /**
- * Documento cargado por/para una persona (RF-23..26).
- *
- * <p>{@code urlArchivo}, {@code fechaCreacion}, {@code resultadoValidacion} y
- * {@code fechaValidacion} se agregan sobre el ERD porque los devuelven los
- * endpoints de documentacion.
+ * Documento cargado por/para un ciudadano (RF-23..26).
  */
 @Entity
 @Table(name = "documento")
@@ -27,10 +23,10 @@ public class Documento {
     @Column(name = "documento_id")
     private Long documentoId;
 
-    @Column(name = "persona_id", nullable = false)
-    private Long personaId;
+    @Column(name = "ciudadano_id", nullable = false)
+    private Long ciudadanoId;
 
-    /** DNI, ESTATUTO, PODER, CONSTANCIA_CUIT, ... */
+    /** DNI, PODER, CONSTANCIA_CUIT, ... */
     @Column(name = "tipo_documento", nullable = false, length = 100)
     private String tipoDocumento;
 
@@ -69,12 +65,12 @@ public class Documento {
         this.documentoId = documentoId;
     }
 
-    public Long getPersonaId() {
-        return personaId;
+    public Long getCiudadanoId() {
+        return ciudadanoId;
     }
 
-    public void setPersonaId(Long personaId) {
-        this.personaId = personaId;
+    public void setCiudadanoId(Long ciudadanoId) {
+        this.ciudadanoId = ciudadanoId;
     }
 
     public String getTipoDocumento() {

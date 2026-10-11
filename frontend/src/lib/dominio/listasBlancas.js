@@ -10,7 +10,7 @@
  * ve el usuario en los desplegables.
  *
  * Cada entrada tiene el `valor` que viaja al backend y la `etiqueta` que lee
- * la persona. Es el lugar exacto donde se cumple la convencion del equipo:
+ * la ciudadano. Es el lugar exacto donde se cumple la convencion del equipo:
  * codigo en mayusculas, pantalla en castellano.
  */
 
@@ -35,7 +35,7 @@ export const TIPOS_RELACION = opciones([
  * El reciproco de un vinculo, cuando se puede deducir sin inventar nada.
  *
  * Solo estan los pares que quedan determinados por el vinculo mismo. Los que
- * dependen del genero de la otra persona NO estan a proposito: si alguien
+ * dependen del genero de la otra ciudadano NO estan a proposito: si alguien
  * declara "es mi hija", el otro extremo puede ser PADRE o MADRE, y la
  * aplicacion no tiene forma de saberlo (el backend no guarda genero).
  * Adivinarlo escribe un dato falso en el registro civil del municipio.
@@ -90,7 +90,7 @@ export const TIPOS_ORGANIZACION = opciones([
   ["SRL", "S.R.L."],
   ["SA", "S.A."],
   ["SAS", "S.A.S."],
-  ["UNIPERSONAL", "Unipersonal"],
+  ["UNIPERSONAL", "Uniciudadanol"],
   ["COOPERATIVA", "Cooperativa"],
   ["ASOCIACION_CIVIL", "Asociación civil"],
   ["FUNDACION", "Fundación"],

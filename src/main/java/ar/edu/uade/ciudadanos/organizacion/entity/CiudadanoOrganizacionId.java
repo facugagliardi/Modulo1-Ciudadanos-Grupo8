@@ -5,30 +5,30 @@ import jakarta.persistence.Embeddable;
 import java.io.Serializable;
 import java.util.Objects;
 
-/** PK compuesta de {@link PersonaOrganizacion}. */
+/** PK compuesta de {@link CiudadanoOrganizacion}. */
 @Embeddable
-public class PersonaOrganizacionId implements Serializable {
+public class CiudadanoOrganizacionId implements Serializable {
 
-    @Column(name = "id_persona")
-    private Long idPersona;
+    @Column(name = "id_ciudadano")
+    private Long idCiudadano;
 
     @Column(name = "id_organizacion")
     private Long idOrganizacion;
 
-    public PersonaOrganizacionId() {
+    public CiudadanoOrganizacionId() {
     }
 
-    public PersonaOrganizacionId(Long idPersona, Long idOrganizacion) {
-        this.idPersona = idPersona;
+    public CiudadanoOrganizacionId(Long idCiudadano, Long idOrganizacion) {
+        this.idCiudadano = idCiudadano;
         this.idOrganizacion = idOrganizacion;
     }
 
-    public Long getIdPersona() {
-        return idPersona;
+    public Long getIdCiudadano() {
+        return idCiudadano;
     }
 
-    public void setIdPersona(Long idPersona) {
-        this.idPersona = idPersona;
+    public void setIdCiudadano(Long idCiudadano) {
+        this.idCiudadano = idCiudadano;
     }
 
     public Long getIdOrganizacion() {
@@ -44,14 +44,14 @@ public class PersonaOrganizacionId implements Serializable {
         if (this == o) {
             return true;
         }
-        if (!(o instanceof PersonaOrganizacionId other)) {
+        if (!(o instanceof CiudadanoOrganizacionId other)) {
             return false;
         }
-        return Objects.equals(idPersona, other.idPersona) && Objects.equals(idOrganizacion, other.idOrganizacion);
+        return Objects.equals(idCiudadano, other.idCiudadano) && Objects.equals(idOrganizacion, other.idOrganizacion);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(idPersona, idOrganizacion);
+        return Objects.hash(idCiudadano, idOrganizacion);
     }
 }

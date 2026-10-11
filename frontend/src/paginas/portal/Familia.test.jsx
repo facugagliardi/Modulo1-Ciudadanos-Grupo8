@@ -61,23 +61,23 @@ describe("listado", () => {
   });
 });
 
-describe("alta: buscar a la otra persona", () => {
+describe("alta: buscar a la otra ciudadano", () => {
   it("valida el DNI antes de consultar", async () => {
     renderizar(<Familia />);
     await userEvent.click(await screen.findByRole("button", { name: /agregar vínculo/i }));
-    await userEvent.type(await screen.findByLabelText(/dni de la persona/i), "123");
+    await userEvent.type(await screen.findByLabelText(/dni de la ciudadano/i), "123");
     await userEvent.click(screen.getByRole("button", { name: "Buscar" }));
 
     expect(await screen.findByText(/entre 7 y 9 dígitos/i)).toBeInTheDocument();
     expect(buscarPorDni).not.toHaveBeenCalled();
   });
 
-  it("avisa si la persona no está registrada", async () => {
+  it("avisa si la ciudadano no está registrada", async () => {
     // El endpoint nunca da 404: responde {existe:false}.
     buscarPorDni.mockResolvedValue({ existe: false });
     renderizar(<Familia />);
     await userEvent.click(await screen.findByRole("button", { name: /agregar vínculo/i }));
-    await userEvent.type(await screen.findByLabelText(/dni de la persona/i), "99999999");
+    await userEvent.type(await screen.findByLabelText(/dni de la ciudadano/i), "99999999");
     await userEvent.click(screen.getByRole("button", { name: "Buscar" }));
 
     expect(await screen.findByText(/tiene que registrarse primero/i)).toBeInTheDocument();
@@ -87,7 +87,7 @@ describe("alta: buscar a la otra persona", () => {
     buscarPorDni.mockResolvedValue({ existe: true, id: 1, nombre: "Diego", apellido: "Lopez" });
     renderizar(<Familia />);
     await userEvent.click(await screen.findByRole("button", { name: /agregar vínculo/i }));
-    await userEvent.type(await screen.findByLabelText(/dni de la persona/i), "34567890");
+    await userEvent.type(await screen.findByLabelText(/dni de la ciudadano/i), "34567890");
     await userEvent.click(screen.getByRole("button", { name: "Buscar" }));
 
     expect(await screen.findByText(/ese sos vos/i)).toBeInTheDocument();
@@ -98,7 +98,7 @@ describe("alta: los dos extremos del vínculo", () => {
   async function llegarAlPaso2() {
     renderizar(<Familia />);
     await userEvent.click(await screen.findByRole("button", { name: /agregar vínculo/i }));
-    await userEvent.type(await screen.findByLabelText(/dni de la persona/i), "40123456");
+    await userEvent.type(await screen.findByLabelText(/dni de la ciudadano/i), "40123456");
     await userEvent.click(screen.getByRole("button", { name: "Buscar" }));
     await screen.findByLabelText(/¿qué es ana pérez tuyo\?/i);
   }
@@ -157,11 +157,11 @@ describe("alta: los dos extremos del vínculo", () => {
 });
 
 describe("eliminación", () => {
-  it("aclara que sólo se borra el vínculo, no la persona", async () => {
+  it("aclara que sólo se borra el vínculo, no la ciudadano", async () => {
     renderizar(<Familia />);
     await userEvent.click(await screen.findByRole("button", { name: /eliminar vínculo/i }));
 
-    expect(await screen.findByText(/los datos de esa persona no se tocan/i)).toBeInTheDocument();
+    expect(await screen.findByText(/los datos de esa ciudadano no se tocan/i)).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: /^eliminar vínculo$/i }));
     await waitFor(() => expect(eliminarRelacion).toHaveBeenCalledWith(1));
   });

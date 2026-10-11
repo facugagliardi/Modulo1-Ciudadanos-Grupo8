@@ -10,7 +10,7 @@ const actualizarDomicilio = vi.fn();
 const marcarDomicilioPrincipal = vi.fn();
 const cerrarDomicilio = vi.fn();
 
-vi.mock("@/lib/api/endpoints/personas", () => ({
+vi.mock("@/lib/api/endpoints/ciudadanos", () => ({
   listarDomicilios: (...a) => listarDomicilios(...a),
   crearDomicilio: (...a) => crearDomicilio(...a),
   actualizarDomicilio: (...a) => actualizarDomicilio(...a),

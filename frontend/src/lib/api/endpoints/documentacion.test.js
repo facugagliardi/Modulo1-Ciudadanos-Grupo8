@@ -72,7 +72,7 @@ describe("subida multipart", () => {
     await subirDocumento(3, { archivo: archivoFalso("dni.pdf"), tipoDocumento: "DNI" });
 
     const [ruta, opciones] = cliente.pedir.mock.calls[0];
-    expect(ruta).toBe("/personas/3/documentos");
+    expect(ruta).toBe("/ciudadanos/3/documentos");
     expect(opciones.metodo).toBe("POST");
     expect(opciones.form.get("archivo")).toBeInstanceOf(File);
     expect(opciones.form.get("tipoDocumento")).toBe("DNI");

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { ArrowLeft, CheckCircle2, KeyRound, Loader2, TriangleAlert } from "lucide-react";
-import { registrarPersona } from "@/lib/api/endpoints/auth";
+import { registrarCiudadano } from "@/lib/api/endpoints/auth";
 import { buscarPorDni } from "@/lib/api/endpoints/ciudadanos";
 import { mensajeAmable } from "@/lib/api/cliente";
 import { soloDigitos } from "@/lib/dominio/formato";
@@ -62,7 +62,7 @@ export function AltaDeVecino() {
       try {
         const res = await buscarPorDni(dniLimpio, control.signal);
         setChequeo(
-          res?.existe ? { estado: "existe", persona: res } : { estado: "libre" },
+          res?.existe ? { estado: "existe", ciudadano: res } : { estado: "libre" },
         );
       } catch (e) {
         if (e?.name !== "AbortError") setChequeo({ estado: "quieto" });
@@ -104,8 +104,8 @@ export function AltaDeVecino() {
 
     setEnviando(true);
     try {
-      const persona = await registrarPersona({ ...valores, tipo: "CIUDADANO" });
-      setCreado({ persona, password: valores.password });
+      const ciudadano = await registrarCiudadano({ ...valores, tipo: "CIUDADANO" });
+      setCreado({ ciudadano, password: valores.password });
     } catch (error) {
       if (error?.tieneErroresDeCampo) setErrores(error.errores);
       setErrorGeneral(error);
@@ -123,21 +123,21 @@ export function AltaDeVecino() {
           <CardCuerpo className="flex flex-col gap-u3">
             <p className="flex items-center gap-2 text-lg font-medium text-vigente">
               <CheckCircle2 className="size-5" aria-hidden="true" />
-              {creado.persona.nombre} {creado.persona.apellido} quedó en el padrón
+              {creado.ciudadano.nombre} {creado.ciudadano.apellido} quedó en el padrón
             </p>
 
             <dl className="grid gap-u2 sm:grid-cols-3">
               <div>
                 <dt className="text-[11px] font-semibold uppercase tracking-wide text-apagado">Ficha</dt>
-                <dd><Identificador valor={`#${creado.persona.personaId}`} /></dd>
+                <dd><Identificador valor={`#${creado.ciudadano.ciudadanoId}`} /></dd>
               </div>
               <div>
                 <dt className="text-[11px] font-semibold uppercase tracking-wide text-apagado">DNI</dt>
-                <dd><Identificador valor={creado.persona.dni} tipo="dni" /></dd>
+                <dd><Identificador valor={creado.ciudadano.dni} tipo="dni" /></dd>
               </div>
               <div>
                 <dt className="text-[11px] font-semibold uppercase tracking-wide text-apagado">CUIL</dt>
-                <dd><Identificador valor={creado.persona.cuil} tipo="cuit" /></dd>
+                <dd><Identificador valor={creado.ciudadano.cuil} tipo="cuit" /></dd>
               </div>
             </dl>
 
@@ -153,7 +153,7 @@ export function AltaDeVecino() {
               <dl className="mt-u2 grid gap-u2 sm:grid-cols-2">
                 <div>
                   <dt className="text-[11px] font-semibold uppercase tracking-wide text-alerta">Usuario (CUIL)</dt>
-                  <dd className="identificador text-lg">{creado.persona.cuil}</dd>
+                  <dd className="identificador text-lg">{creado.ciudadano.cuil}</dd>
                 </div>
                 <div>
                   <dt className="text-[11px] font-semibold uppercase tracking-wide text-alerta">Contraseña provisoria</dt>
@@ -164,7 +164,7 @@ export function AltaDeVecino() {
 
             <div className="flex flex-wrap gap-u2">
               <Button asChild>
-                <Link to={`/admin/padron/${creado.persona.personaId}`}>Ir a su legajo</Link>
+                <Link to={`/admin/padron/${creado.ciudadano.ciudadanoId}`}>Ir a su legajo</Link>
               </Button>
               <Button
                 variante="secundario"
@@ -247,9 +247,9 @@ export function AltaDeVecino() {
                   </p>
                   <p className="mt-1 flex flex-wrap items-center gap-u2 text-[length:var(--texto-dato)]">
                     <span className="font-medium">
-                      {chequeo.persona.nombre} {chequeo.persona.apellido}
+                      {chequeo.ciudadano.nombre} {chequeo.ciudadano.apellido}
                     </span>
-                    <BadgeEstado entidad={ENTIDADES.CIUDADANO} estado={chequeo.persona.estado} />
+                    <BadgeEstado entidad={ENTIDADES.CIUDADANO} estado={chequeo.ciudadano.estado} />
                   </p>
                   <Button
                     asChild
@@ -257,7 +257,7 @@ export function AltaDeVecino() {
                     tamano="chico"
                     className="mt-u2"
                   >
-                    <Link to={`/admin/padron/${chequeo.persona.id}`}>Abrir su legajo</Link>
+                    <Link to={`/admin/padron/${chequeo.ciudadano.id}`}>Abrir su legajo</Link>
                   </Button>
                 </div>
               )}
@@ -315,7 +315,7 @@ export function AltaDeVecino() {
                 className="rounded border border-sello bg-sello-suave px-3 py-2 text-[length:var(--texto-dato)] font-medium text-sello"
               >
                 {errorGeneral.status === 409
-                  ? "Ya hay una persona registrada con ese DNI o CUIL."
+                  ? "Ya hay una ciudadano registrada con ese DNI o CUIL."
                   : mensajeAmable(errorGeneral)}
               </p>
             )}

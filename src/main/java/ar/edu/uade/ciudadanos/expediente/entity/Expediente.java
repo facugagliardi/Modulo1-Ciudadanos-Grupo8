@@ -23,9 +23,9 @@ public class Expediente {
     @Column(name = "numero", nullable = false, unique = true, length = 100)
     private String numero;
 
-    /** Persona titular (RF-31). */
-    @Column(name = "persona_id", nullable = false)
-    private Long personaId;
+    /** Ciudadano titular (RF-31). */
+    @Column(name = "ciudadano_id", nullable = false)
+    private Long ciudadanoId;
 
     @Column(name = "area_iniciadora", nullable = false, length = 255)
     private String areaIniciadora;
@@ -56,12 +56,12 @@ public class Expediente {
         this.numero = numero;
     }
 
-    public Long getPersonaId() {
-        return personaId;
+    public Long getCiudadanoId() {
+        return ciudadanoId;
     }
 
-    public void setPersonaId(Long personaId) {
-        this.personaId = personaId;
+    public void setCiudadanoId(Long ciudadanoId) {
+        this.ciudadanoId = ciudadanoId;
     }
 
     public String getAreaIniciadora() {

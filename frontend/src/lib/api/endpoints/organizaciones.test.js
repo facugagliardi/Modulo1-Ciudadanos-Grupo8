@@ -75,13 +75,13 @@ describe("rutas", () => {
 
 describe("cuerpos filtrados", () => {
   it("el alta manda los dueños como objetos y normaliza el CUIT", async () => {
-    // ARCHITECTURE.md dice `personaId[]`; el backend recibe objetos.
+    // ARCHITECTURE.md dice `ciudadanoId[]`; el backend recibe objetos.
     await crearOrganizacion({
       cuit: "30-71234567-8",
       razonSocial: "Kiosco SRL",
       nombreFantasia: "El Kiosco",
       tipo: "SRL",
-      duenos: [{ personaId: 1, porcentajeTitularidad: 60 }],
+      duenos: [{ ciudadanoId: 1, porcentajeTitularidad: 60 }],
       basura: "x",
     });
     expect(cliente.post).toHaveBeenCalledWith("/organizaciones", {
@@ -89,7 +89,7 @@ describe("cuerpos filtrados", () => {
       razonSocial: "Kiosco SRL",
       nombreFantasia: "El Kiosco",
       tipo: "SRL",
-      duenos: [{ personaId: 1, porcentajeTitularidad: 60 }],
+      duenos: [{ ciudadanoId: 1, porcentajeTitularidad: 60 }],
     });
   });
 
@@ -108,10 +108,10 @@ describe("cuerpos filtrados", () => {
     expect(enviado).not.toHaveProperty("estado");
   });
 
-  it("agregar dueño manda persona y porcentaje", async () => {
-    await agregarDueno(1, { personaId: 4, porcentajeTitularidad: 40, sobra: true });
+  it("agregar dueño manda ciudadano y porcentaje", async () => {
+    await agregarDueno(1, { ciudadanoId: 4, porcentajeTitularidad: 40, sobra: true });
     expect(cliente.post).toHaveBeenCalledWith("/organizaciones/1/duenos", {
-      personaId: 4,
+      ciudadanoId: 4,
       porcentajeTitularidad: 40,
     });
   });
@@ -126,7 +126,7 @@ describe("cuerpos filtrados", () => {
 
   it("la representación acepta hasta nulo como 'sin vencimiento'", async () => {
     await crearRepresentacion({
-      personaId: 3,
+      ciudadanoId: 3,
       organizacionId: 1,
       alcance: "TOTAL",
       desde: "2026-09-06",
@@ -134,7 +134,7 @@ describe("cuerpos filtrados", () => {
       sobra: "x",
     });
     expect(cliente.post).toHaveBeenCalledWith("/representaciones", {
-      personaId: 3,
+      ciudadanoId: 3,
       organizacionId: 1,
       alcance: "TOTAL",
       desde: "2026-09-06",

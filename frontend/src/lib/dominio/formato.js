@@ -74,9 +74,9 @@ export function formatearAutor(traza) {
   return `${quien} #${id}${rolLegible}`;
 }
 
-export function nombreCompleto(persona) {
-  if (!persona) return "";
-  return [persona.nombre, persona.apellido].filter(Boolean).join(" ").trim();
+export function nombreCompleto(ciudadano) {
+  if (!ciudadano) return "";
+  return [ciudadano.nombre, ciudadano.apellido].filter(Boolean).join(" ").trim();
 }
 
 /** "Faltan 3 días" / "Vencido hace 2 días" — para plazos de documentacion. */

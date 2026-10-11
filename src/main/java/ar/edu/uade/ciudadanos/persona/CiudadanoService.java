@@ -14,14 +14,10 @@ import ar.edu.uade.ciudadanos.persona.dto.ExistenciaCiudadanoResponse;
 import ar.edu.uade.ciudadanos.persona.dto.IdentidadCiudadanoResponse;
 import ar.edu.uade.ciudadanos.persona.entity.Ciudadano;
 import ar.edu.uade.ciudadanos.persona.entity.EstadoCiudadano;
-import ar.edu.uade.ciudadanos.persona.entity.Persona;
 import ar.edu.uade.ciudadanos.persona.repository.CiudadanoRepository;
-import ar.edu.uade.ciudadanos.persona.repository.PersonaRepository;
 import ar.edu.uade.ciudadanos.security.AutorizacionService;
 import ar.edu.uade.ciudadanos.security.Permiso;
 import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,18 +26,15 @@ import org.springframework.transaction.annotation.Transactional;
 public class CiudadanoService {
 
     private final CiudadanoRepository ciudadanoRepository;
-    private final PersonaRepository personaRepository;
     private final ContactoCiudadanoRepository contactoRepository;
     private final DomicilioService domicilioService;
     private final AutorizacionService autorizacion;
 
     public CiudadanoService(CiudadanoRepository ciudadanoRepository,
-                            PersonaRepository personaRepository,
                             ContactoCiudadanoRepository contactoRepository,
                             DomicilioService domicilioService,
                             AutorizacionService autorizacion) {
         this.ciudadanoRepository = ciudadanoRepository;
-        this.personaRepository = personaRepository;
         this.contactoRepository = contactoRepository;
         this.domicilioService = domicilioService;
         this.autorizacion = autorizacion;
@@ -56,7 +49,7 @@ public class CiudadanoService {
                 .map(ContactoResponse::de).toList();
 
         return new CiudadanoResponse(ciudadano.getId(), ciudadano.getDocumentoId(), ciudadano.getNombre(),
-                ciudadano.getApellido(), ciudadano.getFechaNacimiento(), cuilDe(id), ciudadano.getEstado(),
+                ciudadano.getApellido(), ciudadano.getFechaNacimiento(), String.valueOf(ciudadano.getCuit()), ciudadano.getEstado(),
                 domicilioService.principalDe(id).orElse(null), contactos);
     }
 
@@ -69,12 +62,9 @@ public class CiudadanoService {
         autorizacion.exigir(Permiso.LISTAR_PADRON, "listar el padron de ciudadanos");
 
         List<Ciudadano> ciudadanos = ciudadanoRepository.findAll();
-        Map<Long, Long> cuiles = personaRepository.findAllById(
-                        ciudadanos.stream().map(Ciudadano::getId).toList()).stream()
-                .collect(Collectors.toMap(Persona::getId, Persona::getCuit));
 
         return ciudadanos.stream()
-                .map(c -> CiudadanoResumenResponse.de(c, cuiles.get(c.getId())))
+                .map(c -> CiudadanoResumenResponse.de(c, c.getCuit()))
                 .toList();
     }
 
@@ -101,7 +91,7 @@ public class CiudadanoService {
             ciudadano.setDocumentoId(request.dni());
         }
         if (request.cuil() != null) {
-            actualizarCuil(id, request.cuil());
+            actualizarCuil(ciudadano, request.cuil());
         }
 
         return obtenerSinChequeo(ciudadano);
@@ -146,22 +136,20 @@ public class CiudadanoService {
 
     // ------------------------------------------------------------------ helpers
 
-    private void actualizarCuil(Long personaId, String cuilCrudo) {
+    private void actualizarCuil(Ciudadano ciudadano, String cuilCrudo) {
         String digitos = cuilCrudo.replaceAll("\\D", "");
         if (digitos.length() != 11) {
             throw ApiException.invalido("El CUIL debe tener 11 digitos");
         }
         Long cuil = Long.valueOf(digitos);
 
-        Persona persona = personaRepository.findById(personaId)
-                .orElseThrow(() -> ApiException.noEncontrado("No existe la persona " + personaId));
-        if (persona.getCuit().equals(cuil)) {
+        if (ciudadano.getCuit().equals(cuil)) {
             return;
         }
-        if (personaRepository.existsByCuit(cuil)) {
-            throw ApiException.conflicto("Ya existe otra persona con el CUIL " + digitos);
+        if (ciudadanoRepository.existsByCuit(cuil)) {
+            throw ApiException.conflicto("Ya existe otro ciudadano con el CUIL " + digitos);
         }
-        persona.setCuit(cuil);
+        ciudadano.setCuit(cuil);
     }
 
     /** Arma la respuesta cuando el permiso ya se verifico en el metodo llamador. */
@@ -169,13 +157,8 @@ public class CiudadanoService {
         List<ContactoResponse> contactos = contactoRepository.findByCiudadanoId(ciudadano.getId()).stream()
                 .map(ContactoResponse::de).toList();
         return new CiudadanoResponse(ciudadano.getId(), ciudadano.getDocumentoId(), ciudadano.getNombre(),
-                ciudadano.getApellido(), ciudadano.getFechaNacimiento(), cuilDe(ciudadano.getId()),
+                ciudadano.getApellido(), ciudadano.getFechaNacimiento(), String.valueOf(ciudadano.getCuit()),
                 ciudadano.getEstado(), domicilioService.principalDe(ciudadano.getId()).orElse(null), contactos);
-    }
-
-    private String cuilDe(Long personaId) {
-        return personaRepository.findById(personaId)
-                .map(Persona::getCuit).map(String::valueOf).orElse(null);
     }
 
     private Ciudadano buscar(Long id) {

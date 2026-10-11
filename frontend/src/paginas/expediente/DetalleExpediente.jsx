@@ -32,13 +32,13 @@ export function DetalleExpediente({ zona = "portal" }) {
   const expediente = useRecurso(useCallback((s) => obtenerExpediente(id, s), [id]));
   const actuaciones = useRecurso(useCallback((s) => listarActuaciones(id, s), [id]));
 
-  const personaId = expediente.datos?.personaId;
-  // El titular puede ser una persona jurídica, y para esas no hay endpoint de
-  // consulta: si falla, se muestra el número de persona y listo.
+  const ciudadanoId = expediente.datos?.ciudadanoId;
+  // El titular puede ser una ciudadano jurídica, y para esas no hay endpoint de
+  // consulta: si falla, se muestra el número de ciudadano y listo.
   const titular = useRecurso(
     useCallback(
-      (s) => (personaId ? obtenerCiudadano(personaId, s).catch(() => null) : Promise.resolve(null)),
-      [personaId],
+      (s) => (ciudadanoId ? obtenerCiudadano(ciudadanoId, s).catch(() => null) : Promise.resolve(null)),
+      [ciudadanoId],
     ),
   );
 
@@ -66,7 +66,7 @@ export function DetalleExpediente({ zona = "portal" }) {
             expediente={expediente.datos}
             titular={titular.datos}
             enlaceTitular={
-              zona === "admin" && puedeLeerTerceros ? `/admin/padron/${personaId}` : null
+              zona === "admin" && puedeLeerTerceros ? `/admin/padron/${ciudadanoId}` : null
             }
             acciones={
               puedeCambiarEstado && (

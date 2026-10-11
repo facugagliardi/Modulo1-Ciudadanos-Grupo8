@@ -19,7 +19,7 @@ import { ENTIDADES } from "@/lib/dominio/estados";
  * y eso es lo que conviene: el módulo garantiza que sea único e irrepetible, y
  * escribirlo a mano sólo abre la puerta a colisiones.
  *
- * El titular se busca por DNI porque el alta necesita su `personaId` y la única
+ * El titular se busca por DNI porque el alta necesita su `ciudadanoId` y la única
  * consulta disponible es por documento.
  */
 export function NuevoExpediente() {
@@ -72,7 +72,7 @@ export function NuevoExpediente() {
     setEnviando(true);
     try {
       const creado = await crearExpediente({
-        personaId: titular.id,
+        ciudadanoId: titular.id,
         caratula: valores.caratula.trim(),
         areaIniciadora: valores.areaIniciadora.trim(),
       });
@@ -110,7 +110,7 @@ export function NuevoExpediente() {
                 etiqueta="DNI del titular"
                 obligatorio
                 inputMode="numeric"
-                ayuda="El expediente se abre a nombre de una persona registrada."
+                ayuda="El expediente se abre a nombre de una ciudadano registrada."
                 value={dni}
                 onChange={(e) => {
                   setDni(e.target.value);
@@ -148,7 +148,7 @@ export function NuevoExpediente() {
                   role="alert"
                   className="rounded border border-sello bg-sello-suave px-3 py-2 text-[length:var(--texto-dato)] text-sello"
                 >
-                  Esta persona figura como fallecida. Revisá que corresponda abrir un
+                  Esta ciudadano figura como fallecida. Revisá que corresponda abrir un
                   expediente a su nombre.
                 </p>
               )}

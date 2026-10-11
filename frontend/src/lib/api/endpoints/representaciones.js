@@ -2,7 +2,7 @@ import { get, patch, post } from "../cliente";
 import { cuerpo } from "../campos";
 
 /**
- * Representaciones: qué personas físicas pueden actuar en nombre de una
+ * Representaciones: qué ciudadanos físicas pueden actuar en nombre de una
  * organización, con qué alcance y hasta cuándo.
  *
  * Es lo que consume el Módulo 4 (Habilitaciones) para autorizar trámites, así
@@ -18,7 +18,7 @@ export async function listarRepresentacionesDeOrganizacion(organizacionId, senal
   return res?.items ?? [];
 }
 
-/** 409 si ya hay una representación activa para ese par persona-organización. */
+/** 409 si ya hay una representación activa para ese par ciudadano-organización. */
 export function crearRepresentacion(datos) {
   return post("/representaciones", cuerpo("crearRepresentacion", datos));
 }

@@ -14,7 +14,7 @@ public interface ExpedienteRepository extends JpaRepository<Expediente, Long> {
 
     boolean existsByNumero(String numero);
 
-    List<Expediente> findByPersonaId(Long personaId);
+    List<Expediente> findByCiudadanoId(Long ciudadanoId);
 
     List<Expediente> findByEstado(EstadoExpediente estado);
 }

@@ -8,7 +8,7 @@ import java.time.OffsetDateTime;
 /** 200 de GET /documentos/{id}. */
 public record DocumentoResponse(
         Long documentoId,
-        Long personaId,
+        Long ciudadanoId,
         String tipoDocumento,
         Integer version,
         LocalDate vigenciaHasta,
@@ -20,7 +20,7 @@ public record DocumentoResponse(
         OffsetDateTime fechaCreacion) {
 
     public static DocumentoResponse de(Documento d) {
-        return new DocumentoResponse(d.getDocumentoId(), d.getPersonaId(), d.getTipoDocumento(), d.getVersion(),
+        return new DocumentoResponse(d.getDocumentoId(), d.getCiudadanoId(), d.getTipoDocumento(), d.getVersion(),
                 d.getVigenciaHasta(), d.getCargadoPor(), d.getValidadoPor(), d.getResultadoValidacion(),
                 d.getFechaValidacion(), d.getUrlArchivo(), d.getFechaCreacion());
     }

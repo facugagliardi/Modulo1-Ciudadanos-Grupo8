@@ -14,15 +14,10 @@ import ar.edu.uade.ciudadanos.empleado.entity.CuentaEmpleado;
 import ar.edu.uade.ciudadanos.empleado.repository.CredencialEmpleadoRepository;
 import ar.edu.uade.ciudadanos.empleado.repository.CuentaEmpleadoRepository;
 import ar.edu.uade.ciudadanos.persona.entity.Ciudadano;
-import ar.edu.uade.ciudadanos.persona.entity.CredencialPersona;
+import ar.edu.uade.ciudadanos.persona.entity.CredencialCiudadano;
 import ar.edu.uade.ciudadanos.persona.entity.EstadoCiudadano;
-import ar.edu.uade.ciudadanos.persona.entity.Persona;
-import ar.edu.uade.ciudadanos.persona.entity.PersonaJuridica;
-import ar.edu.uade.ciudadanos.persona.entity.TipoPersona;
 import ar.edu.uade.ciudadanos.persona.repository.CiudadanoRepository;
-import ar.edu.uade.ciudadanos.persona.repository.CredencialPersonaRepository;
-import ar.edu.uade.ciudadanos.persona.repository.PersonaJuridicaRepository;
-import ar.edu.uade.ciudadanos.persona.repository.PersonaRepository;
+import ar.edu.uade.ciudadanos.persona.repository.CredencialCiudadanoRepository;
 import ar.edu.uade.ciudadanos.security.AuthPrincipal;
 import ar.edu.uade.ciudadanos.security.JwtService;
 import ar.edu.uade.ciudadanos.security.Rol;
@@ -35,31 +30,21 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class AuthService {
 
-    // El rol de ciudadanos y personas juridicas es el mismo: los dos son
-    // titulares que operan sobre lo propio. Lo que los distingue es
-    // tipoPersona, que viaja aparte en el cuerpo y en el claim sub_type.
-
-    private final PersonaRepository personaRepository;
     private final CiudadanoRepository ciudadanoRepository;
-    private final PersonaJuridicaRepository personaJuridicaRepository;
-    private final CredencialPersonaRepository credencialPersonaRepository;
+    private final CredencialCiudadanoRepository credencialCiudadanoRepository;
     private final CuentaEmpleadoRepository cuentaEmpleadoRepository;
     private final CredencialEmpleadoRepository credencialEmpleadoRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
 
-    public AuthService(PersonaRepository personaRepository,
-                       CiudadanoRepository ciudadanoRepository,
-                       PersonaJuridicaRepository personaJuridicaRepository,
-                       CredencialPersonaRepository credencialPersonaRepository,
+    public AuthService(CiudadanoRepository ciudadanoRepository,
+                       CredencialCiudadanoRepository credencialCiudadanoRepository,
                        CuentaEmpleadoRepository cuentaEmpleadoRepository,
                        CredencialEmpleadoRepository credencialEmpleadoRepository,
                        PasswordEncoder passwordEncoder,
                        JwtService jwtService) {
-        this.personaRepository = personaRepository;
         this.ciudadanoRepository = ciudadanoRepository;
-        this.personaJuridicaRepository = personaJuridicaRepository;
-        this.credencialPersonaRepository = credencialPersonaRepository;
+        this.credencialCiudadanoRepository = credencialCiudadanoRepository;
         this.cuentaEmpleadoRepository = cuentaEmpleadoRepository;
         this.credencialEmpleadoRepository = credencialEmpleadoRepository;
         this.passwordEncoder = passwordEncoder;
@@ -72,32 +57,15 @@ public class AuthService {
     public RegisterResponse registrar(RegisterRequest request) {
         Long cuit = normalizarCuit(request.cuit());
 
-        // RF-06: unicidad de CUIT/CUIL antes de tocar nada.
-        if (personaRepository.existsByCuit(cuit)) {
-            throw ApiException.conflicto("Ya existe una persona registrada con ese CUIT/CUIL");
+        if (ciudadanoRepository.existsByCuit(cuit)) {
+            throw ApiException.conflicto("Ya existe un ciudadano registrado con ese CUIT/CUIL");
         }
 
-        Persona persona = new Persona();
-        persona.setTipo(request.tipo());
-        persona.setCuit(cuit);
-        persona = personaRepository.save(persona);
-
-        CredencialPersona credencial = new CredencialPersona();
-        credencial.setPersona(persona);
-        credencial.setPassword(passwordEncoder.encode(request.password()));
-        credencialPersonaRepository.save(credencial);
-
-        return request.tipo() == TipoPersona.CIUDADANO
-                ? registrarCiudadano(request, persona)
-                : registrarPersonaJuridica(request, persona);
-    }
-
-    private RegisterResponse registrarCiudadano(RegisterRequest request, Persona persona) {
-        exigir(request.dni(), "dni es obligatorio para una persona fisica");
-        exigir(request.nombre(), "nombre es obligatorio para una persona fisica");
-        exigir(request.apellido(), "apellido es obligatorio para una persona fisica");
+        exigir(request.dni(), "dni es obligatorio para un ciudadano");
+        exigir(request.nombre(), "nombre es obligatorio para un ciudadano");
+        exigir(request.apellido(), "apellido es obligatorio para un ciudadano");
         if (request.fechaNacimiento() == null) {
-            throw ApiException.invalido("fechaNacimiento es obligatoria para una persona fisica");
+            throw ApiException.invalido("fechaNacimiento es obligatoria para un ciudadano");
         }
 
         if (ciudadanoRepository.existsByDocumentoId(request.dni())) {
@@ -105,34 +73,22 @@ public class AuthService {
         }
 
         Ciudadano ciudadano = new Ciudadano();
-        ciudadano.setPersona(persona);
+        ciudadano.setCuit(cuit);
         ciudadano.setDocumentoId(request.dni());
         ciudadano.setNombre(request.nombre());
         ciudadano.setApellido(request.apellido());
         ciudadano.setFechaNacimiento(request.fechaNacimiento());
         ciudadano.setEstado(EstadoCiudadano.ACTIVO);
-        ciudadanoRepository.save(ciudadano);
+        ciudadano = ciudadanoRepository.save(ciudadano);
 
-        return RegisterResponse.fisica(persona.getId(), ciudadano.getDocumentoId(), ciudadano.getNombre(),
-                ciudadano.getApellido(), ciudadano.getFechaNacimiento(), String.valueOf(persona.getCuit()),
-                ciudadano.getEstado().name(), persona.getCreadoEn());
-    }
+        CredencialCiudadano credencial = new CredencialCiudadano();
+        credencial.setCiudadano(ciudadano);
+        credencial.setPassword(passwordEncoder.encode(request.password()));
+        credencialCiudadanoRepository.save(credencial);
 
-    private RegisterResponse registrarPersonaJuridica(RegisterRequest request, Persona persona) {
-        exigir(request.razonSocial(), "razonSocial es obligatoria para una persona juridica");
-        exigir(request.nombreFantasia(), "nombreFantasia es obligatorio para una persona juridica");
-
-        PersonaJuridica juridica = new PersonaJuridica();
-        juridica.setPersona(persona);
-        juridica.setRazonSocial(request.razonSocial());
-        juridica.setNombre(request.nombreFantasia());
-        juridica.setFechaDeCreacion(request.fechaDeCreacion());
-        juridica.setEstado(EstadoCiudadano.ACTIVO);
-        personaJuridicaRepository.save(juridica);
-
-        return RegisterResponse.juridica(persona.getId(), String.valueOf(persona.getCuit()),
-                juridica.getRazonSocial(), juridica.getNombre(), juridica.getEstado().name(),
-                persona.getCreadoEn());
+        return RegisterResponse.fisica(ciudadano.getId(), ciudadano.getDocumentoId(), ciudadano.getNombre(),
+                ciudadano.getApellido(), ciudadano.getFechaNacimiento(), String.valueOf(ciudadano.getCuit()),
+                ciudadano.getEstado().name(), ciudadano.getCreadoEn());
     }
 
     // ------------------------------------------------------------------- login
@@ -141,42 +97,25 @@ public class AuthService {
     public Sesion<LoginResponse> login(LoginRequest request) {
         Long cuit = normalizarCuit(request.cuit());
 
-        Persona persona = personaRepository.findByCuit(cuit)
-                .orElseThrow(() -> ApiException.noEncontrado("No hay una cuenta registrada con ese CUIT/CUIL"));
+        Ciudadano ciudadano = ciudadanoRepository.findByCuit(cuit)
+                .orElseThrow(() -> ApiException.noEncontrado("No hay un ciudadano registrado con ese CUIT/CUIL"));
 
-        CredencialPersona credencial = credencialPersonaRepository.findByPersonaId(persona.getId())
+        CredencialCiudadano credencial = credencialCiudadanoRepository.findByCiudadano_Cuit(cuit)
                 .orElseThrow(() -> ApiException.noAutenticado("Credenciales invalidas"));
 
         if (!passwordEncoder.matches(request.password(), credencial.getPassword())) {
             throw ApiException.noAutenticado("Credenciales invalidas");
         }
 
-        String rol = verificarEstadoYResolverRol(persona);
-        TipoSujeto tipoSujeto = persona.getTipo() == TipoPersona.CIUDADANO
-                ? TipoSujeto.CIUDADANO
-                : TipoSujeto.JURIDICA;
-
-        TokenEmitido tokens = emitir(new AuthPrincipal(persona.getId(), tipoSujeto, rol));
-        return new Sesion<>(new LoginResponse(persona.getId(), persona.getTipo().name(), rol), tokens);
-    }
-
-    /** 403 si la cuenta no esta operativa (bloqueada, inactiva o fallecida). */
-    private String verificarEstadoYResolverRol(Persona persona) {
-        if (persona.getTipo() == TipoPersona.CIUDADANO) {
-            Ciudadano ciudadano = ciudadanoRepository.findById(persona.getId())
-                    .orElseThrow(() -> ApiException.noEncontrado("Ciudadano inexistente"));
-            if (ciudadano.getEstado() != EstadoCiudadano.ACTIVO) {
-                throw ApiException.prohibido("La cuenta esta " + ciudadano.getEstado());
-            }
-            return Rol.PERSONA.name();
+        if (ciudadano.getEstado() != EstadoCiudadano.ACTIVO) {
+            throw ApiException.prohibido("La cuenta esta " + ciudadano.getEstado());
         }
 
-        PersonaJuridica juridica = personaJuridicaRepository.findById(persona.getId())
-                .orElseThrow(() -> ApiException.noEncontrado("Persona juridica inexistente"));
-        if (juridica.getEstado() != EstadoCiudadano.ACTIVO) {
-            throw ApiException.prohibido("La cuenta esta " + juridica.getEstado());
-        }
-        return Rol.PERSONA.name();
+        String rol = Rol.PERSONA.name();
+        TipoSujeto tipoSujeto = TipoSujeto.CIUDADANO;
+
+        TokenEmitido tokens = emitir(new AuthPrincipal(ciudadano.getId(), tipoSujeto, rol));
+        return new Sesion<>(new LoginResponse(ciudadano.getId(), "CIUDADANO", rol), tokens);
     }
 
     @Transactional(readOnly = true)

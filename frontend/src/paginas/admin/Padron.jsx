@@ -21,9 +21,9 @@ import { Encabezado } from "@/componentes/Encabezado";
  * ordenar y paginar lo hace <Tabla> del lado del cliente.
  *
  * RF-07 pide buscar por DNI, nombre, domicilio, teléfono o correo. El listado
- * solo trae los datos personales, así que acá se puede buscar por nombre,
+ * solo trae los datos ciudadanoles, así que acá se puede buscar por nombre,
  * apellido, DNI y CUIL; domicilio y contacto están en el legajo de cada
- * persona. Está anotado en contexto.md como pedido al backend.
+ * ciudadano. Está anotado en contexto.md como pedido al backend.
  */
 
 const ESTADOS = [
@@ -86,7 +86,7 @@ export function Padron() {
       <Encabezado
         seccion="Registro civil"
         titulo="Padrón de vecinos"
-        descripcion="Todas las personas físicas registradas en el municipio."
+        descripcion="Todas las ciudadanos físicas registradas en el municipio."
         acciones={
           puedeEditar && (
             <Button asChild>

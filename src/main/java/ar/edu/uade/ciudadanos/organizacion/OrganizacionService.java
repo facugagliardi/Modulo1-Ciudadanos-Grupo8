@@ -19,12 +19,12 @@ import ar.edu.uade.ciudadanos.organizacion.dto.RepresentanteVigenteResponse;
 import ar.edu.uade.ciudadanos.organizacion.entity.EstadoOrganizacion;
 import ar.edu.uade.ciudadanos.organizacion.entity.EstadoRepresentacion;
 import ar.edu.uade.ciudadanos.organizacion.entity.Organizacion;
-import ar.edu.uade.ciudadanos.organizacion.entity.PersonaOrganizacion;
-import ar.edu.uade.ciudadanos.organizacion.entity.PersonaOrganizacionId;
+import ar.edu.uade.ciudadanos.organizacion.entity.CiudadanoOrganizacion;
+import ar.edu.uade.ciudadanos.organizacion.entity.CiudadanoOrganizacionId;
 import ar.edu.uade.ciudadanos.organizacion.repository.OrganizacionRepository;
-import ar.edu.uade.ciudadanos.organizacion.repository.PersonaOrganizacionRepository;
+import ar.edu.uade.ciudadanos.organizacion.repository.CiudadanoOrganizacionRepository;
 import ar.edu.uade.ciudadanos.organizacion.repository.RepresentacionRepository;
-import ar.edu.uade.ciudadanos.persona.PersonaDirectorioService;
+import ar.edu.uade.ciudadanos.persona.CiudadanoDirectorioService;
 import ar.edu.uade.ciudadanos.persona.dto.CambioEstadoResponse;
 import ar.edu.uade.ciudadanos.persona.dto.DatosPersona;
 import ar.edu.uade.ciudadanos.security.AutorizacionService;
@@ -44,16 +44,16 @@ public class OrganizacionService {
     private static final String TIPO_POR_DEFECTO = "OTRO";
 
     private final OrganizacionRepository organizacionRepository;
-    private final PersonaOrganizacionRepository duenoRepository;
+    private final CiudadanoOrganizacionRepository duenoRepository;
     private final RepresentacionRepository representacionRepository;
-    private final PersonaDirectorioService directorio;
+    private final CiudadanoDirectorioService directorio;
     private final DomicilioService domicilioService;
     private final AutorizacionService autorizacion;
 
     public OrganizacionService(OrganizacionRepository organizacionRepository,
-                               PersonaOrganizacionRepository duenoRepository,
+                               CiudadanoOrganizacionRepository duenoRepository,
                                RepresentacionRepository representacionRepository,
-                               PersonaDirectorioService directorio,
+                               CiudadanoDirectorioService directorio,
                                DomicilioService domicilioService,
                                AutorizacionService autorizacion) {
         this.organizacionRepository = organizacionRepository;
@@ -65,7 +65,7 @@ public class OrganizacionService {
     }
 
     @Transactional
-    public OrganizacionResponse crear(CrearOrganizacionRequest request) {
+    public OrganizacionResponse crear(Long creadorId, CrearOrganizacionRequest request) {
         Long cuit = normalizarCuit(request.cuit());
         if (organizacionRepository.existsByCuit(cuit)) {
             throw ApiException.conflicto("Ya existe una organizacion con el CUIT " + cuit);
@@ -78,18 +78,7 @@ public class OrganizacionService {
             throw ApiException.conflicto("Ya existe una organizacion con el taxId " + taxId);
         }
 
-        // Los duenos se validan ANTES de crear nada: si uno no existe, no queda
-        // una organizacion a medio armar.
-        java.math.BigDecimal sumaPorcentajes = java.math.BigDecimal.ZERO;
-        for (var dueno : request.duenos()) {
-            directorio.exigirQueExista(dueno.personaId());
-            if (dueno.porcentajeTitularidad() != null) {
-                sumaPorcentajes = sumaPorcentajes.add(dueno.porcentajeTitularidad());
-            }
-        }
-        if (sumaPorcentajes.compareTo(java.math.BigDecimal.valueOf(100)) > 0) {
-            throw ApiException.conflicto("La suma de titularidades iniciales supera el 100%");
-        }
+        directorio.exigirQueExista(creadorId);
 
         Organizacion organizacion = new Organizacion();
         organizacion.setCuit(cuit);
@@ -97,16 +86,44 @@ public class OrganizacionService {
         organizacion.setRazonSocial(request.razonSocial().trim());
         organizacion.setNombre(request.nombreFantasia());
         organizacion.setTipo(tipoValidado(request.tipo()));
-        organizacion.setEstado(EstadoOrganizacion.ACTIVA);
+        organizacion.setEstado(EstadoOrganizacion.PENDIENTE);
         organizacionRepository.save(organizacion);
 
-        request.duenos().forEach(dueno -> {
-            PersonaOrganizacion vinculo = new PersonaOrganizacion();
-            vinculo.setId(new PersonaOrganizacionId(dueno.personaId(), organizacion.getOrganizacionId()));
-            vinculo.setPorcentajeTitularidad(dueno.porcentajeTitularidad());
-            duenoRepository.save(vinculo);
-        });
+        CiudadanoOrganizacion vinculo = new CiudadanoOrganizacion();
+        vinculo.setId(new CiudadanoOrganizacionId(creadorId, organizacion.getOrganizacionId()));
+        vinculo.setPorcentajeTitularidad(java.math.BigDecimal.valueOf(100));
+        duenoRepository.save(vinculo);
 
+        return armar(organizacion);
+    }
+
+    @Transactional(readOnly = true)
+    public List<OrganizacionResumenResponse> listarPendientes() {
+        autorizacion.exigir(Permiso.CAMBIAR_ESTADO_TITULAR, "listar organizaciones pendientes");
+        return organizacionRepository.findAll().stream()
+                .filter(o -> o.getEstado() == EstadoOrganizacion.PENDIENTE)
+                .map(OrganizacionResumenResponse::de).toList();
+    }
+
+    @Transactional
+    public OrganizacionResponse aprobar(Long id) {
+        autorizacion.exigir(Permiso.CAMBIAR_ESTADO_TITULAR, "aprobar una organizacion");
+        Organizacion organizacion = buscar(id);
+        if (organizacion.getEstado() != EstadoOrganizacion.PENDIENTE) {
+            throw ApiException.conflicto("La organizacion no esta PENDIENTE");
+        }
+        organizacion.setEstado(EstadoOrganizacion.ACTIVA);
+        return armar(organizacion);
+    }
+
+    @Transactional
+    public OrganizacionResponse rechazar(Long id) {
+        autorizacion.exigir(Permiso.CAMBIAR_ESTADO_TITULAR, "rechazar una organizacion");
+        Organizacion organizacion = buscar(id);
+        if (organizacion.getEstado() != EstadoOrganizacion.PENDIENTE) {
+            throw ApiException.conflicto("La organizacion no esta PENDIENTE");
+        }
+        organizacion.setEstado(EstadoOrganizacion.RECHAZADA);
         return armar(organizacion);
     }
 
@@ -121,23 +138,12 @@ public class OrganizacionService {
         return organizacionRepository.findAll().stream().map(OrganizacionResumenResponse::de).toList();
     }
 
-    /**
-     * Las organizaciones donde la persona es duena (RF-19).
-     *
-     * Existia el listado de representaciones pero no este, y son vinculos
-     * distintos: el alta de una organizacion anota al creador como DUENO, nunca
-     * como representante. Sin esta consulta, quien registraba una organizacion
-     * no tenia forma de volver a encontrarla desde el portal.
-     *
-     * Los ids se resuelven con un findAllById en vez de un findById por
-     * vinculo: son dos consultas en total, no una por organizacion.
-     */
     @Transactional(readOnly = true)
     public List<OrganizacionDeDuenoResponse> listarPorDueno(Long personaId) {
         directorio.exigirQueExista(personaId);
         autorizacion.exigirLecturaDePersona(personaId);
 
-        List<PersonaOrganizacion> vinculos = duenoRepository.findByIdIdPersona(personaId);
+        List<CiudadanoOrganizacion> vinculos = duenoRepository.findByIdIdCiudadano(personaId);
         if (vinculos.isEmpty()) {
             return List.of();
         }
@@ -150,8 +156,6 @@ public class OrganizacionService {
         return vinculos.stream()
                 .map(v -> {
                     Organizacion o = porId.get(v.getId().getIdOrganizacion());
-                    // Un vinculo sin organizacion solo puede venir de datos
-                    // inconsistentes; se saltea en vez de romper el listado.
                     return o == null ? null : OrganizacionDeDuenoResponse.de(o, v.getPorcentajeTitularidad());
                 })
                 .filter(Objects::nonNull)
@@ -176,7 +180,6 @@ public class OrganizacionService {
         return armar(organizacion);
     }
 
-    /** RF-08: baja y alta de la organizacion. Accion administrativa. */
     @Transactional
     public CambioEstadoResponse cambiarEstado(Long id, EstadoOrganizacion nuevo) {
         autorizacion.exigir(Permiso.CAMBIAR_ESTADO_TITULAR, "cambiar el estado de una organizacion");
@@ -189,7 +192,6 @@ public class OrganizacionService {
         return CambioEstadoResponse.de(id, anterior, nuevo);
     }
 
-    /** RF-06. Nunca 404. */
     @Transactional(readOnly = true)
     public ExistenciaOrganizacionResponse buscarPorCuit(String cuitCrudo) {
         Long cuit = normalizarCuit(cuitCrudo);
@@ -214,15 +216,15 @@ public class OrganizacionService {
         autorizacion.exigirEscrituraSobreOrganizacion(organizacionId);
         DatosPersona persona = directorio.resolver(request.personaId());
 
-        PersonaOrganizacionId clave = new PersonaOrganizacionId(request.personaId(), organizacionId);
+        CiudadanoOrganizacionId clave = new CiudadanoOrganizacionId(request.personaId(), organizacionId);
         if (duenoRepository.existsById(clave)) {
-            throw ApiException.conflicto("La persona ya figura como duena de la organizacion");
+            throw ApiException.conflicto("El ciudadano ya figura como dueno de la organizacion");
         }
 
         if (request.ajustes() != null) {
             for (var ajuste : request.ajustes()) {
-                PersonaOrganizacionId ajusteClave = new PersonaOrganizacionId(ajuste.personaId(), organizacionId);
-                PersonaOrganizacion vinculoExistente = duenoRepository.findById(ajusteClave)
+                CiudadanoOrganizacionId ajusteClave = new CiudadanoOrganizacionId(ajuste.personaId(), organizacionId);
+                CiudadanoOrganizacion vinculoExistente = duenoRepository.findById(ajusteClave)
                         .orElseThrow(() -> ApiException.conflicto("El dueno a ajustar no existe en la organizacion"));
                 vinculoExistente.setPorcentajeTitularidad(ajuste.nuevoPorcentaje());
                 duenoRepository.save(vinculoExistente);
@@ -231,7 +233,7 @@ public class OrganizacionService {
 
         exigirTitularidadCoherente(organizacionId, request.porcentajeTitularidad(), null);
 
-        PersonaOrganizacion vinculo = new PersonaOrganizacion();
+        CiudadanoOrganizacion vinculo = new CiudadanoOrganizacion();
         vinculo.setId(clave);
         vinculo.setPorcentajeTitularidad(request.porcentajeTitularidad());
         duenoRepository.save(vinculo);
@@ -246,9 +248,9 @@ public class OrganizacionService {
         autorizacion.exigirEscrituraSobreOrganizacion(organizacionId);
         DatosPersona persona = directorio.resolver(personaId);
 
-        PersonaOrganizacionId clave = new PersonaOrganizacionId(personaId, organizacionId);
-        PersonaOrganizacion vinculo = duenoRepository.findById(clave)
-                .orElseThrow(() -> ApiException.noEncontrado("La persona " + personaId + " no es duena de la organizacion"));
+        CiudadanoOrganizacionId clave = new CiudadanoOrganizacionId(personaId, organizacionId);
+        CiudadanoOrganizacion vinculo = duenoRepository.findById(clave)
+                .orElseThrow(() -> ApiException.noEncontrado("El ciudadano " + personaId + " no es dueno de la organizacion"));
 
         exigirTitularidadCoherente(organizacionId, request.porcentajeTitularidad(), personaId);
 
@@ -270,11 +272,11 @@ public class OrganizacionService {
         buscar(organizacionId);
         autorizacion.exigirEscrituraSobreOrganizacion(organizacionId);
 
-        PersonaOrganizacionId clave = new PersonaOrganizacionId(personaId, organizacionId);
-        PersonaOrganizacion vinculo = duenoRepository.findById(clave)
-                .orElseThrow(() -> ApiException.noEncontrado("La persona " + personaId + " no es duena de la organizacion"));
+        CiudadanoOrganizacionId clave = new CiudadanoOrganizacionId(personaId, organizacionId);
+        CiudadanoOrganizacion vinculo = duenoRepository.findById(clave)
+                .orElseThrow(() -> ApiException.noEncontrado("El ciudadano " + personaId + " no es dueno de la organizacion"));
 
-        java.util.List<PersonaOrganizacion> todosLosDuenos = duenoRepository.findByIdIdOrganizacion(organizacionId);
+        java.util.List<CiudadanoOrganizacion> todosLosDuenos = duenoRepository.findByIdIdOrganizacion(organizacionId);
         if (todosLosDuenos.size() == 1) {
             throw ApiException.conflicto("Es el unico dueno: la organizacion no puede quedar sin titular");
         }
@@ -284,8 +286,8 @@ public class OrganizacionService {
         if (porcentajeAEliminar != null && porcentajeAEliminar.compareTo(java.math.BigDecimal.ZERO) > 0) {
             if (beneficiarioId != null) {
                 // Asignar al beneficiario especifico
-                PersonaOrganizacionId beneficiarioClave = new PersonaOrganizacionId(beneficiarioId, organizacionId);
-                PersonaOrganizacion beneficiario = duenoRepository.findById(beneficiarioClave)
+                CiudadanoOrganizacionId beneficiarioClave = new CiudadanoOrganizacionId(beneficiarioId, organizacionId);
+                CiudadanoOrganizacion beneficiario = duenoRepository.findById(beneficiarioClave)
                         .orElseThrow(() -> ApiException.conflicto("El beneficiario especificado no es dueno de la organizacion"));
                 java.math.BigDecimal nuevoPorcentaje = beneficiario.getPorcentajeTitularidad() != null 
                         ? beneficiario.getPorcentajeTitularidad().add(porcentajeAEliminar) 
@@ -295,13 +297,13 @@ public class OrganizacionService {
             } else {
                 // Repartir proporcionalmente
                 java.math.BigDecimal sumaRestantes = todosLosDuenos.stream()
-                        .filter(d -> !d.getId().getIdPersona().equals(personaId))
+                        .filter(d -> !d.getId().getIdCiudadano().equals(personaId))
                         .map(d -> d.getPorcentajeTitularidad() != null ? d.getPorcentajeTitularidad() : java.math.BigDecimal.ZERO)
                         .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
                 
                 if (sumaRestantes.compareTo(java.math.BigDecimal.ZERO) > 0) {
-                    for (PersonaOrganizacion d : todosLosDuenos) {
-                        if (!d.getId().getIdPersona().equals(personaId)) {
+                    for (CiudadanoOrganizacion d : todosLosDuenos) {
+                        if (!d.getId().getIdCiudadano().equals(personaId)) {
                             java.math.BigDecimal actual = d.getPorcentajeTitularidad() != null ? d.getPorcentajeTitularidad() : java.math.BigDecimal.ZERO;
                             java.math.BigDecimal proporcion = actual.divide(sumaRestantes, 4, java.math.RoundingMode.HALF_UP);
                             java.math.BigDecimal sumar = porcentajeAEliminar.multiply(proporcion);
@@ -334,13 +336,9 @@ public class OrganizacionService {
                 domicilioPrincipalDe(o), duenos(o.getOrganizacionId()), representantes);
     }
 
-    /**
-     * La organizacion no es una persona, asi que su domicilio se busca por la
-     * persona juridica que comparte el CUIT, si existe.
-     */
     private ar.edu.uade.ciudadanos.domicilio.dto.DomicilioResponse domicilioPrincipalDe(Organizacion o) {
         return duenoRepository.findByIdIdOrganizacion(o.getOrganizacionId()).stream()
-                .map(v -> v.getId().getIdPersona())
+                .map(v -> v.getId().getIdCiudadano())
                 .filter(personaId -> String.valueOf(o.getCuit()).equals(directorio.resolver(personaId).cuit()))
                 .findFirst()
                 .flatMap(domicilioService::principalDe)
@@ -350,21 +348,20 @@ public class OrganizacionService {
     private List<DuenoResponse> duenos(Long organizacionId) {
         return duenoRepository.findByIdIdOrganizacion(organizacionId).stream()
                 .map(v -> {
-                    DatosPersona p = directorio.resolver(v.getId().getIdPersona());
+                    DatosPersona p = directorio.resolver(v.getId().getIdCiudadano());
                     return new DuenoResponse(p.personaId(), p.dni(), p.nombre(), p.apellido(),
                             v.getPorcentajeTitularidad());
                 })
                 .toList();
     }
 
-    /** La suma de titularidades declaradas no puede pasarse de 100. */
     private void exigirTitularidadCoherente(Long organizacionId, java.math.BigDecimal nuevo, Long ignorar) {
         if (nuevo == null) {
             return;
         }
         java.math.BigDecimal acumulado = duenoRepository.findByIdIdOrganizacion(organizacionId).stream()
-                .filter(v -> ignorar == null || !v.getId().getIdPersona().equals(ignorar))
-                .map(PersonaOrganizacion::getPorcentajeTitularidad)
+                .filter(v -> ignorar == null || !v.getId().getIdCiudadano().equals(ignorar))
+                .map(CiudadanoOrganizacion::getPorcentajeTitularidad)
                 .filter(java.util.Objects::nonNull)
                 .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
 

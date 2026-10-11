@@ -3,7 +3,7 @@ import { Link, useParams } from "react-router-dom";
 import { ArrowLeft, BadgeCheck, CircleDashed, MapPin } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { cambiarEstadoCiudadano, obtenerCiudadano } from "@/lib/api/endpoints/ciudadanos";
-import { listarDocumentos, listarDomicilios } from "@/lib/api/endpoints/personas";
+import { listarDocumentos, listarDomicilios } from "@/lib/api/endpoints/ciudadanos";
 import { listarRelaciones } from "@/lib/api/endpoints/relaciones";
 import { ListaDocumentos, SubirDocumento } from "@/componentes/documentacion/ListaDocumentos";
 import { Button } from "@/componentes/ui/button";
@@ -26,7 +26,7 @@ import {
 } from "@/componentes/ui/tabs";
 
 /**
- * El legajo de una persona: todo lo que el municipio sabe de ella, en un lugar.
+ * El legajo de una ciudadano: todo lo que el municipio sabe de ella, en un lugar.
  *
  * Cada bloque se carga por separado a propósito. Si fallan las relaciones, el
  * legajo igual muestra los datos y los domicilios; un error parcial no deja la
@@ -39,12 +39,12 @@ export function LegajoVecino() {
   const puedeEditar = usePermiso(PERMISOS.EDITAR_TERCEROS);
   const puedeValidar = usePermiso(PERMISOS.VALIDAR_DOCUMENTACION);
 
-  const persona = useRecurso(useCallback((s) => obtenerCiudadano(id, s), [id]));
+  const ciudadano = useRecurso(useCallback((s) => obtenerCiudadano(id, s), [id]));
   const domicilios = useRecurso(useCallback((s) => listarDomicilios(id, s), [id]));
   const relaciones = useRecurso(useCallback((s) => listarRelaciones(id, s), [id]));
   const documentos = useRecurso(useCallback((s) => listarDocumentos(id, s), [id]));
 
-  const c = persona.datos;
+  const c = ciudadano.datos;
 
   return (
     <>
@@ -56,8 +56,8 @@ export function LegajoVecino() {
         Volver al padrón
       </Link>
 
-      {persona.cargando && <Cargando texto="Buscando el legajo…" />}
-      {persona.error && <ErrorEnPantalla error={persona.error} alReintentar={persona.recargar} />}
+      {ciudadano.cargando && <Cargando texto="Buscando el legajo…" />}
+      {ciudadano.error && <ErrorEnPantalla error={ciudadano.error} alReintentar={ciudadano.recargar} />}
 
       {c && (
         <>
@@ -99,7 +99,7 @@ export function LegajoVecino() {
                 nombreEntidad="este vecino"
                 alConfirmar={async (nuevo) => {
                   await cambiarEstadoCiudadano(c.id, nuevo);
-                  persona.recargar();
+                  ciudadano.recargar();
                 }}
               />
             )}
@@ -107,7 +107,7 @@ export function LegajoVecino() {
 
           <Pestanias defaultValue="datos">
             <ListaPestanias>
-              <Pestania value="datos">Datos personales</Pestania>
+              <Pestania value="datos">Datos ciudadanoles</Pestania>
               <Pestania value="domicilios">
                 Domicilios
                 {domicilios.datos && (
@@ -132,7 +132,7 @@ export function LegajoVecino() {
               </Pestania>
             </ListaPestanias>
 
-            {/* --- Datos personales --- */}
+            {/* --- Datos ciudadanoles --- */}
             <PanelPestania value="datos">
               <Card>
                 <CardCuerpo>
@@ -326,7 +326,7 @@ export function LegajoVecino() {
                 <>
                   {puedeEditar && documentos.datos.length > 0 && (
                     <div className="mb-u2 flex justify-end">
-                      <SubirDocumento personaId={Number(id)} alGuardar={documentos.recargar}>
+                      <SubirDocumento ciudadanoId={Number(id)} alGuardar={documentos.recargar}>
                         <Button variante="secundario" tamano="chico">
                           Subir documento
                         </Button>
@@ -334,7 +334,7 @@ export function LegajoVecino() {
                     </div>
                   )}
                   <ListaDocumentos
-                    personaId={Number(id)}
+                    ciudadanoId={Number(id)}
                     documentos={documentos.datos}
                     puedeSubir={puedeEditar}
                     puedeValidar={puedeValidar}

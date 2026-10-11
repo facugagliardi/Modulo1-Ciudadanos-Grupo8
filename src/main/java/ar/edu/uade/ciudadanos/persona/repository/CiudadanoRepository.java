@@ -13,7 +13,11 @@ public interface CiudadanoRepository extends JpaRepository<Ciudadano, Long> {
     /** documentoId es el DNI (RF-06, GET /ciudadanos/dni/{dni}). */
     Optional<Ciudadano> findByDocumentoId(String documentoId);
 
+    Optional<Ciudadano> findByCuit(Long cuit);
+
     boolean existsByDocumentoId(String documentoId);
+
+    boolean existsByCuit(Long cuit);
 
     List<Ciudadano> findByEstado(EstadoCiudadano estado);
 

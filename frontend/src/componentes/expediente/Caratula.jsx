@@ -47,12 +47,12 @@ export function Caratula({ expediente, titular, enlaceTitular, acciones }) {
           <CampoSellado etiqueta="Titular">
             {enlaceTitular ? (
               <Link to={enlaceTitular} className="font-medium text-expediente hover:underline">
-                {titular ? nombreCompleto(titular) : `Persona #${expediente.personaId}`}
+                {titular ? nombreCompleto(titular) : `Ciudadano #${expediente.ciudadanoId}`}
               </Link>
             ) : titular ? (
               nombreCompleto(titular)
             ) : (
-              <Identificador valor={`#${expediente.personaId}`} />
+              <Identificador valor={`#${expediente.ciudadanoId}`} />
             )}
           </CampoSellado>
 

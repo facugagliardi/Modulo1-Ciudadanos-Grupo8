@@ -4,7 +4,7 @@ import ar.edu.uade.ciudadanos.documentacion.entity.Documento;
 import ar.edu.uade.ciudadanos.documentacion.entity.ResultadoValidacion;
 import java.time.LocalDate;
 
-/** Item de GET /personas/{personaId}/documentos. */
+/** Item de GET /ciudadanos/{ciudadanoId}/documentos. */
 public record DocumentoResumenResponse(
         Long documentoId,
         String tipoDocumento,

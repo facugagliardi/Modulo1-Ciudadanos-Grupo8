@@ -7,7 +7,7 @@ import {
   crearDomicilio,
   listarDomicilios,
   marcarDomicilioPrincipal,
-} from "@/lib/api/endpoints/personas";
+} from "@/lib/api/endpoints/ciudadanos";
 import { useRecurso } from "@/lib/useRecurso";
 import { useSesion } from "@/lib/auth/SesionContext";
 import { mensajeAmable } from "@/lib/api/cliente";
@@ -46,7 +46,7 @@ export function Domicilios() {
         descripcion="Podés tener varios. Uno es el principal y es el que usa el municipio para notificarte."
         acciones={
           <FormularioDomicilio
-            personaId={id}
+            ciudadanoId={id}
             sinDomiciliosAun={lista.length === 0}
             alGuardar={() => domicilios.recargar()}
             disparador={
@@ -72,7 +72,7 @@ export function Domicilios() {
               descripcion="El municipio necesita saber dónde vivís para notificarte y para asignarte los servicios de tu zona."
               accion={
                 <FormularioDomicilio
-                  personaId={id}
+                  ciudadanoId={id}
                   sinDomiciliosAun
                   alGuardar={() => domicilios.recargar()}
                   disparador={<Button>Cargar mi domicilio</Button>}
@@ -152,7 +152,7 @@ export function Domicilios() {
                         )}
 
                         <FormularioDomicilio
-                          personaId={id}
+                          ciudadanoId={id}
                           domicilio={d}
                           alGuardar={() => domicilios.recargar()}
                           disparador={
@@ -211,7 +211,7 @@ const VACIO = {
  * Ojo con la asimetría del backend: el POST acepta `esPrincipal` y el PUT no.
  * Además el PUT **no es parcial**: pide tipo, calle y número sí o sí.
  */
-function FormularioDomicilio({ personaId, domicilio, sinDomiciliosAun, disparador, alGuardar }) {
+function FormularioDomicilio({ ciudadanoId, domicilio, sinDomiciliosAun, disparador, alGuardar }) {
   const esEdicion = Boolean(domicilio);
   const [abierto, setAbierto] = useState(false);
   const [valores, setValores] = useState(VACIO);
@@ -241,7 +241,7 @@ function FormularioDomicilio({ personaId, domicilio, sinDomiciliosAun, disparado
     try {
       if (esEdicion) await actualizarDomicilio(domicilio.propiedadId, valores);
       // El primer domicilio siempre es el principal: no tendría sentido otra cosa.
-      else await crearDomicilio(personaId, { ...valores, esPrincipal: sinDomiciliosAun || valores.esPrincipal });
+      else await crearDomicilio(ciudadanoId, { ...valores, esPrincipal: sinDomiciliosAun || valores.esPrincipal });
       alGuardar?.();
       setAbierto(false);
     } catch (error) {

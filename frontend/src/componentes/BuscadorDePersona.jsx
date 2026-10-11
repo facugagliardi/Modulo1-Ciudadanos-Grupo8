@@ -8,21 +8,21 @@ import { Button } from "./ui/button";
 import { Campo } from "./ui/campo";
 
 /**
- * Buscar a una persona por su DNI.
+ * Buscar a una ciudadano por su DNI.
  *
  * Aparece cada vez que hay que referirse a alguien: vincular un familiar, abrir
  * un expediente a su nombre, pedirle documentación, sumarlo como dueño de una
- * organización. En todos esos casos el backend necesita el `personaId` y la
+ * organización. En todos esos casos el backend necesita el `ciudadanoId` y la
  * única consulta disponible es por documento.
  *
  * `GET /ciudadanos/dni/{dni}` nunca devuelve 404: responde `{existe:false}`.
  */
-export function BuscadorDePersona({
-  etiqueta = "DNI de la persona",
+export function BuscadorDeCiudadano({
+  etiqueta = "DNI de la ciudadano",
   ayuda = "Tiene que estar registrada en el municipio.",
   alEncontrar,
   excluirId,
-  textoExcluido = "Esa persona ya está.",
+  textoExcluido = "Esa ciudadano ya está.",
   autoFocus,
 }) {
   const [dni, setDni] = useState("");
@@ -80,8 +80,8 @@ export function BuscadorDePersona({
   );
 }
 
-/** La persona ya encontrada, con la opción de cambiarla. */
-export function PersonaElegida({ persona, alCambiar, etiqueta = "Persona" }) {
+/** La ciudadano ya encontrada, con la opción de cambiarla. */
+export function CiudadanoElegida({ ciudadano, alCambiar, etiqueta = "Ciudadano" }) {
   return (
     <div className="flex flex-wrap items-center justify-between gap-u2 rounded border border-borde bg-papel px-3 py-2">
       <span>
@@ -89,12 +89,12 @@ export function PersonaElegida({ persona, alCambiar, etiqueta = "Persona" }) {
           {etiqueta}
         </span>
         <span className="font-medium">
-          {[persona.nombre, persona.apellido].filter(Boolean).join(" ") || `Persona #${persona.id}`}
+          {[ciudadano.nombre, ciudadano.apellido].filter(Boolean).join(" ") || `Ciudadano #${ciudadano.id}`}
         </span>
       </span>
       <span className="flex items-center gap-u2">
-        {persona.estado && (
-          <BadgeEstado entidad={ENTIDADES.CIUDADANO} estado={persona.estado} />
+        {ciudadano.estado && (
+          <BadgeEstado entidad={ENTIDADES.CIUDADANO} estado={ciudadano.estado} />
         )}
         {alCambiar && (
           <Button type="button" variante="fantasma" tamano="chico" onClick={alCambiar}>

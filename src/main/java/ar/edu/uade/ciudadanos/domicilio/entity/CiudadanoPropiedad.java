@@ -6,33 +6,28 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
 import java.time.LocalDate;
 
-/**
- * Vinculo persona-domicilio con vigencia (RF-09..12). La baja cierra
- * {@code vigenteHasta}; nunca se borra la fila, para conservar el historial.
- */
+/** Vinculo entre un ciudadano y una propiedad (RF-09..12). */
 @Entity
-@Table(name = "personas_propiedades")
-public class PersonaPropiedad {
+@Table(name = "ciudadanos_propiedades")
+public class CiudadanoPropiedad {
 
     @EmbeddedId
-    private PersonaPropiedadId id;
+    private CiudadanoPropiedadId id;
 
     @Column(name = "vigente_desde", nullable = false)
     private LocalDate vigenteDesde = LocalDate.now();
 
-    /** null = vigente. */
     @Column(name = "vigente_hasta")
     private LocalDate vigenteHasta;
 
-    /** Agregado sobre el ERD: RF-10 pide marcar el domicilio principal. */
     @Column(name = "es_principal", nullable = false)
     private boolean esPrincipal;
 
-    public PersonaPropiedadId getId() {
+    public CiudadanoPropiedadId getId() {
         return id;
     }
 
-    public void setId(PersonaPropiedadId id) {
+    public void setId(CiudadanoPropiedadId id) {
         this.id = id;
     }
 

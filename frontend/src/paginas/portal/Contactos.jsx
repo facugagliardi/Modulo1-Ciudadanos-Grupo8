@@ -27,7 +27,7 @@ import { TIPOS_CONTACTO } from "@/lib/dominio/listasBlancas";
  *
  * El backend normaliza lo que recibe: el correo se guarda en minúsculas y el
  * teléfono sin espacios ni guiones. Por eso siempre se muestra lo que devolvió
- * la respuesta y no lo que escribió la persona.
+ * la respuesta y no lo que escribió la ciudadano.
  */
 
 // Las mismas reglas que aplica el backend, para avisar antes de mandar.
@@ -47,7 +47,7 @@ export function Contactos() {
         descripcion="Por acá te avisamos del estado de tus trámites."
         acciones={
           <FormularioContacto
-            personaId={id}
+            ciudadanoId={id}
             alGuardar={() => contactos.recargar()}
             disparador={
               <Button>
@@ -72,7 +72,7 @@ export function Contactos() {
               descripcion="Sin un correo o un teléfono no podemos avisarte cuando avanza un trámite tuyo."
               accion={
                 <FormularioContacto
-                  personaId={id}
+                  ciudadanoId={id}
                   alGuardar={() => contactos.recargar()}
                   disparador={<Button>Agregar el primero</Button>}
                 />
@@ -122,7 +122,7 @@ export function Contactos() {
                     )}
 
                     <FormularioContacto
-                      personaId={id}
+                      ciudadanoId={id}
                       contacto={c}
                       abierto={editando === c.contactoId}
                       alCambiarApertura={(v) => setEditando(v ? c.contactoId : null)}
@@ -160,7 +160,7 @@ export function Contactos() {
 }
 
 /** Alta y edición comparten formulario: el backend usa el mismo par de campos. */
-function FormularioContacto({ personaId, contacto, disparador, alGuardar, abierto, alCambiarApertura }) {
+function FormularioContacto({ ciudadanoId, contacto, disparador, alGuardar, abierto, alCambiarApertura }) {
   const esEdicion = Boolean(contacto);
   const [interno, setInterno] = useState(false);
   const visible = abierto ?? interno;
@@ -194,7 +194,7 @@ function FormularioContacto({ personaId, contacto, disparador, alGuardar, abiert
     setEnviando(true);
     try {
       if (esEdicion) await actualizarContacto(contacto.contactoId, valores);
-      else await crearContacto(personaId, valores);
+      else await crearContacto(ciudadanoId, valores);
       alGuardar?.();
       cambiarApertura(false);
       if (!esEdicion) setValores({ tipo: "EMAIL", valor: "" });

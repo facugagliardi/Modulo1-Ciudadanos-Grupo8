@@ -47,7 +47,7 @@ vi.mock("@/lib/api/endpoints/representaciones", () => ({
   crearRepresentacion: (...a) => crearRepresentacion(...a),
   cambiarEstadoRepresentacion: (...a) => cambiarEstadoRepresentacion(...a),
 }));
-vi.mock("@/lib/api/endpoints/personas", () => ({
+vi.mock("@/lib/api/endpoints/ciudadanos", () => ({
   listarRepresentaciones: (...a) => listarRepresentaciones(...a),
 }));
 vi.mock("@/lib/api/endpoints/ciudadanos", () => ({
@@ -59,15 +59,15 @@ const ORG = {
   razonSocial: "Kiosco del Barrio SRL", nombreFantasia: "El Kiosco", tipo: "SRL",
   estado: "ACTIVA", creadoEn: "2026-09-06T18:00:00-03:00", domicilioPrincipal: null,
   duenos: [
-    { personaId: 1, dni: "34567890", nombre: "Diego", apellido: "Lopez", porcentajeTitularidad: 60 },
+    { ciudadanoId: 1, dni: "34567890", nombre: "Diego", apellido: "Lopez", porcentajeTitularidad: 60 },
   ],
   representantesVigentes: [],
 };
 
 const REPRESENTACIONES = [
-  { representacionId: 1, personaId: 2, nombre: "Ana", apellido: "Pérez",
+  { representacionId: 1, ciudadanoId: 2, nombre: "Ana", apellido: "Pérez",
     alcance: "TOTAL", desde: "2026-09-06", hasta: null, estado: "VIGENTE" },
-  { representacionId: 2, personaId: 3, nombre: "Carla", apellido: "Molina",
+  { representacionId: 2, ciudadanoId: 3, nombre: "Carla", apellido: "Molina",
     alcance: "TRAMITES", desde: "2026-01-01", hasta: "2026-06-01", estado: "VENCIDA" },
 ];
 
@@ -210,7 +210,7 @@ describe("detalle", () => {
   it("un representante vigente también puede editar", async () => {
     obtenerOrganizacion.mockResolvedValue({
       ...ORG,
-      representantesVigentes: [{ personaId: 42, nombre: "Ana", apellido: "Pérez", alcance: "TOTAL" }],
+      representantesVigentes: [{ ciudadanoId: 42, nombre: "Ana", apellido: "Pérez", alcance: "TOTAL" }],
     });
     conSesion({ id: 42, rol: "PERSONA", subType: "CIUDADANO" });
     detalle("portal");
@@ -231,7 +231,7 @@ describe("dueños", () => {
   it("con dos dueños sí permite quitar uno", async () => {
     obtenerOrganizacion.mockResolvedValue({
       ...ORG,
-      duenos: [...ORG.duenos, { personaId: 2, dni: "40123456", nombre: "Ana", apellido: "Pérez", porcentajeTitularidad: 40 }],
+      duenos: [...ORG.duenos, { ciudadanoId: 2, dni: "40123456", nombre: "Ana", apellido: "Pérez", porcentajeTitularidad: 40 }],
     });
     detalle();
     await userEvent.click(await screen.findByRole("tab", { name: /dueños/i }));
@@ -250,7 +250,7 @@ describe("dueños", () => {
       ...ORG,
       duenos: [
         ...ORG.duenos,
-        { personaId: 2, dni: "40123456", nombre: "Ana", apellido: "Pérez", porcentajeTitularidad: 40 },
+        { ciudadanoId: 2, dni: "40123456", nombre: "Ana", apellido: "Pérez", porcentajeTitularidad: 40 },
       ],
     });
     detalle();
@@ -308,7 +308,7 @@ describe("dueños", () => {
       ...ORG,
       duenos: [
         ...ORG.duenos,
-        { personaId: 2, dni: "40123456", nombre: "Ana", apellido: "Pérez", porcentajeTitularidad: null },
+        { ciudadanoId: 2, dni: "40123456", nombre: "Ana", apellido: "Pérez", porcentajeTitularidad: null },
       ],
     });
     detalle();
@@ -358,7 +358,7 @@ describe("dueños", () => {
 
     await waitFor(() => expect(agregarDueno).toHaveBeenCalled());
     expect(actualizarDueno).toHaveBeenCalledWith(1, 1, 40); // Diego: 60 - 20
-    expect(agregarDueno).toHaveBeenCalledWith(1, { personaId: 5, porcentajeTitularidad: 20 });
+    expect(agregarDueno).toHaveBeenCalledWith(1, { ciudadanoId: 5, porcentajeTitularidad: 20 });
     expect(orden).toEqual(["PUT", "POST"]);
   });
 
@@ -468,7 +468,7 @@ describe("representaciones", () => {
 
     await waitFor(() => expect(crearRepresentacion).toHaveBeenCalled());
     const enviado = crearRepresentacion.mock.calls[0][0];
-    expect(enviado.personaId).toBe(5);
+    expect(enviado.ciudadanoId).toBe(5);
     expect(enviado.organizacionId).toBe(1);
     expect(enviado.alcance).toBe("FIRMA");
     // Vacío se manda como null: el backend lo lee como "sin vencimiento".
@@ -524,7 +524,7 @@ describe("alta de organización", () => {
   });
 
   it("manda los dueños como objetos, no como ids sueltos", async () => {
-    // ARCHITECTURE.md dice `personaId[]`; el backend recibe objetos.
+    // ARCHITECTURE.md dice `ciudadanoId[]`; el backend recibe objetos.
     renderizar(<NuevaOrganizacion zona="admin" />);
     await userEvent.type(screen.getByLabelText("CUIT"), "30712345678");
     await userEvent.type(screen.getByLabelText(/razón social/i), "Kiosco SRL");
@@ -539,12 +539,12 @@ describe("alta de organización", () => {
 
     await waitFor(() => expect(crearOrganizacion).toHaveBeenCalled());
     expect(crearOrganizacion.mock.calls[0][0].duenos).toEqual([
-      { personaId: 5, porcentajeTitularidad: 100 },
+      { ciudadanoId: 5, porcentajeTitularidad: 100 },
     ]);
     expect(navegar).toHaveBeenCalledWith("/admin/organizaciones/9", { replace: true });
   });
 
-  it("no deja agregar dos veces a la misma persona", async () => {
+  it("no deja agregar dos veces a la misma ciudadano", async () => {
     renderizar(<NuevaOrganizacion zona="admin" />);
     for (let i = 0; i < 2; i += 1) {
       await userEvent.click(screen.getByRole("button", { name: /agregar dueño/i }));

@@ -37,7 +37,7 @@ const alCambiar = vi.fn();
 function pintar(documentos = [PENDIENTE], props = {}) {
   return renderizar(
     <ListaDocumentos
-      personaId={1}
+      ciudadanoId={1}
       documentos={documentos}
       puedeValidar
       alCambiar={alCambiar}
@@ -49,7 +49,7 @@ function pintar(documentos = [PENDIENTE], props = {}) {
 beforeEach(() => {
   [validarDocumento, crearSolicitud, obtenerArchivoDocumento, obtenerDocumento, alCambiar]
     .forEach((m) => m.mockReset());
-  obtenerDocumento.mockResolvedValue({ ...PENDIENTE, personaId: 1 });
+  obtenerDocumento.mockResolvedValue({ ...PENDIENTE, ciudadanoId: 1 });
   validarDocumento.mockResolvedValue({});
   crearSolicitud.mockResolvedValue({ solicitudId: 99 });
   obtenerArchivoDocumento.mockResolvedValue(new Blob(["x"], { type: "application/pdf" }));
@@ -180,11 +180,11 @@ describe("entrando por el id, desde la pantalla de Documentación", () => {
   it("trae el documento y deja resolverlo igual que desde el legajo", async () => {
     // Una solicitud sólo conoce el `documentoId`: el resto hay que buscarlo,
     // porque de eso depende si todavía se puede decidir algo.
-    obtenerDocumento.mockResolvedValue({ ...PENDIENTE, personaId: 1 });
+    obtenerDocumento.mockResolvedValue({ ...PENDIENTE, ciudadanoId: 1 });
 
     renderizar(
       <RevisarDocumento
-        personaId={1}
+        ciudadanoId={1}
         documentoId={7}
         puedeValidar
         alGuardar={alCambiar}
@@ -201,11 +201,11 @@ describe("entrando por el id, desde la pantalla de Documentación", () => {
   });
 
   it("un documento ya resuelto se abre sólo para mirar", async () => {
-    obtenerDocumento.mockResolvedValue({ ...VALIDADO, documentoId: 7, personaId: 1 });
+    obtenerDocumento.mockResolvedValue({ ...VALIDADO, documentoId: 7, ciudadanoId: 1 });
 
     renderizar(
       <RevisarDocumento
-        personaId={1}
+        ciudadanoId={1}
         documentoId={7}
         puedeValidar
         disparador={<button type="button">Ver</button>}

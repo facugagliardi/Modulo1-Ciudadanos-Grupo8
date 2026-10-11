@@ -4,7 +4,7 @@ import { EnConstruccion, NoEncontrado, SinPermiso } from "./Errores";
 import { conSesion, renderizar, sinSesion } from "@/pruebas/utilidades";
 
 describe("SinPermiso", () => {
-  it("nombra el rol que tiene la persona", () => {
+  it("nombra el rol que tiene la ciudadano", () => {
     conSesion({ rol: "AUDITOR", subType: "EMPLEADO" });
     renderizar(<SinPermiso />);
 
@@ -20,7 +20,7 @@ describe("SinPermiso", () => {
 });
 
 describe("NoEncontrado", () => {
-  it("explica y ofrece una salida en lugar de dejar a la persona varada", () => {
+  it("explica y ofrece una salida en lugar de dejar a la ciudadano varada", () => {
     sinSesion();
     renderizar(<NoEncontrado />);
 
