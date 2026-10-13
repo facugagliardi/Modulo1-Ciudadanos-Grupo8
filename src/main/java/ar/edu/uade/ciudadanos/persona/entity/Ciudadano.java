@@ -45,8 +45,6 @@ public class Ciudadano {
     @Column(name = "creado_en", nullable = false)
     private OffsetDateTime creadoEn = OffsetDateTime.now();
 
-    @Column(name = "domicilio_id")
-    private Long domicilioId;
 
     public Long getId() {
         return id;
@@ -112,11 +110,4 @@ public class Ciudadano {
         this.creadoEn = creadoEn;
     }
 
-    public Long getDomicilioId() {
-        return domicilioId;
-    }
-
-    public void setDomicilioId(Long domicilioId) {
-        this.domicilioId = domicilioId;
-    }
 }

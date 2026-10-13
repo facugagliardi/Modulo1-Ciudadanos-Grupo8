@@ -27,21 +27,14 @@ ON CONFLICT (empleado_id) DO NOTHING;
 
 -- Ciudadano de prueba para POST /auth/login. Se puede crear igual por
 -- POST /auth/register; esto solo evita tener que hacerlo a mano cada vez.
-INSERT INTO persona (tipo, cuit) VALUES ('CIUDADANO', 20345678901)
+INSERT INTO ciudadano (documento_id, nombre, apellido, fecha_nacimiento, estado, cuit) VALUES
+    ('34567890', 'Diego', 'Lopez', DATE '1989-04-12', 'ACTIVO', 20345678901)
 ON CONFLICT (cuit) DO NOTHING;
 
-INSERT INTO ciudadano (persona_id, documento_id, nombre, apellido, fecha_nacimiento, estado)
-SELECT id, '34567890', 'Diego', 'Lopez', DATE '1989-04-12', 'ACTIVO'
-FROM persona WHERE cuit = 20345678901
-ON CONFLICT (persona_id) DO NOTHING;
-
 -- Clave: Ciudadano.2026
-INSERT INTO credencial_persona (persona_id, password)
-SELECT id, '$2a$10$UR3R7UFRgE9Zn/1kgMBZgeRZQElVTI3lc6T0VL0KykfZmyve2k4GG'
-FROM persona WHERE cuit = 20345678901
-ON CONFLICT (persona_id) DO NOTHING;
+INSERT INTO credencial_ciudadano (ciudadano_id, password)
+SELECT ciudadano_id, '$2a$10$UR3R7UFRgE9Zn/1kgMBZgeRZQElVTI3lc6T0VL0KykfZmyve2k4GG'
+FROM ciudadano WHERE cuit = 20345678901
+ON CONFLICT (ciudadano_id) DO NOTHING;
 
 COMMIT;
-
-
-select * from credencial_empleado;

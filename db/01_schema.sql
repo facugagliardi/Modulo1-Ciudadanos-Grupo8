@@ -284,4 +284,21 @@ CREATE INDEX ix_solicitud_titular   ON solicitud_documentacion (titular_id, esta
 CREATE INDEX ix_expediente_ciudadano ON expediente (ciudadano_id);
 CREATE INDEX ix_expediente_estado    ON expediente (estado);
 
+-- ------------------------------------------------------------------ EVENTOS ---
+
+CREATE TABLE events (
+    event_id        VARCHAR(36)  PRIMARY KEY,
+    aggregate_type  VARCHAR(100) NOT NULL,
+    aggregate_id    VARCHAR(100) NOT NULL,
+    event_type      VARCHAR(100) NOT NULL,
+    payload         TEXT         NOT NULL,
+    created_at      TIMESTAMPTZ  NOT NULL DEFAULT now(),
+    type            VARCHAR(20)  NOT NULL,
+    CONSTRAINT ck_events_type CHECK (lower(type) IN ('emitido', 'recibido'))
+);
+
+CREATE INDEX ix_events_type ON events (type);
+CREATE INDEX ix_events_event_type ON events (event_type);
+CREATE INDEX ix_events_aggregate ON events (aggregate_type, aggregate_id);
+
 COMMIT;

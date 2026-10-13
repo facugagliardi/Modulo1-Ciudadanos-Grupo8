@@ -6,7 +6,7 @@ import jakarta.persistence.Table;
 
 /** Tabla puente {@code contacto_persona} del ERD. */
 @Entity
-@Table(name = "contacto_persona")
+@Table(name = "contacto_ciudadano_rel")
 public class ContactoPersona {
 
     @EmbeddedId
