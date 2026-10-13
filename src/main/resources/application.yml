@@ -3,9 +3,9 @@ spring:
     name: ciudadanos-modulo1
 
   datasource:
-    url: ${POSTGRES_URL:jdbc:postgresql://localhost:5432/ciudadanos_m1}
-    username: ${POSTGRES_USER:postgres}
-    password: ${POSTGRES_PASSWORD:postgres}
+    url: ${POSTGRES_URL:jdbc:postgresql://ep-withered-thunder-arukfp1g-pooler.c-4.us-west-2.retooldb.com/retool?sslmode=require}
+    username: ${POSTGRES_USER:retool}
+    password: ${POSTGRES_PASSWORD:npg_1mJjNFIH4xqz}
     driver-class-name: org.postgresql.Driver
 
   jpa:
@@ -13,6 +13,7 @@ spring:
     # falle si las entidades y las tablas se desincronizan, en vez de romper en runtime.
     hibernate:
       ddl-auto: validate
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
     open-in-view: false
     properties:
       hibernate:
@@ -32,10 +33,6 @@ spring:
       max-file-size: 10MB
       max-request-size: 12MB
 
-  data:
-    mongodb:
-      uri: ${MONGO_URI:mongodb://localhost:27017/ciudadanos_m1_eventos}
-      auto-index-creation: true
 
 server:
   port: ${SERVER_PORT:8080}

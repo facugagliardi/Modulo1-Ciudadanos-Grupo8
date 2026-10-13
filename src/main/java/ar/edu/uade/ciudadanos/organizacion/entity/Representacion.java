@@ -20,7 +20,7 @@ public class Representacion {
     @Column(name = "representacion_id")
     private Long representacionId;
 
-    @Column(name = "persona_id", nullable = false)
+    @Column(name = "ciudadano_id", nullable = false)
     private Long personaId;
 
     @Column(name = "organizacion_id", nullable = false)

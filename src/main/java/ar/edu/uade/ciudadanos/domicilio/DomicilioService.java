@@ -76,9 +76,6 @@ public class DomicilioService {
         vinculo.setEsPrincipal(principal);
         vinculoRepository.save(vinculo);
 
-        if (principal) {
-            sincronizarPunteroCiudadano(ciudadanoId, propiedad.getPropiedadId());
-        }
 
         return new DomicilioCreadoResponse(propiedad.getPropiedadId(), ciudadanoId, propiedad.getTipo(),
                 propiedad.getCalle(), propiedad.getNumero(), propiedad.getIdBarrio(),
@@ -124,7 +121,6 @@ public class DomicilioService {
 
         desmarcarPrincipalVigente(ciudadanoId);
         vinculo.setEsPrincipal(true);
-        sincronizarPunteroCiudadano(ciudadanoId, propiedadId);
 
         return new DomicilioPrincipalResponse(propiedadId, ciudadanoId, true, OffsetDateTime.now());
     }
@@ -160,7 +156,6 @@ public class DomicilioService {
             CiudadanoPropiedad sucesor = reemplazo.get();
             sucesor.setEsPrincipal(true);
             nuevoPrincipal = sucesor.getId().getIdPropiedad();
-            sincronizarPunteroCiudadano(ciudadanoId, nuevoPrincipal);
         }
 
         return new DomicilioCerradoResponse(propiedadId, vinculo.getVigenteHasta(), nuevoPrincipal);
@@ -205,11 +200,6 @@ public class DomicilioService {
         // El indice parcial uk_pp_principal_vigente no tolera dos principales a
         // la vez, asi que hay que bajar el anterior antes de subir el nuevo.
         vinculoRepository.flush();
-    }
-
-    /** Mantiene sincronizado el puntero denormalizado ciudadano.domicilio_id. */
-    private void sincronizarPunteroCiudadano(Long ciudadanoId, Long propiedadId) {
-        ciudadanoRepository.findById(ciudadanoId).ifPresent(c -> c.setDomicilioId(propiedadId));
     }
 
     private Propiedad propiedad(Long propiedadId) {
