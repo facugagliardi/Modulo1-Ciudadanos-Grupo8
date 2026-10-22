@@ -5,9 +5,8 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 
-import ar.edu.uade.ciudadanos.organizacion.repository.PersonaOrganizacionRepository;
+import ar.edu.uade.ciudadanos.organizacion.repository.CiudadanoOrganizacionRepository;
 import ar.edu.uade.ciudadanos.organizacion.repository.RepresentacionRepository;
-import ar.edu.uade.ciudadanos.persona.repository.IntegrantePersonaJuridicaRepository;
 import ar.edu.uade.ciudadanos.security.Permiso;
 import java.util.List;
 import org.junit.jupiter.api.AfterEach;
@@ -42,10 +41,9 @@ class SoloInternoTest {
         /** El bean tiene que llamarse "permisos": asi lo referencia la anotacion. */
         @Bean("permisos")
         AutorizacionService permisos() {
-            PersonaOrganizacionRepository duenos = mock(PersonaOrganizacionRepository.class);
+            CiudadanoOrganizacionRepository duenos = mock(CiudadanoOrganizacionRepository.class);
             RepresentacionRepository reps = mock(RepresentacionRepository.class);
-            IntegrantePersonaJuridicaRepository intRepos = mock(IntegrantePersonaJuridicaRepository.class);
-            return new AutorizacionService(duenos, reps, intRepos);
+            return new AutorizacionService(duenos, reps);
         }
 
         @Bean

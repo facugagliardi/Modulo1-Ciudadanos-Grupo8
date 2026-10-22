@@ -31,6 +31,16 @@ import org.springframework.transaction.annotation.Transactional;
  * <p>Regla central: un domicilio nunca se borra. La baja cierra
  * {@code vigenteHasta} y la fila queda como historia.
  */
+import ar.edu.uade.ciudadanos.evento.EventPublisherService;
+import ar.edu.uade.ciudadanos.evento.dto.UpdatedBy;
+import java.util.Map;
+
+/**
+ * Domicilios y su historial (RF-09 a RF-12).
+ *
+ * <p>Regla central: un domicilio nunca se borra. La baja cierra
+ * {@code vigenteHasta} y la fila queda como historia.
+ */
 @Service
 public class DomicilioService {
 
@@ -38,15 +48,25 @@ public class DomicilioService {
     private final CiudadanoPropiedadRepository vinculoRepository;
     private final CiudadanoRepository ciudadanoRepository;
     private final AutorizacionService autorizacion;
+    private final EventPublisherService eventPublisherService;
 
     public DomicilioService(PropiedadRepository propiedadRepository,
                             CiudadanoPropiedadRepository vinculoRepository,
                             CiudadanoRepository ciudadanoRepository,
                             AutorizacionService autorizacion) {
+        this(propiedadRepository, vinculoRepository, ciudadanoRepository, autorizacion, null);
+    }
+
+    public DomicilioService(PropiedadRepository propiedadRepository,
+                            CiudadanoPropiedadRepository vinculoRepository,
+                            CiudadanoRepository ciudadanoRepository,
+                            AutorizacionService autorizacion,
+                            EventPublisherService eventPublisherService) {
         this.propiedadRepository = propiedadRepository;
         this.vinculoRepository = vinculoRepository;
         this.ciudadanoRepository = ciudadanoRepository;
         this.autorizacion = autorizacion;
+        this.eventPublisherService = eventPublisherService;
     }
 
     @Transactional
@@ -56,14 +76,15 @@ public class DomicilioService {
 
         Propiedad propiedad = new Propiedad();
         aplicar(propiedad, ListasBlancas.exigir(request.tipo(), ListasBlancas.TIPOS_PROPIEDAD, "tipo"),
-                request.calle(), request.numero(), request.altura(), request.idBarrio(),
+                request.calle(), request.numero(), request.piso(), request.idBarrio(),
                 request.longitud(), request.latitud());
         propiedadRepository.save(propiedad);
 
         // Si todavia no hay principal vigente, este lo es: nadie deberia quedar
         // sin domicilio principal por haber omitido el flag.
-        boolean sinPrincipal = vinculoRepository
-                .findByIdIdCiudadanoAndEsPrincipalTrueAndVigenteHastaIsNull(ciudadanoId).isEmpty();
+        Optional<CiudadanoPropiedad> optPrevio = vinculoRepository
+                .findByIdIdCiudadanoAndEsPrincipalTrueAndVigenteHastaIsNull(ciudadanoId);
+        boolean sinPrincipal = optPrevio.isEmpty();
         boolean principal = Boolean.TRUE.equals(request.esPrincipal()) || sinPrincipal;
 
         if (principal) {
@@ -76,6 +97,37 @@ public class DomicilioService {
         vinculo.setEsPrincipal(principal);
         vinculoRepository.save(vinculo);
 
+        if (eventPublisherService != null && principal) {
+            try {
+                Map<String, Object> newAddr = Map.of(
+                        "propertyId", propiedad.getPropiedadId(),
+                        "street", propiedad.getCalle(),
+                        "number", propiedad.getNumero(),
+                        "primary", true,
+                        "effectiveFrom", String.valueOf(vinculo.getVigenteDesde())
+                );
+                Map<String, Object> details = new java.util.HashMap<>();
+                optPrevio.ifPresent(prevVinculo -> {
+                    Propiedad pPrev = propiedadRepository.findById(prevVinculo.getId().getIdPropiedad()).orElse(null);
+                    if (pPrev != null) {
+                        details.put("previousAddress", Map.of(
+                                "propertyId", pPrev.getPropiedadId(),
+                                "street", pPrev.getCalle(),
+                                "number", pPrev.getNumero(),
+                                "effectiveUntil", String.valueOf(LocalDate.now())
+                        ));
+                    }
+                });
+                details.put("newAddress", newAddr);
+                eventPublisherService.publicarCitizenUpdated(
+                        ciudadanoId,
+                        "ADDRESS_UPDATED",
+                        details,
+                        UpdatedBy.areaUser("USR-M1-14")
+                );
+            } catch (Exception ignored) {
+            }
+        }
 
         return new DomicilioCreadoResponse(propiedad.getPropiedadId(), ciudadanoId, propiedad.getTipo(),
                 propiedad.getCalle(), propiedad.getNumero(), propiedad.getIdBarrio(),
@@ -100,7 +152,7 @@ public class DomicilioService {
         CiudadanoPropiedad vinculo = vinculoOperable(propiedadId);
 
         aplicar(propiedad, ListasBlancas.exigir(request.tipo(), ListasBlancas.TIPOS_PROPIEDAD, "tipo"),
-                request.calle(), request.numero(), request.altura(), request.idBarrio(),
+                request.calle(), request.numero(), request.piso(), request.idBarrio(),
                 request.longitud(), request.latitud());
 
         return DomicilioResponse.de(propiedad, vinculo);
@@ -119,8 +171,44 @@ public class DomicilioService {
             throw ApiException.conflicto("El domicilio ya es el principal");
         }
 
+        Optional<CiudadanoPropiedad> optPrevio = vinculoRepository
+                .findByIdIdCiudadanoAndEsPrincipalTrueAndVigenteHastaIsNull(ciudadanoId);
+
         desmarcarPrincipalVigente(ciudadanoId);
         vinculo.setEsPrincipal(true);
+
+        if (eventPublisherService != null) {
+            try {
+                Propiedad propiedad = propiedad(propiedadId);
+                Map<String, Object> newAddr = Map.of(
+                        "propertyId", propiedad.getPropiedadId(),
+                        "street", propiedad.getCalle(),
+                        "number", propiedad.getNumero(),
+                        "primary", true,
+                        "effectiveFrom", String.valueOf(LocalDate.now())
+                );
+                Map<String, Object> details = new java.util.HashMap<>();
+                optPrevio.ifPresent(prevVinculo -> {
+                    Propiedad pPrev = propiedadRepository.findById(prevVinculo.getId().getIdPropiedad()).orElse(null);
+                    if (pPrev != null) {
+                        details.put("previousAddress", Map.of(
+                                "propertyId", pPrev.getPropiedadId(),
+                                "street", pPrev.getCalle(),
+                                "number", pPrev.getNumero(),
+                                "effectiveUntil", String.valueOf(LocalDate.now())
+                        ));
+                    }
+                });
+                details.put("newAddress", newAddr);
+                eventPublisherService.publicarCitizenUpdated(
+                        ciudadanoId,
+                        "ADDRESS_UPDATED",
+                        details,
+                        UpdatedBy.areaUser("USR-M1-14")
+                );
+            } catch (Exception ignored) {
+            }
+        }
 
         return new DomicilioPrincipalResponse(propiedadId, ciudadanoId, true, OffsetDateTime.now());
     }
@@ -183,12 +271,12 @@ public class DomicilioService {
 
     // ------------------------------------------------------------------ helpers
 
-    private void aplicar(Propiedad propiedad, String tipo, String calle, String numero, String altura,
+    private void aplicar(Propiedad propiedad, String tipo, String calle, String numero, String piso,
                          java.util.UUID idBarrio, String longitud, String latitud) {
         propiedad.setTipo(tipo);
         propiedad.setCalle(calle.trim());
         propiedad.setNumero(numero.trim());
-        propiedad.setAltura(altura);
+        propiedad.setPiso(piso);
         propiedad.setIdBarrio(idBarrio);
         propiedad.setLongitud(longitud);
         propiedad.setLatitud(latitud);

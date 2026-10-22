@@ -22,6 +22,10 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import ar.edu.uade.ciudadanos.evento.EventPublisherService;
+import ar.edu.uade.ciudadanos.evento.dto.RepresentationExpiredData;
+import ar.edu.uade.ciudadanos.evento.dto.RepresentationGrantedData;
+
 /** Poderes de representacion sobre organizaciones (RF-20, RF-21, RF-22). */
 @Service
 public class RepresentacionService {
@@ -30,15 +34,25 @@ public class RepresentacionService {
     private final OrganizacionRepository organizacionRepository;
     private final CiudadanoDirectorioService directorio;
     private final AutorizacionService autorizacion;
+    private final EventPublisherService eventPublisherService;
 
     public RepresentacionService(RepresentacionRepository representacionRepository,
                                  OrganizacionRepository organizacionRepository,
                                  CiudadanoDirectorioService directorio,
                                  AutorizacionService autorizacion) {
+        this(representacionRepository, organizacionRepository, directorio, autorizacion, null);
+    }
+
+    public RepresentacionService(RepresentacionRepository representacionRepository,
+                                 OrganizacionRepository organizacionRepository,
+                                 CiudadanoDirectorioService directorio,
+                                 AutorizacionService autorizacion,
+                                 EventPublisherService eventPublisherService) {
         this.representacionRepository = representacionRepository;
         this.organizacionRepository = organizacionRepository;
         this.directorio = directorio;
         this.autorizacion = autorizacion;
+        this.eventPublisherService = eventPublisherService;
     }
 
     /** RF-20. Otorgar un poder es potestad de la organizacion, no del apoderado. */
@@ -70,7 +84,26 @@ public class RepresentacionService {
         representacion.setHasta(request.hasta());
         representacion.setEstado(EstadoRepresentacion.VIGENTE);
 
-        return RepresentacionResponse.de(representacionRepository.save(representacion));
+        Representacion guardada = representacionRepository.save(representacion);
+
+        if (eventPublisherService != null) {
+            try {
+                Organizacion org = buscarOrganizacion(guardada.getOrganizacionId());
+                RepresentationGrantedData data = new RepresentationGrantedData(
+                        guardada.getRepresentacionId(),
+                        guardada.getPersonaId(),
+                        org.getOrganizacionId(),
+                        org.getCuit(),
+                        guardada.getAlcance(),
+                        String.valueOf(guardada.getDesde()),
+                        "VALID"
+                );
+                eventPublisherService.publicarRepresentationGranted(guardada.getRepresentacionId(), data);
+            } catch (Exception ignored) {
+            }
+        }
+
+        return RepresentacionResponse.de(guardada);
     }
 
     @Transactional(readOnly = true)
@@ -112,6 +145,22 @@ public class RepresentacionService {
         representacion.setEstado(nuevo);
         if (nuevo != EstadoRepresentacion.VIGENTE && representacion.getHasta() == null) {
             representacion.setHasta(LocalDate.now());
+        }
+
+        if (eventPublisherService != null && nuevo != EstadoRepresentacion.VIGENTE) {
+            try {
+                Organizacion org = buscarOrganizacion(representacion.getOrganizacionId());
+                RepresentationExpiredData data = new RepresentationExpiredData(
+                        representacion.getRepresentacionId(),
+                        representacion.getPersonaId(),
+                        org.getOrganizacionId(),
+                        org.getCuit(),
+                        String.valueOf(representacion.getHasta() != null ? representacion.getHasta() : LocalDate.now()),
+                        "EXPIRED"
+                );
+                eventPublisherService.publicarRepresentationExpired(representacion.getRepresentacionId(), data);
+            } catch (Exception ignored) {
+            }
         }
 
         return CambioEstadoResponse.de(representacionId, anterior, nuevo);

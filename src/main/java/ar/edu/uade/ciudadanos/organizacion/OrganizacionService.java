@@ -27,8 +27,11 @@ import ar.edu.uade.ciudadanos.organizacion.repository.RepresentacionRepository;
 import ar.edu.uade.ciudadanos.persona.CiudadanoDirectorioService;
 import ar.edu.uade.ciudadanos.persona.dto.CambioEstadoResponse;
 import ar.edu.uade.ciudadanos.persona.dto.DatosPersona;
+import ar.edu.uade.ciudadanos.security.AuthPrincipal;
 import ar.edu.uade.ciudadanos.security.AutorizacionService;
 import ar.edu.uade.ciudadanos.security.Permiso;
+import ar.edu.uade.ciudadanos.security.TipoSujeto;
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
@@ -49,6 +52,7 @@ public class OrganizacionService {
     private final CiudadanoDirectorioService directorio;
     private final DomicilioService domicilioService;
     private final AutorizacionService autorizacion;
+    private final ar.edu.uade.ciudadanos.evento.EventPublisherService eventPublisherService;
 
     public OrganizacionService(OrganizacionRepository organizacionRepository,
                                CiudadanoOrganizacionRepository duenoRepository,
@@ -56,16 +60,34 @@ public class OrganizacionService {
                                CiudadanoDirectorioService directorio,
                                DomicilioService domicilioService,
                                AutorizacionService autorizacion) {
+        this(organizacionRepository, duenoRepository, representacionRepository,
+             directorio, domicilioService, autorizacion, null);
+    }
+
+    public OrganizacionService(OrganizacionRepository organizacionRepository,
+                               CiudadanoOrganizacionRepository duenoRepository,
+                               RepresentacionRepository representacionRepository,
+                               CiudadanoDirectorioService directorio,
+                               DomicilioService domicilioService,
+                               AutorizacionService autorizacion,
+                               ar.edu.uade.ciudadanos.evento.EventPublisherService eventPublisherService) {
         this.organizacionRepository = organizacionRepository;
         this.duenoRepository = duenoRepository;
         this.representacionRepository = representacionRepository;
         this.directorio = directorio;
         this.domicilioService = domicilioService;
         this.autorizacion = autorizacion;
+        this.eventPublisherService = eventPublisherService;
     }
 
     @Transactional
     public OrganizacionResponse crear(Long creadorId, CrearOrganizacionRequest request) {
+        return crear(new AuthPrincipal(creadorId, TipoSujeto.CIUDADANO, "PERSONA"), request);
+    }
+
+    @Transactional
+    public OrganizacionResponse crear(AuthPrincipal principal, CrearOrganizacionRequest request) {
+        Long creadorId = principal != null ? principal.id() : null;
         Long cuit = normalizarCuit(request.cuit());
         if (organizacionRepository.existsByCuit(cuit)) {
             throw ApiException.conflicto("Ya existe una organizacion con el CUIT " + cuit);
@@ -78,8 +100,6 @@ public class OrganizacionService {
             throw ApiException.conflicto("Ya existe una organizacion con el taxId " + taxId);
         }
 
-        directorio.exigirQueExista(creadorId);
-
         Organizacion organizacion = new Organizacion();
         organizacion.setCuit(cuit);
         organizacion.setTaxId(taxId);
@@ -89,10 +109,112 @@ public class OrganizacionService {
         organizacion.setEstado(EstadoOrganizacion.PENDIENTE);
         organizacionRepository.save(organizacion);
 
-        CiudadanoOrganizacion vinculo = new CiudadanoOrganizacion();
-        vinculo.setId(new CiudadanoOrganizacionId(creadorId, organizacion.getOrganizacionId()));
-        vinculo.setPorcentajeTitularidad(java.math.BigDecimal.valueOf(100));
-        duenoRepository.save(vinculo);
+        if (request.duenos() != null && !request.duenos().isEmpty()) {
+            BigDecimal sumaPorcentajes = BigDecimal.ZERO;
+            for (var dueno : request.duenos()) {
+                Long duenoId = dueno.id();
+                if (duenoId == null) {
+                    throw ApiException.invalido("personaId es obligatorio para cada dueño");
+                }
+                directorio.exigirQueExista(duenoId);
+                if (dueno.porcentajeTitularidad() != null) {
+                    sumaPorcentajes = sumaPorcentajes.add(dueno.porcentajeTitularidad());
+                }
+            }
+            if (sumaPorcentajes.compareTo(BigDecimal.valueOf(100)) > 0) {
+                throw ApiException.conflicto("La suma de titularidades iniciales supera el 100%");
+            }
+
+            for (var dueno : request.duenos()) {
+                CiudadanoOrganizacion vinculo = new CiudadanoOrganizacion();
+                vinculo.setId(new CiudadanoOrganizacionId(dueno.id(), organizacion.getOrganizacionId()));
+                vinculo.setPorcentajeTitularidad(dueno.porcentajeTitularidad());
+                duenoRepository.save(vinculo);
+            }
+        } else {
+            BigDecimal sumaOtros = BigDecimal.ZERO;
+            if (request.otrosDuenos() != null) {
+                for (var otro : request.otrosDuenos()) {
+                    Long otroId = otro.id();
+                    if (otroId == null) {
+                        throw ApiException.invalido("ciudadanoId es obligatorio para cada dueño");
+                    }
+                    directorio.exigirQueExista(otroId);
+                    if (creadorId != null && otroId.equals(creadorId)) {
+                        throw ApiException.conflicto("El creador no puede duplicarse en otros dueños");
+                    }
+                    if (otro.porcentajeTitularidad() != null) {
+                        sumaOtros = sumaOtros.add(otro.porcentajeTitularidad());
+                    }
+                }
+            }
+
+            BigDecimal pctCreador = request.porcentajeCreador();
+            if (pctCreador == null && (request.otrosDuenos() == null || request.otrosDuenos().isEmpty())) {
+                pctCreador = BigDecimal.valueOf(100);
+            } else if (pctCreador == null) {
+                pctCreador = BigDecimal.valueOf(100).subtract(sumaOtros);
+            }
+
+            if (pctCreador.compareTo(BigDecimal.ZERO) < 0) {
+                pctCreador = BigDecimal.ZERO;
+            }
+
+            if (pctCreador.add(sumaOtros).compareTo(BigDecimal.valueOf(100)) > 0) {
+                throw ApiException.conflicto("La suma total de titularidades supera el 100%");
+            }
+
+            boolean esCiudadano = creadorId != null && (
+                    (principal != null && principal.tipoInfo() == TipoSujeto.CIUDADANO)
+                    || directorio.existe(creadorId));
+
+            if (pctCreador.compareTo(BigDecimal.ZERO) > 0) {
+                if (esCiudadano) {
+                    directorio.exigirQueExista(creadorId);
+                    CiudadanoOrganizacion vinculo = new CiudadanoOrganizacion();
+                    vinculo.setId(new CiudadanoOrganizacionId(creadorId, organizacion.getOrganizacionId()));
+                    vinculo.setPorcentajeTitularidad(pctCreador);
+                    duenoRepository.save(vinculo);
+                } else if (request.otrosDuenos() == null || request.otrosDuenos().isEmpty()) {
+                    if (directorio.existe(creadorId)) {
+                        CiudadanoOrganizacion vinculo = new CiudadanoOrganizacion();
+                        vinculo.setId(new CiudadanoOrganizacionId(creadorId, organizacion.getOrganizacionId()));
+                        vinculo.setPorcentajeTitularidad(pctCreador);
+                        duenoRepository.save(vinculo);
+                    } else {
+                        throw ApiException.invalido("Debe asignar al menos un dueño registrado para la organización");
+                    }
+                }
+            }
+
+            if (request.otrosDuenos() != null) {
+                for (var otro : request.otrosDuenos()) {
+                    CiudadanoOrganizacion vinculoOtro = new CiudadanoOrganizacion();
+                    vinculoOtro.setId(new CiudadanoOrganizacionId(otro.id(), organizacion.getOrganizacionId()));
+                    vinculoOtro.setPorcentajeTitularidad(otro.porcentajeTitularidad());
+                    duenoRepository.save(vinculoOtro);
+                }
+            }
+        }
+
+        if (eventPublisherService != null) {
+            try {
+                Long holderId = creadorId != null ? creadorId : 0L;
+                ar.edu.uade.ciudadanos.evento.dto.OrganizationRegisteredData data =
+                        new ar.edu.uade.ciudadanos.evento.dto.OrganizationRegisteredData(
+                                organizacion.getOrganizacionId(),
+                                organizacion.getCuit(),
+                                organizacion.getTaxId(),
+                                organizacion.getRazonSocial(),
+                                organizacion.getNombre(),
+                                organizacion.getTipo(),
+                                organizacion.getEstado().name(),
+                                Map.of("personId", holderId, "personType", "LEGAL")
+                        );
+                eventPublisherService.publicarOrganizationRegistered(organizacion.getOrganizacionId(), data);
+            } catch (Exception ignored) {
+            }
+        }
 
         return armar(organizacion);
     }
@@ -113,6 +235,25 @@ public class OrganizacionService {
             throw ApiException.conflicto("La organizacion no esta PENDIENTE");
         }
         organizacion.setEstado(EstadoOrganizacion.ACTIVA);
+
+        if (eventPublisherService != null) {
+            try {
+                ar.edu.uade.ciudadanos.evento.dto.OrganizationRegisteredData data =
+                        new ar.edu.uade.ciudadanos.evento.dto.OrganizationRegisteredData(
+                                organizacion.getOrganizacionId(),
+                                organizacion.getCuit(),
+                                organizacion.getTaxId(),
+                                organizacion.getRazonSocial(),
+                                organizacion.getNombre(),
+                                organizacion.getTipo(),
+                                organizacion.getEstado().name(),
+                                Map.of("personId", organizacion.getOrganizacionId(), "personType", "LEGAL")
+                        );
+                eventPublisherService.publicarOrganizationRegistered(organizacion.getOrganizacionId(), data);
+            } catch (Exception ignored) {
+            }
+        }
+
         return armar(organizacion);
     }
 

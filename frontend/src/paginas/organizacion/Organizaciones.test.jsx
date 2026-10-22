@@ -681,6 +681,7 @@ describe("portal: mis organizaciones", () => {
           tipo: "LOCAL",
           calle: "Av. Corrientes",
           numero: "1234",
+          piso: "PB",
           altura: "PB",
           esPrincipal: true,
           vigenteDesde: "2026-01-01",

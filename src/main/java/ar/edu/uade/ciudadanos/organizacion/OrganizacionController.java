@@ -42,7 +42,7 @@ public class OrganizacionController {
     @PostMapping
     public ResponseEntity<OrganizacionResponse> crear(@AuthenticationPrincipal AuthPrincipal principal,
                                                       @Valid @RequestBody CrearOrganizacionRequest request) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(organizacionService.crear(principal.id(), request));
+        return ResponseEntity.status(HttpStatus.CREATED).body(organizacionService.crear(principal, request));
     }
 
     @GetMapping

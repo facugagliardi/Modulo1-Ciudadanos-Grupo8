@@ -180,13 +180,16 @@ export function NuevaOrganizacion({ zona = "admin" }) {
                 onBlur={revisarCuit}
                 error={errores.cuit}
               />
-              <Selector
-                etiqueta="Tipo de organización"
-                obligatorio
-                opciones={TIPOS_ORGANIZACION}
-                value={valores.tipo}
-                onChange={(e) => cambiar("tipo", e.target.value)}
-              />
+              <Campo etiqueta="Tipo de organización" obligatorio error={errores.tipo}>
+                {(props) => (
+                  <Selector
+                    {...props}
+                    opciones={TIPOS_ORGANIZACION}
+                    value={valores.tipo}
+                    onChange={(e) => cambiar("tipo", e.target.value)}
+                  />
+                )}
+              </Campo>
             </div>
 
             {avisoCuit && (

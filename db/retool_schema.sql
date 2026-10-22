@@ -91,7 +91,7 @@ CREATE TABLE propiedades (
     tipo         VARCHAR(100) NOT NULL,
     calle        VARCHAR(255) NOT NULL,
     numero       VARCHAR(50)  NOT NULL,
-    altura       VARCHAR(50),
+    piso         VARCHAR(50),
     id_barrio    UUID,
     longitud     VARCHAR(50),
     latitud      VARCHAR(50)
