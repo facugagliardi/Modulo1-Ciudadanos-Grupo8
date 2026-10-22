@@ -119,7 +119,7 @@ export function Domicilios() {
                       <div className="min-w-0">
                         <p className="flex flex-wrap items-center gap-2 font-medium">
                           {d.calle} {d.numero}
-                          {d.altura ? `, ${d.altura}` : ""}
+                          {(d.piso ?? d.altura) ? `, ${d.piso ?? d.altura}` : ""}
                           {d.esPrincipal && vigente && (
                             <span className="inline-flex items-center gap-1 rounded bg-expediente-suave px-1.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-expediente">
                               <Star className="size-3" aria-hidden="true" />
@@ -199,7 +199,7 @@ const VACIO = {
   tipo: "CASA",
   calle: "",
   numero: "",
-  altura: "",
+  piso: "",
   longitud: "",
   latitud: "",
   esPrincipal: false,
@@ -264,7 +264,7 @@ function FormularioDomicilio({ ciudadanoId, domicilio, sinDomiciliosAun, dispara
                   tipo: domicilio.tipo ?? "CASA",
                   calle: domicilio.calle ?? "",
                   numero: domicilio.numero ?? "",
-                  altura: domicilio.altura ?? "",
+                  piso: domicilio.piso ?? domicilio.altura ?? "",
                   longitud: domicilio.longitud ?? "",
                   latitud: domicilio.latitud ?? "",
                   esPrincipal: Boolean(domicilio.esPrincipal),
@@ -317,9 +317,9 @@ function FormularioDomicilio({ ciudadanoId, domicilio, sinDomiciliosAun, dispara
             <Campo
               etiqueta="Piso y depto."
               ayuda="Opcional"
-              value={valores.altura}
-              onChange={(e) => cambiar("altura", e.target.value)}
-              error={errores.altura}
+              value={valores.piso}
+              onChange={(e) => cambiar("piso", e.target.value)}
+              error={errores.piso}
             />
           </div>
 

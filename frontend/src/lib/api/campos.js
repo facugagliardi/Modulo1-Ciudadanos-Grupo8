@@ -41,6 +41,7 @@ export const CAMPOS = {
     "tipo",
     "calle",
     "numero",
+    "piso",
     "altura",
     "idBarrio",
     "longitud",
@@ -49,7 +50,7 @@ export const CAMPOS = {
   ],
   // El PUT no acepta esPrincipal, y ademas no es parcial: tipo, calle y numero
   // son obligatorios y sobreescriben.
-  actualizarDomicilio: ["tipo", "calle", "numero", "altura", "idBarrio", "longitud", "latitud"],
+  actualizarDomicilio: ["tipo", "calle", "numero", "piso", "altura", "idBarrio", "longitud", "latitud"],
 
   // --- contactos ---
   crearContacto: ["tipo", "valor"],

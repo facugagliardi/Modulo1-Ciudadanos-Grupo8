@@ -31,7 +31,7 @@ const VECINO = {
   contactos: [{ contactoId: 1, tipo: "EMAIL", valor: "diego@mail.com", verificado: true }],
 };
 const DOMICILIO = {
-  propiedadId: 3, tipo: "CASA", calle: "Rivadavia", numero: "4520", altura: null,
+  propiedadId: 3, tipo: "CASA", calle: "Rivadavia", numero: "4520", piso: null, altura: null,
   esPrincipal: true, vigenteDesde: "2026-09-01", vigenteHasta: null,
 };
 

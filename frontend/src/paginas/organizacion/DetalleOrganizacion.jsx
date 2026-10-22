@@ -224,7 +224,7 @@ export function DetalleOrganizacion({ zona = "admin" }) {
                   <CardCuerpo>
                     <p className="font-medium">
                       {o.domicilioPrincipal.calle} {o.domicilioPrincipal.numero}
-                      {o.domicilioPrincipal.altura ? `, ${o.domicilioPrincipal.altura}` : ""}
+                      {(o.domicilioPrincipal.piso ?? o.domicilioPrincipal.altura) ? `, ${o.domicilioPrincipal.piso ?? o.domicilioPrincipal.altura}` : ""}
                     </p>
                     <p className="text-[length:var(--texto-dato)] text-apagado">
                       {etiquetaDe(TIPOS_PROPIEDAD, o.domicilioPrincipal.tipo)} · vigente desde{" "}
@@ -430,7 +430,7 @@ export function DetalleOrganizacion({ zona = "admin" }) {
                               <p className="flex flex-wrap items-center gap-u2 font-medium">
                                 <MapPin className="size-4 text-apagado" aria-hidden="true" />
                                 {p.calle} {p.numero}
-                                {p.altura ? `, ${p.altura}` : ""}
+                                {(p.piso ?? p.altura) ? `, ${p.piso ?? p.altura}` : ""}
                                 {p.esPrincipal && (
                                   <span className="inline-flex items-center gap-1 rounded bg-expediente-suave px-2 py-0.5 text-xs font-semibold text-expediente">
                                     <Star className="size-3 fill-current" aria-hidden="true" />
@@ -1181,7 +1181,7 @@ function FormularioPropiedadOrganizacion({ organizacionId, sinPropiedadesAun, di
     tipo: "LOCAL",
     calle: "",
     numero: "",
-    altura: "",
+    piso: "",
     longitud: "",
     latitud: "",
     esPrincipal: false,
@@ -1234,7 +1234,7 @@ function FormularioPropiedadOrganizacion({ organizacionId, sinPropiedadesAun, di
             tipo: "LOCAL",
             calle: "",
             numero: "",
-            altura: "",
+            piso: "",
             longitud: "",
             latitud: "",
             esPrincipal: false,
@@ -1282,9 +1282,9 @@ function FormularioPropiedadOrganizacion({ organizacionId, sinPropiedadesAun, di
             <Campo
               etiqueta="Piso y depto."
               ayuda="Opcional"
-              value={valores.altura}
-              onChange={(e) => cambiar("altura", e.target.value)}
-              error={errores.altura}
+              value={valores.piso}
+              onChange={(e) => cambiar("piso", e.target.value)}
+              error={errores.piso}
             />
           </div>
 

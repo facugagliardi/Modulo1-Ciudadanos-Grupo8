@@ -28,4 +28,9 @@ public class CiudadanoDirectorioService {
             throw ApiException.noEncontrado("No existe el ciudadano " + ciudadanoId);
         }
     }
+
+    @Transactional(readOnly = true)
+    public boolean existe(Long ciudadanoId) {
+        return ciudadanoId != null && ciudadanoRepository.existsById(ciudadanoId);
+    }
 }

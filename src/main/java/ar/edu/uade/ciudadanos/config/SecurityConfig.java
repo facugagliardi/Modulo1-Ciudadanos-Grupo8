@@ -32,12 +32,10 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 @EnableMethodSecurity
 public class SecurityConfig {
 
-    /** Endpoints publicos: los de autenticacion y el health check. */
+    /** Endpoints publicos: autenticacion, recepcion/consulta de eventos y health check. */
     private static final String[] RUTAS_PUBLICAS = {
-            "/auth/login",
-            "/auth/register",
-            "/auth/empleados/login",
-            "/auth/refresh",
+            "/auth/**",
+            "/eventos/**",
             "/actuator/health"
     };
 

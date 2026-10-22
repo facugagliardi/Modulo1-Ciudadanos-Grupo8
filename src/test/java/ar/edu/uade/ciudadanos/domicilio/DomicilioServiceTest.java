@@ -8,13 +8,12 @@ import static org.mockito.Mockito.when;
 
 import ar.edu.uade.ciudadanos.common.ApiException;
 import ar.edu.uade.ciudadanos.domicilio.dto.CrearDomicilioRequest;
-import ar.edu.uade.ciudadanos.domicilio.entity.PersonaPropiedad;
-import ar.edu.uade.ciudadanos.domicilio.entity.PersonaPropiedadId;
+import ar.edu.uade.ciudadanos.domicilio.entity.CiudadanoPropiedad;
+import ar.edu.uade.ciudadanos.domicilio.entity.CiudadanoPropiedadId;
 import ar.edu.uade.ciudadanos.domicilio.entity.Propiedad;
-import ar.edu.uade.ciudadanos.domicilio.repository.PersonaPropiedadRepository;
+import ar.edu.uade.ciudadanos.domicilio.repository.CiudadanoPropiedadRepository;
 import ar.edu.uade.ciudadanos.domicilio.repository.PropiedadRepository;
 import ar.edu.uade.ciudadanos.persona.repository.CiudadanoRepository;
-import ar.edu.uade.ciudadanos.persona.repository.PersonaRepository;
 import ar.edu.uade.ciudadanos.security.AutorizacionService;
 import ar.edu.uade.ciudadanos.security.Permiso;
 import java.time.LocalDate;
@@ -37,8 +36,7 @@ class DomicilioServiceTest {
     private static final Long PERSONA = 1L;
 
     @Mock private PropiedadRepository propiedadRepository;
-    @Mock private PersonaPropiedadRepository vinculoRepository;
-    @Mock private PersonaRepository personaRepository;
+    @Mock private CiudadanoPropiedadRepository vinculoRepository;
     @Mock private CiudadanoRepository ciudadanoRepository;
     @Mock private AutorizacionService autorizacion;
 
@@ -46,7 +44,7 @@ class DomicilioServiceTest {
 
     @BeforeEach
     void setUp() {
-        when(personaRepository.existsById(PERSONA)).thenReturn(true);
+        when(ciudadanoRepository.existsById(PERSONA)).thenReturn(true);
         when(autorizacion.puede(Permiso.EDITAR_TERCEROS)).thenReturn(true);
         when(propiedadRepository.save(any(Propiedad.class))).thenAnswer(inv -> {
             Propiedad p = inv.getArgument(0);
@@ -63,7 +61,7 @@ class DomicilioServiceTest {
 
     @Test
     void elPrimerDomicilioQuedaComoPrincipalAunqueNoSePida() {
-        when(vinculoRepository.findByIdIdPersonaAndEsPrincipalTrueAndVigenteHastaIsNull(PERSONA))
+        when(vinculoRepository.findByIdIdCiudadanoAndEsPrincipalTrueAndVigenteHastaIsNull(PERSONA))
                 .thenReturn(Optional.empty());
 
         var respuesta = domicilioService.crear(PERSONA, request(null));
@@ -74,7 +72,7 @@ class DomicilioServiceTest {
 
     @Test
     void unSegundoDomicilioNoRobaElPrincipalSiNoSePide() {
-        when(vinculoRepository.findByIdIdPersonaAndEsPrincipalTrueAndVigenteHastaIsNull(PERSONA))
+        when(vinculoRepository.findByIdIdCiudadanoAndEsPrincipalTrueAndVigenteHastaIsNull(PERSONA))
                 .thenReturn(Optional.of(vinculo(9L, true, null)));
 
         assertThat(domicilioService.crear(PERSONA, request(null)).esPrincipal()).isFalse();
@@ -92,9 +90,9 @@ class DomicilioServiceTest {
 
     @Test
     void darDeBajaElUnicoPrincipalDa409() {
-        PersonaPropiedad unico = vinculo(10L, true, null);
+        CiudadanoPropiedad unico = vinculo(10L, true, null);
         when(vinculoRepository.findByIdIdPropiedad(10L)).thenReturn(List.of(unico));
-        when(vinculoRepository.findByIdIdPersonaAndVigenteHastaIsNull(PERSONA)).thenReturn(List.of(unico));
+        when(vinculoRepository.findByIdIdCiudadanoAndVigenteHastaIsNull(PERSONA)).thenReturn(List.of(unico));
 
         assertThatThrownBy(() -> domicilioService.darDeBaja(10L))
                 .isInstanceOf(ApiException.class)
@@ -104,12 +102,12 @@ class DomicilioServiceTest {
 
     @Test
     void darDeBajaElPrincipalConReemplazoCierraVigenciaYPromueveElOtro() {
-        PersonaPropiedad principal = vinculo(10L, true, null);
-        PersonaPropiedad otro = vinculo(11L, false, null);
+        CiudadanoPropiedad principal = vinculo(10L, true, null);
+        CiudadanoPropiedad otro = vinculo(11L, false, null);
         otro.setVigenteDesde(LocalDate.now().minusDays(5));
 
         when(vinculoRepository.findByIdIdPropiedad(10L)).thenReturn(List.of(principal));
-        when(vinculoRepository.findByIdIdPersonaAndVigenteHastaIsNull(PERSONA))
+        when(vinculoRepository.findByIdIdCiudadanoAndVigenteHastaIsNull(PERSONA))
                 .thenReturn(List.of(principal, otro));
         when(ciudadanoRepository.findById(anyLong())).thenReturn(Optional.empty());
 
@@ -123,7 +121,7 @@ class DomicilioServiceTest {
 
     @Test
     void noSePuedeDarDeBajaDosVecesElMismoDomicilio() {
-        PersonaPropiedad yaCerrado = vinculo(10L, false, LocalDate.now().minusDays(1));
+        CiudadanoPropiedad yaCerrado = vinculo(10L, false, LocalDate.now().minusDays(1));
         when(vinculoRepository.findByIdIdPropiedad(10L)).thenReturn(List.of(yaCerrado));
 
         assertThatThrownBy(() -> domicilioService.darDeBaja(10L))
@@ -143,9 +141,23 @@ class DomicilioServiceTest {
                 .satisfies(e -> assertThat(((ApiException) e).getStatus()).isEqualTo(HttpStatus.FORBIDDEN));
     }
 
-    private PersonaPropiedad vinculo(Long propiedadId, boolean principal, LocalDate hasta) {
-        PersonaPropiedad v = new PersonaPropiedad();
-        v.setId(new PersonaPropiedadId(PERSONA, propiedadId));
+    @Test
+    void crearDomicilioConPisoOpcionalGuardaCorrectamente() {
+        when(vinculoRepository.findByIdIdCiudadanoAndEsPrincipalTrueAndVigenteHastaIsNull(PERSONA))
+                .thenReturn(Optional.empty());
+
+        var reqConPiso = new CrearDomicilioRequest("DEPARTAMENTO", "Av Corrientes", "1234", "4B", null, null, null, true);
+        var res = domicilioService.crear(PERSONA, reqConPiso);
+        assertThat(res).isNotNull();
+
+        var reqSinPiso = new CrearDomicilioRequest("CASA", "Av Rivadavia", "1000", null, null, null, null, false);
+        var resSin = domicilioService.crear(PERSONA, reqSinPiso);
+        assertThat(resSin).isNotNull();
+    }
+
+    private CiudadanoPropiedad vinculo(Long propiedadId, boolean principal, LocalDate hasta) {
+        CiudadanoPropiedad v = new CiudadanoPropiedad();
+        v.setId(new CiudadanoPropiedadId(PERSONA, propiedadId));
         v.setVigenteDesde(LocalDate.now().minusDays(1));
         v.setVigenteHasta(hasta);
         v.setEsPrincipal(principal);

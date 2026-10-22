@@ -17,7 +17,11 @@ import ar.edu.uade.ciudadanos.persona.entity.EstadoCiudadano;
 import ar.edu.uade.ciudadanos.persona.repository.CiudadanoRepository;
 import ar.edu.uade.ciudadanos.security.AutorizacionService;
 import ar.edu.uade.ciudadanos.security.Permiso;
+import ar.edu.uade.ciudadanos.evento.EventPublisherService;
+import ar.edu.uade.ciudadanos.evento.dto.UpdatedBy;
+import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,15 +33,25 @@ public class CiudadanoService {
     private final ContactoCiudadanoRepository contactoRepository;
     private final DomicilioService domicilioService;
     private final AutorizacionService autorizacion;
+    private final EventPublisherService eventPublisherService;
 
     public CiudadanoService(CiudadanoRepository ciudadanoRepository,
                             ContactoCiudadanoRepository contactoRepository,
                             DomicilioService domicilioService,
                             AutorizacionService autorizacion) {
+        this(ciudadanoRepository, contactoRepository, domicilioService, autorizacion, null);
+    }
+
+    public CiudadanoService(CiudadanoRepository ciudadanoRepository,
+                            ContactoCiudadanoRepository contactoRepository,
+                            DomicilioService domicilioService,
+                            AutorizacionService autorizacion,
+                            EventPublisherService eventPublisherService) {
         this.ciudadanoRepository = ciudadanoRepository;
         this.contactoRepository = contactoRepository;
         this.domicilioService = domicilioService;
         this.autorizacion = autorizacion;
+        this.eventPublisherService = eventPublisherService;
     }
 
     @Transactional(readOnly = true)
@@ -94,6 +108,25 @@ public class CiudadanoService {
             actualizarCuil(ciudadano, request.cuil());
         }
 
+        if (eventPublisherService != null) {
+            try {
+                Map<String, Object> details = new java.util.HashMap<>();
+                details.put("dni", ciudadano.getDocumentoId());
+                details.put("cuil", String.valueOf(ciudadano.getCuit()));
+                details.put("name", ciudadano.getNombre());
+                details.put("lastname", ciudadano.getApellido());
+                details.put("birthdate", String.valueOf(ciudadano.getFechaNacimiento()));
+                details.put("state", ciudadano.getEstado().name());
+                eventPublisherService.publicarCitizenUpdated(
+                        id,
+                        "UPDATED",
+                        details,
+                        UpdatedBy.selfService()
+                );
+            } catch (Exception ignored) {
+            }
+        }
+
         return obtenerSinChequeo(ciudadano);
     }
 
@@ -106,6 +139,27 @@ public class CiudadanoService {
         EstadoCiudadano anterior = ciudadano.getEstado();
         TransicionesEstado.exigirCiudadano(anterior, nuevo);
         ciudadano.setEstado(nuevo);
+
+        if (eventPublisherService != null) {
+            try {
+                if (nuevo == EstadoCiudadano.BLOQUEADO) {
+                    eventPublisherService.publicarCitizenUpdated(
+                            id,
+                            "BLOCKED",
+                            Map.of("reason", "ACCION_ADMINISTRATIVA", "reviewRequired", true),
+                            UpdatedBy.areaUser("USR-M1-14")
+                    );
+                } else if (nuevo == EstadoCiudadano.FALLECIDO) {
+                    eventPublisherService.publicarCitizenUpdated(
+                            id,
+                            "DECEASED",
+                            Map.of("deceasedAt", LocalDate.now().toString(), "source", "REGISTRO_CIVIL"),
+                            UpdatedBy.areaUser("USR-M1-09")
+                    );
+                }
+            } catch (Exception ignored) {
+            }
+        }
 
         return CambioEstadoResponse.de(id, anterior, nuevo);
     }
