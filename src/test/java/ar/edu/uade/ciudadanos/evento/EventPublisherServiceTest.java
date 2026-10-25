@@ -56,7 +56,9 @@ class EventPublisherServiceTest {
 
         assertThat(envelope).isNotNull();
         assertThat(envelope.eventType()).isEqualTo("citizenUpdated");
-        assertThat(envelope.subject()).isEqualTo("citizens/100");
+        assertThat(envelope.sourceModule()).isEqualTo("ciudadanos");
+        assertThat(envelope.eventVersion()).isEqualTo("1.0");
+        assertThat(envelope.occuredAt()).isNotBlank();
 
         // Verifica que se guardó en PostgreSQL con el patrón Outbox
         ArgumentCaptor<String> eventIdCaptor = ArgumentCaptor.forClass(String.class);
@@ -65,9 +67,9 @@ class EventPublisherServiceTest {
         ArgumentCaptor<String> payloadCaptor = ArgumentCaptor.forClass(String.class);
 
         verify(eventoService).registrarEmitido(eventIdCaptor.capture(), subjectCaptor.capture(), typeCaptor.capture(), payloadCaptor.capture());
-        assertThat(subjectCaptor.getValue()).isEqualTo("citizens/100");
+        assertThat(subjectCaptor.getValue()).isEqualTo("ciudadanos");
         assertThat(typeCaptor.getValue()).isEqualTo("citizenUpdated");
-        assertThat(payloadCaptor.getValue()).contains("REGISTERED").contains("Juan");
+        assertThat(payloadCaptor.getValue()).contains("REGISTERED").contains("Juan").contains("sourceModule");
 
         // Verifica despacho a RabbitMQ
         verify(rabbitTemplate).convertAndSend(eq("modulo1.topic.exchange"), eq("modulo1.citizens.registered"), eq(envelope));

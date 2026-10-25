@@ -56,9 +56,9 @@ class EventConsumerServiceTest {
         );
 
         when(eventoService.estaProcesado(eventId)).thenReturn(false);
-        when(eventPublisherService.publicarSocialDocumentationDelivered(eq(eventId), any()))
+        when(eventPublisherService.publicarSocialDocumentationDelivered(eq(eventId), any(), any()))
                 .thenReturn(EventEnvelope.de("M1-EVT-000210", "2026-08-21T10:35:00-03:00", "socialDocumentationDelivered",
-                        ProducerInfo.expedientesApi(), "citizens/c-00123", eventId,
+                        EventEnvelope.SOURCE_MODULE_CIUDADANOS,
                         new SocialDocumentationDeliveredData("c-00123", "sol-00456", "prog-00789", List.of())));
 
         boolean procesado = consumerService.procesarSocialDocumentationRequested(evento);
@@ -68,8 +68,8 @@ class EventConsumerServiceTest {
         // Verifica que se guardó en PostgreSQL como RECIBIDO
         verify(eventoService).registrarRecibido(eq(eventId), eq("citizens"), eq("c-00123"), eq("socialDocumentationRequested"), any());
 
-        // Verifica que se emitió la respuesta con el correlationId original
-        verify(eventPublisherService).publicarSocialDocumentationDelivered(eq(eventId), any());
+        // Verifica que se emitió la respuesta con el correlationId original y causationId
+        verify(eventPublisherService).publicarSocialDocumentationDelivered(eq(eventId), any(), any());
     }
 
     @Test
@@ -90,7 +90,7 @@ class EventConsumerServiceTest {
 
         assertThat(procesado).isFalse();
         verify(eventoService, never()).registrarRecibido(any(), any(), any(), any(), any());
-        verify(eventPublisherService, never()).publicarSocialDocumentationDelivered(any(), any());
+        verify(eventPublisherService, never()).publicarSocialDocumentationDelivered(any(), any(), any());
     }
 
     @Test

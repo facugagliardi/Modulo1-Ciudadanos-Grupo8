@@ -7,6 +7,7 @@ import ar.edu.uade.ciudadanos.evento.dto.SocialDocumentationRequestedEvent;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
@@ -35,13 +36,13 @@ public class EventConsumerService {
     }
 
     /**
-     * Listener que consume mensajes de la cola de M8 en RabbitMQ.
+     * Listener que consume mensajes de la cola de Ciudadanos ('q.ciudadanos') y M8 en RabbitMQ.
      * Solo procesa si auto-startup esta habilitado.
      */
-    @RabbitListener(queues = RabbitMQConfig.QUEUE_M8_REQUESTS)
+    @RabbitListener(queues = {RabbitMQConfig.QUEUE_CIUDADANOS, RabbitMQConfig.QUEUE_M8_REQUESTS})
     public void onSocialDocumentationRequested(SocialDocumentationRequestedEvent evento) {
-        log.info("Mensaje recibido desde cola RabbitMQ {}: eventId={}",
-                RabbitMQConfig.QUEUE_M8_REQUESTS, evento.eventId());
+        log.info("Mensaje recibido desde cola RabbitMQ: eventId={}, eventType={}",
+                evento.eventId(), evento.eventType());
         procesarSocialDocumentationRequested(evento);
     }
 
@@ -111,11 +112,15 @@ public class EventConsumerService {
                 List.of(file)
         );
 
-        EventEnvelope<SocialDocumentationDeliveredData> respuestaEnvelope =
-                eventPublisherService.publicarSocialDocumentationDelivered(evento.eventId(), respuestaData);
+        String correlationId = (evento.correlationId() != null && !evento.correlationId().isBlank())
+                ? evento.correlationId()
+                : UUID.randomUUID().toString();
 
-        log.info("Respuesta socialDocumentationDelivered emitida con correlationId={}: nuevo eventId={}",
-                evento.eventId(), respuestaEnvelope.eventId());
+        EventEnvelope<SocialDocumentationDeliveredData> respuestaEnvelope =
+                eventPublisherService.publicarSocialDocumentationDelivered(evento.eventId(), correlationId, respuestaData);
+
+        log.info("Respuesta socialDocumentationDelivered emitida con causationId={} y correlationId={}: nuevo eventId={}",
+                evento.eventId(), correlationId, respuestaEnvelope.eventId());
 
         return true;
     }
