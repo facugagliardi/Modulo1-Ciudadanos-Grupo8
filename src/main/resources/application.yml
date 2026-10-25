@@ -42,6 +42,7 @@ spring:
     listener:
       simple:
         auto-startup: ${RABBITMQ_AUTO_STARTUP:false}
+        default-requeue-rejected: false
 
 server:
   port: ${SERVER_PORT:8080}
@@ -51,7 +52,9 @@ server:
 
 app:
   events:
-    exchange: ${APP_EVENTS_EXCHANGE:modulo1.topic.exchange}
+    exchange: ${APP_EVENTS_EXCHANGE:muni.inbox}
+    queue: ${APP_EVENTS_QUEUE:q.ciudadanos}
+    source-module: ${APP_EVENTS_SOURCE_MODULE:ciudadanos}
   # Donde se guardan los archivos de POST /personas/{id}/documentos.
   almacenamiento:
     directorio: ${ALMACENAMIENTO_DIR:./archivos-documentos}

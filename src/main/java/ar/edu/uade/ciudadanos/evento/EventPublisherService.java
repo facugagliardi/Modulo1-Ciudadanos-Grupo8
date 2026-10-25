@@ -38,7 +38,7 @@ public class EventPublisherService {
     private final RabbitTemplate rabbitTemplate;
     private final ObjectMapper objectMapper;
 
-    @Value("${app.events.exchange:modulo1.topic.exchange}")
+    @Value("${app.events.exchange:muni.inbox}")
     private String exchangeName;
 
     public EventPublisherService(EventoService eventoService,
@@ -88,14 +88,13 @@ public class EventPublisherService {
                                                                    Map<String, Object> details,
                                                                    UpdatedBy updatedBy) {
         String eventId = generarEventId();
-        String occurredAt = fechaActualIso();
+        String occuredAt = fechaActualIso();
         CitizenUpdatedData data = new CitizenUpdatedData(citizenId, updateType, details, updatedBy);
         EventEnvelope<CitizenUpdatedData> envelope = EventEnvelope.de(
                 eventId,
-                occurredAt,
+                occuredAt,
                 "citizenUpdated",
-                ProducerInfo.citizensApi(),
-                "citizens/" + citizenId,
+                EventEnvelope.SOURCE_MODULE_CIUDADANOS,
                 data
         );
         return publicar(envelope, "modulo1.citizens." + updateType.toLowerCase());
@@ -106,13 +105,12 @@ public class EventPublisherService {
      */
     public EventEnvelope<CaseFileResolvedData> publicarCasefileResolved(CaseFileResolvedData data) {
         String eventId = generarEventId();
-        String occurredAt = fechaActualIso();
+        String occuredAt = fechaActualIso();
         EventEnvelope<CaseFileResolvedData> envelope = EventEnvelope.de(
                 eventId,
-                occurredAt,
+                occuredAt,
                 "casefileResolved",
-                ProducerInfo.expedientesApi(),
-                "caseFiles/" + data.caseFileId(),
+                EventEnvelope.SOURCE_MODULE_CIUDADANOS,
                 data
         );
         return publicar(envelope, "modulo1.casefiles.resolved");
@@ -125,13 +123,12 @@ public class EventPublisherService {
                                                                                String correlationId,
                                                                                CitizenInfoDeliveredData data) {
         String eventId = generarEventId();
-        String occurredAt = fechaActualIso();
+        String occuredAt = fechaActualIso();
         EventEnvelope<CitizenInfoDeliveredData> envelope = EventEnvelope.de(
                 eventId,
-                occurredAt,
+                occuredAt,
                 "citizenInfoDelivered",
-                ProducerInfo.citizensApi(),
-                "citizens/" + citizenId,
+                EventEnvelope.SOURCE_MODULE_CIUDADANOS,
                 correlationId,
                 data
         );
@@ -145,13 +142,12 @@ public class EventPublisherService {
                                                                                          String correlationId,
                                                                                          OrganizationInfoDeliveredData data) {
         String eventId = generarEventId();
-        String occurredAt = fechaActualIso();
+        String occuredAt = fechaActualIso();
         EventEnvelope<OrganizationInfoDeliveredData> envelope = EventEnvelope.de(
                 eventId,
-                occurredAt,
+                occuredAt,
                 "organizationInfoDelivered",
-                ProducerInfo.organizationsApi(),
-                "organizations/" + cuit,
+                EventEnvelope.SOURCE_MODULE_CIUDADANOS,
                 correlationId,
                 data
         );
@@ -164,13 +160,12 @@ public class EventPublisherService {
     public EventEnvelope<OrganizationRegisteredData> publicarOrganizationRegistered(Long cuit,
                                                                                    OrganizationRegisteredData data) {
         String eventId = generarEventId();
-        String occurredAt = fechaActualIso();
+        String occuredAt = fechaActualIso();
         EventEnvelope<OrganizationRegisteredData> envelope = EventEnvelope.de(
                 eventId,
-                occurredAt,
+                occuredAt,
                 "organizationRegistered",
-                ProducerInfo.organizationsApi(),
-                "organizations/" + cuit,
+                EventEnvelope.SOURCE_MODULE_CIUDADANOS,
                 data
         );
         return publicar(envelope, "modulo1.organizations.registered");
@@ -180,15 +175,14 @@ public class EventPublisherService {
      * 6. representationGranted (M1 -> inter-modulo)
      */
     public EventEnvelope<RepresentationGrantedData> publicarRepresentationGranted(Long representationId,
-                                                                                 RepresentationGrantedData data) {
+                                                                                  RepresentationGrantedData data) {
         String eventId = generarEventId();
-        String occurredAt = fechaActualIso();
+        String occuredAt = fechaActualIso();
         EventEnvelope<RepresentationGrantedData> envelope = EventEnvelope.de(
                 eventId,
-                occurredAt,
+                occuredAt,
                 "representationGranted",
-                ProducerInfo.organizationsApi(),
-                "representations/" + representationId,
+                EventEnvelope.SOURCE_MODULE_CIUDADANOS,
                 data
         );
         return publicar(envelope, "modulo1.representations.granted");
@@ -198,15 +192,14 @@ public class EventPublisherService {
      * 7. representationExpired (M1 -> inter-modulo)
      */
     public EventEnvelope<RepresentationExpiredData> publicarRepresentationExpired(Long representationId,
-                                                                                 RepresentationExpiredData data) {
+                                                                                  RepresentationExpiredData data) {
         String eventId = generarEventId();
-        String occurredAt = fechaActualIso();
+        String occuredAt = fechaActualIso();
         EventEnvelope<RepresentationExpiredData> envelope = EventEnvelope.de(
                 eventId,
-                occurredAt,
+                occuredAt,
                 "representationExpired",
-                ProducerInfo.organizationsApi(),
-                "representations/" + representationId,
+                EventEnvelope.SOURCE_MODULE_CIUDADANOS,
                 data
         );
         return publicar(envelope, "modulo1.representations.expired");
@@ -215,20 +208,27 @@ public class EventPublisherService {
     /**
      * 8. socialDocumentationDelivered (M1 -> M8 Desarrollo Social)
      */
-    public EventEnvelope<SocialDocumentationDeliveredData> publicarSocialDocumentationDelivered(String correlationId,
+    public EventEnvelope<SocialDocumentationDeliveredData> publicarSocialDocumentationDelivered(String causationId,
+                                                                                               String correlationId,
                                                                                                SocialDocumentationDeliveredData data) {
         String eventId = generarEventId();
-        String occurredAt = fechaActualIso();
+        String occuredAt = fechaActualIso();
+        String corrId = (correlationId != null && !correlationId.isBlank()) ? correlationId : UUID.randomUUID().toString();
         EventEnvelope<SocialDocumentationDeliveredData> envelope = EventEnvelope.de(
                 eventId,
-                occurredAt,
+                occuredAt,
                 "socialDocumentationDelivered",
-                ProducerInfo.expedientesApi(),
-                "citizens/" + data.citizenId(),
-                correlationId,
+                EventEnvelope.SOURCE_MODULE_CIUDADANOS,
+                corrId,
+                causationId,
                 data
         );
-        return publicar(envelope, "modulo1.social.documentation.delivered");
+        return publicar(envelope, "socialDocumentationDelivered");
+    }
+
+    public EventEnvelope<SocialDocumentationDeliveredData> publicarSocialDocumentationDelivered(String causationId,
+                                                                                               SocialDocumentationDeliveredData data) {
+        return publicarSocialDocumentationDelivered(causationId, null, data);
     }
 
     // ------------------------------------------------ Generacion de Ejemplos del PDF
@@ -402,7 +402,7 @@ public class EventPublisherService {
     // ------------------------------------------------ Helpers
 
     private String generarEventId() {
-        return "M1-EVT-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+        return UUID.randomUUID().toString();
     }
 
     private String fechaActualIso() {
