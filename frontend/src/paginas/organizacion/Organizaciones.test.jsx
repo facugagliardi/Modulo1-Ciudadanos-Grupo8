@@ -694,6 +694,26 @@ describe("portal: mis organizaciones", () => {
       expect(screen.getByText(/Principal/i)).toBeInTheDocument();
       expect(screen.getByRole("button", { name: /agregar propiedad/i })).toBeInTheDocument();
     });
+
+    it("permite asignar una propiedad existente por su ID a la organización", async () => {
+      listarPropiedadesDeOrganizacion.mockResolvedValue([]);
+      crearPropiedadOrganizacion.mockResolvedValue({ propiedadId: 5 });
+      detalle();
+      await userEvent.click(await screen.findByRole("tab", { name: /propiedades/i }));
+      await userEvent.click(await screen.findByRole("button", { name: /cargar primera propiedad/i }));
+
+      const campoId = await screen.findByLabelText(/id o código del inmueble/i);
+      await userEvent.type(campoId, "PROP-5");
+
+      await userEvent.click(screen.getByRole("button", { name: /asignar propiedad/i }));
+
+      await waitFor(() => expect(crearPropiedadOrganizacion).toHaveBeenCalled());
+      expect(crearPropiedadOrganizacion).toHaveBeenCalledWith(1, {
+        propiedadId: 5,
+        esPrincipal: true,
+      });
+    });
   });
 });
+
 

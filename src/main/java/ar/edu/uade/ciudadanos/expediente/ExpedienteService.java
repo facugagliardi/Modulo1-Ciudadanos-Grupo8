@@ -30,6 +30,7 @@ import java.util.List;
 import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -54,6 +55,7 @@ public class ExpedienteService {
         this(expedienteRepository, actuacionRepository, directorio, autorizacion, objectMapper, null);
     }
 
+    @Autowired
     public ExpedienteService(ExpedienteRepository expedienteRepository,
                              ActuacionRepository actuacionRepository,
                              CiudadanoDirectorioService directorio,
@@ -119,6 +121,9 @@ public class ExpedienteService {
 
         if (eventPublisherService != null && nuevo == EstadoExpediente.RESUELTO) {
             try {
+                String citizenUuid = directorio.resolverUuid(expediente.getCiudadanoId())
+                        .map(java.util.UUID::toString)
+                        .orElse(expediente.getCiudadanoId() != null ? String.valueOf(expediente.getCiudadanoId()) : null);
                 CaseFileResolvedData data = new CaseFileResolvedData(
                         expediente.getExpedienteId(),
                         expediente.getNumero(),
@@ -126,7 +131,7 @@ public class ExpedienteService {
                         "approved",
                         expediente.getAreaIniciadora(),
                         expediente.getCaratula(),
-                        expediente.getCiudadanoId(),
+                        citizenUuid,
                         Map.of("type", "PUBLIC_WORKS_PROJECT", "id", "OBRA-" + expediente.getExpedienteId()),
                         "Dictamen administrativo favorable. Se autoriza la ejecucion conforme al pliego tecnico.",
                         UpdatedBy.areaUser("USR-M1-07"),

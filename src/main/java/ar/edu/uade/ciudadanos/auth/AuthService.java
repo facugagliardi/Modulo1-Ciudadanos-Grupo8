@@ -31,6 +31,7 @@ import ar.edu.uade.ciudadanos.evento.EventPublisherService;
 import ar.edu.uade.ciudadanos.evento.dto.UpdatedBy;
 import java.util.List;
 import java.util.Map;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -58,6 +59,7 @@ public class AuthService {
              credencialEmpleadoRepository, passwordEncoder, jwtService, null, null);
     }
 
+    @Autowired
     public AuthService(CiudadanoRepository ciudadanoRepository,
                        CredencialCiudadanoRepository credencialCiudadanoRepository,
                        CuentaEmpleadoRepository cuentaEmpleadoRepository,
@@ -123,7 +125,7 @@ public class AuthService {
                         "nationality", "argentina"
                 );
                 eventPublisherService.publicarCitizenUpdated(
-                        ciudadano.getId(),
+                        ciudadano.getUuid() != null ? ciudadano.getUuid().toString() : String.valueOf(ciudadano.getId()),
                         "REGISTERED",
                         details,
                         UpdatedBy.selfService()
@@ -132,7 +134,7 @@ public class AuthService {
             }
         }
 
-        return RegisterResponse.fisica(ciudadano.getId(), ciudadano.getDocumentoId(), ciudadano.getNombre(),
+        return RegisterResponse.fisica(ciudadano.getId(), ciudadano.getUuid(), ciudadano.getDocumentoId(), ciudadano.getNombre(),
                 ciudadano.getApellido(), ciudadano.getFechaNacimiento(), String.valueOf(ciudadano.getCuit()),
                 ciudadano.getEstado().name(), ciudadano.getCreadoEn());
     }
@@ -161,7 +163,7 @@ public class AuthService {
         TipoSujeto tipoSujeto = TipoSujeto.CIUDADANO;
 
         TokenEmitido tokens = emitir(new AuthPrincipal(ciudadano.getId(), tipoSujeto, rol));
-        return new Sesion<>(new LoginResponse(ciudadano.getId(), "CIUDADANO", rol), tokens);
+        return new Sesion<>(new LoginResponse(ciudadano.getId(), "CIUDADANO", rol, ciudadano.getUuid()), tokens);
     }
 
     @Transactional(readOnly = true)
@@ -247,6 +249,7 @@ public class AuthService {
                                 .toList();
                         UsuarioLoginResponse cuerpo = new UsuarioLoginResponse(
                                 c.getId(),
+                                c.getUuid(),
                                 dni,
                                 c.getNombre(),
                                 c.getApellido(),

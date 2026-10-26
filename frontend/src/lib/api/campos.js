@@ -38,6 +38,8 @@ export const CAMPOS = {
 
   // --- domicilios ---
   crearDomicilio: [
+    "propiedadId",
+    "codigoPropiedad",
     "tipo",
     "calle",
     "numero",
@@ -60,7 +62,7 @@ export const CAMPOS = {
   // --- organizaciones ---
   crearOrganizacion: ["cuit", "razonSocial", "nombreFantasia", "tipo", "taxId", "porcentajeCreador", "otrosDuenos"],
   actualizarOrganizacion: ["razonSocial", "nombreFantasia", "tipo"],
-  agregarDueno: ["ciudadanoId", "personaId", "porcentajeTitularidad"],
+  agregarDueno: ["ciudadanoId", "personaId", "porcentajeTitularidad", "ajustes"],
   // El PUT sólo mueve el porcentaje: la ciudadano ya viene en la URL.
   actualizarDueno: ["porcentajeTitularidad"],
 

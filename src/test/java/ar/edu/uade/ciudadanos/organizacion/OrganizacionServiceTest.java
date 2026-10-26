@@ -23,6 +23,8 @@ import ar.edu.uade.ciudadanos.security.AutorizacionService;
 import ar.edu.uade.ciudadanos.security.TipoSujeto;
 import java.math.BigDecimal;
 import java.util.Collections;
+import java.util.Optional;
+
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -55,6 +57,12 @@ class OrganizacionServiceTest {
     @Mock
     private AutorizacionService autorizacion;
 
+    @Mock
+    private ar.edu.uade.ciudadanos.organizacion.repository.OrganizacionPropiedadRepository organizacionPropiedadRepository;
+
+    @Mock
+    private ar.edu.uade.ciudadanos.domicilio.repository.PropiedadRepository propiedadRepository;
+
     private OrganizacionService organizacionService;
 
     @BeforeEach
@@ -65,9 +73,13 @@ class OrganizacionServiceTest {
                 representacionRepository,
                 directorio,
                 domicilioService,
-                autorizacion
+                autorizacion,
+                null,
+                organizacionPropiedadRepository,
+                propiedadRepository
         );
     }
+
 
     @Test
     void crearOrganizacion_conPorcentajeCreadorYOtrosDuenos_guardaCorrectamente() {
@@ -132,4 +144,39 @@ class OrganizacionServiceTest {
                 .isInstanceOf(ApiException.class)
                 .hasMessageContaining("supera el 100%");
     }
+
+    @Test
+    void agregarDomicilio_conPropiedadExistente_asignaCorrectamente() {
+        Long orgId = 10L;
+        Long propId = 5L;
+        Organizacion org = new Organizacion();
+        org.setOrganizacionId(orgId);
+        org.setCuit(30712345678L);
+        org.setRazonSocial("Mi Empresa SRL");
+
+        ar.edu.uade.ciudadanos.domicilio.entity.Propiedad prop = new ar.edu.uade.ciudadanos.domicilio.entity.Propiedad();
+        prop.setPropiedadId(propId);
+        prop.setTipo("LOCAL");
+        prop.setCalle("Av. Corrientes");
+        prop.setNumero("1234");
+
+        when(organizacionRepository.findById(orgId)).thenReturn(Optional.of(org));
+        when(propiedadRepository.findById(propId)).thenReturn(Optional.of(prop));
+        when(organizacionPropiedadRepository.findByIdIdOrganizacionAndIdIdPropiedad(orgId, propId)).thenReturn(Optional.empty());
+        when(organizacionPropiedadRepository.findByIdIdOrganizacionAndEsPrincipalTrueAndVigenteHastaIsNull(orgId)).thenReturn(Optional.empty());
+
+        var req = new ar.edu.uade.ciudadanos.organizacion.dto.CrearDomicilioOrganizacionRequest(
+                propId, null, null, null, null, null, null, null, true
+        );
+
+        var res = organizacionService.agregarDomicilio(orgId, req);
+
+        assertThat(res.propiedadId()).isEqualTo(propId);
+        assertThat(res.personaId()).isEqualTo(orgId);
+        assertThat(res.calle()).isEqualTo("Av. Corrientes");
+        assertThat(res.esPrincipal()).isTrue();
+
+        verify(organizacionPropiedadRepository).save(any(ar.edu.uade.ciudadanos.organizacion.entity.OrganizacionPropiedad.class));
+    }
 }
+

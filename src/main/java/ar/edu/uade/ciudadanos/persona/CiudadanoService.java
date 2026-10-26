@@ -22,6 +22,7 @@ import ar.edu.uade.ciudadanos.evento.dto.UpdatedBy;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -42,6 +43,7 @@ public class CiudadanoService {
         this(ciudadanoRepository, contactoRepository, domicilioService, autorizacion, null);
     }
 
+    @Autowired
     public CiudadanoService(CiudadanoRepository ciudadanoRepository,
                             ContactoCiudadanoRepository contactoRepository,
                             DomicilioService domicilioService,
@@ -62,7 +64,7 @@ public class CiudadanoService {
         List<ContactoResponse> contactos = contactoRepository.findByCiudadanoId(id).stream()
                 .map(ContactoResponse::de).toList();
 
-        return new CiudadanoResponse(ciudadano.getId(), ciudadano.getDocumentoId(), ciudadano.getNombre(),
+        return new CiudadanoResponse(ciudadano.getId(), ciudadano.getUuid(), ciudadano.getDocumentoId(), ciudadano.getNombre(),
                 ciudadano.getApellido(), ciudadano.getFechaNacimiento(), String.valueOf(ciudadano.getCuit()), ciudadano.getEstado(),
                 domicilioService.principalDe(id).orElse(null), contactos);
     }
@@ -117,8 +119,9 @@ public class CiudadanoService {
                 details.put("lastname", ciudadano.getApellido());
                 details.put("birthdate", String.valueOf(ciudadano.getFechaNacimiento()));
                 details.put("state", ciudadano.getEstado().name());
+                String citizenUuid = ciudadano.getUuid() != null ? ciudadano.getUuid().toString() : String.valueOf(id);
                 eventPublisherService.publicarCitizenUpdated(
-                        id,
+                        citizenUuid,
                         "UPDATED",
                         details,
                         UpdatedBy.selfService()
@@ -142,16 +145,17 @@ public class CiudadanoService {
 
         if (eventPublisherService != null) {
             try {
+                String citizenUuid = ciudadano.getUuid() != null ? ciudadano.getUuid().toString() : String.valueOf(id);
                 if (nuevo == EstadoCiudadano.BLOQUEADO) {
                     eventPublisherService.publicarCitizenUpdated(
-                            id,
+                            citizenUuid,
                             "BLOCKED",
                             Map.of("reason", "ACCION_ADMINISTRATIVA", "reviewRequired", true),
                             UpdatedBy.areaUser("USR-M1-14")
                     );
                 } else if (nuevo == EstadoCiudadano.FALLECIDO) {
                     eventPublisherService.publicarCitizenUpdated(
-                            id,
+                            citizenUuid,
                             "DECEASED",
                             Map.of("deceasedAt", LocalDate.now().toString(), "source", "REGISTRO_CIVIL"),
                             UpdatedBy.areaUser("USR-M1-09")
@@ -180,7 +184,7 @@ public class CiudadanoService {
     public IdentidadCiudadanoResponse identidad(Long id) {
         Ciudadano c = buscar(id);
         return new IdentidadCiudadanoResponse(c.getId(), c.getDocumentoId(), c.getNombre(), c.getApellido(),
-                c.getEstado());
+                c.getEstado(), c.getUuid());
     }
 
     @Transactional(readOnly = true)
@@ -210,7 +214,7 @@ public class CiudadanoService {
     private CiudadanoResponse obtenerSinChequeo(Ciudadano ciudadano) {
         List<ContactoResponse> contactos = contactoRepository.findByCiudadanoId(ciudadano.getId()).stream()
                 .map(ContactoResponse::de).toList();
-        return new CiudadanoResponse(ciudadano.getId(), ciudadano.getDocumentoId(), ciudadano.getNombre(),
+        return new CiudadanoResponse(ciudadano.getId(), ciudadano.getUuid(), ciudadano.getDocumentoId(), ciudadano.getNombre(),
                 ciudadano.getApellido(), ciudadano.getFechaNacimiento(), String.valueOf(ciudadano.getCuit()),
                 ciudadano.getEstado(), domicilioService.principalDe(ciudadano.getId()).orElse(null), contactos);
     }

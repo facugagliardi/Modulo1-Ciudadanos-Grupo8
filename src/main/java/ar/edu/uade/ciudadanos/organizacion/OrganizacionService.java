@@ -4,10 +4,21 @@ import ar.edu.uade.ciudadanos.common.ApiException;
 import ar.edu.uade.ciudadanos.common.ListasBlancas;
 import ar.edu.uade.ciudadanos.common.TransicionesEstado;
 import ar.edu.uade.ciudadanos.domicilio.DomicilioService;
+import ar.edu.uade.ciudadanos.domicilio.dto.DomicilioCerradoResponse;
+import ar.edu.uade.ciudadanos.domicilio.dto.DomicilioCreadoResponse;
+import ar.edu.uade.ciudadanos.domicilio.dto.DomicilioPrincipalResponse;
+import ar.edu.uade.ciudadanos.domicilio.dto.DomicilioResponse;
+import ar.edu.uade.ciudadanos.domicilio.entity.Propiedad;
+import ar.edu.uade.ciudadanos.domicilio.repository.PropiedadRepository;
 import ar.edu.uade.ciudadanos.organizacion.dto.ActualizarDuenoRequest;
 import ar.edu.uade.ciudadanos.organizacion.dto.ActualizarOrganizacionRequest;
 import ar.edu.uade.ciudadanos.organizacion.dto.AgregarDuenoRequest;
+import ar.edu.uade.ciudadanos.organizacion.dto.CrearDomicilioOrganizacionRequest;
 import ar.edu.uade.ciudadanos.organizacion.dto.CrearOrganizacionRequest;
+import ar.edu.uade.ciudadanos.organizacion.entity.OrganizacionPropiedad;
+import ar.edu.uade.ciudadanos.organizacion.entity.OrganizacionPropiedadId;
+import ar.edu.uade.ciudadanos.organizacion.repository.OrganizacionPropiedadRepository;
+
 import ar.edu.uade.ciudadanos.organizacion.dto.DuenoAgregadoResponse;
 import ar.edu.uade.ciudadanos.organizacion.dto.DuenoResponse;
 import ar.edu.uade.ciudadanos.organizacion.dto.ExistenciaOrganizacionResponse;
@@ -33,10 +44,15 @@ import ar.edu.uade.ciudadanos.security.Permiso;
 import ar.edu.uade.ciudadanos.security.TipoSujeto;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.OffsetDateTime;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
+import java.util.Objects;
 import java.util.stream.Collectors;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -53,6 +69,8 @@ public class OrganizacionService {
     private final DomicilioService domicilioService;
     private final AutorizacionService autorizacion;
     private final ar.edu.uade.ciudadanos.evento.EventPublisherService eventPublisherService;
+    private final OrganizacionPropiedadRepository organizacionPropiedadRepository;
+    private final PropiedadRepository propiedadRepository;
 
     public OrganizacionService(OrganizacionRepository organizacionRepository,
                                CiudadanoOrganizacionRepository duenoRepository,
@@ -61,7 +79,7 @@ public class OrganizacionService {
                                DomicilioService domicilioService,
                                AutorizacionService autorizacion) {
         this(organizacionRepository, duenoRepository, representacionRepository,
-             directorio, domicilioService, autorizacion, null);
+             directorio, domicilioService, autorizacion, null, null, null);
     }
 
     public OrganizacionService(OrganizacionRepository organizacionRepository,
@@ -71,6 +89,20 @@ public class OrganizacionService {
                                DomicilioService domicilioService,
                                AutorizacionService autorizacion,
                                ar.edu.uade.ciudadanos.evento.EventPublisherService eventPublisherService) {
+        this(organizacionRepository, duenoRepository, representacionRepository,
+             directorio, domicilioService, autorizacion, eventPublisherService, null, null);
+    }
+
+    @Autowired
+    public OrganizacionService(OrganizacionRepository organizacionRepository,
+                               CiudadanoOrganizacionRepository duenoRepository,
+                               RepresentacionRepository representacionRepository,
+                               CiudadanoDirectorioService directorio,
+                               DomicilioService domicilioService,
+                               AutorizacionService autorizacion,
+                               ar.edu.uade.ciudadanos.evento.EventPublisherService eventPublisherService,
+                               OrganizacionPropiedadRepository organizacionPropiedadRepository,
+                               PropiedadRepository propiedadRepository) {
         this.organizacionRepository = organizacionRepository;
         this.duenoRepository = duenoRepository;
         this.representacionRepository = representacionRepository;
@@ -78,7 +110,10 @@ public class OrganizacionService {
         this.domicilioService = domicilioService;
         this.autorizacion = autorizacion;
         this.eventPublisherService = eventPublisherService;
+        this.organizacionPropiedadRepository = organizacionPropiedadRepository;
+        this.propiedadRepository = propiedadRepository;
     }
+
 
     @Transactional
     public OrganizacionResponse crear(Long creadorId, CrearOrganizacionRequest request) {
@@ -477,7 +512,199 @@ public class OrganizacionService {
                 domicilioPrincipalDe(o), duenos(o.getOrganizacionId()), representantes);
     }
 
+    @Transactional(readOnly = true)
+    public List<DomicilioResponse> listarDomicilios(Long organizacionId) {
+        autorizacion.exigirLecturaSobreOrganizacion(organizacionId);
+        buscar(organizacionId);
+        if (organizacionPropiedadRepository == null || propiedadRepository == null) {
+            return List.of();
+        }
+        return organizacionPropiedadRepository.findByIdIdOrganizacion(organizacionId).stream()
+                .map(v -> {
+                    Propiedad p = propiedadRepository.findById(v.getId().getIdPropiedad()).orElse(null);
+                    if (p == null) return null;
+                    return new DomicilioResponse(
+                            p.getPropiedadId(),
+                            p.getTipo(),
+                            p.getCalle(),
+                            p.getNumero(),
+                            p.getPiso(),
+                            p.getIdBarrio(),
+                            p.getLongitud(),
+                            p.getLatitud(),
+                            v.isEsPrincipal(),
+                            v.getVigenteDesde(),
+                            v.getVigenteHasta()
+                    );
+                })
+                .filter(Objects::nonNull)
+                .sorted(Comparator.comparing(DomicilioResponse::esPrincipal).reversed()
+                        .thenComparing(d -> d.vigenteHasta() == null, Comparator.reverseOrder())
+                        .thenComparing(DomicilioResponse::vigenteDesde, Comparator.reverseOrder()))
+                .toList();
+    }
+
+    @Transactional
+    public DomicilioCreadoResponse agregarDomicilio(Long organizacionId, CrearDomicilioOrganizacionRequest request) {
+        autorizacion.exigirEscrituraSobreOrganizacion(organizacionId);
+        buscar(organizacionId);
+
+        Propiedad propiedad;
+        if (request.propiedadId() != null) {
+            propiedad = propiedadRepository.findById(request.propiedadId())
+                    .orElseThrow(() -> ApiException.noEncontrado("No existe la propiedad con ID " + request.propiedadId()));
+
+            Optional<OrganizacionPropiedad> vinculoExistente = organizacionPropiedadRepository
+                    .findByIdIdOrganizacionAndIdIdPropiedad(organizacionId, propiedad.getPropiedadId());
+            if (vinculoExistente.isPresent() && vinculoExistente.get().getVigenteHasta() == null) {
+                throw ApiException.conflicto("La propiedad ya se encuentra asignada a esta organización");
+            }
+        } else {
+            if (request.tipo() == null || request.tipo().isBlank()) {
+                throw ApiException.invalido("tipo es obligatorio para una nueva propiedad");
+            }
+            if (request.calle() == null || request.calle().isBlank()) {
+                throw ApiException.invalido("calle es obligatoria para una nueva propiedad");
+            }
+            if (request.numero() == null || request.numero().isBlank()) {
+                throw ApiException.invalido("numero es obligatorio para una nueva propiedad");
+            }
+
+            propiedad = new Propiedad();
+            propiedad.setTipo(ListasBlancas.exigir(request.tipo(), ListasBlancas.TIPOS_PROPIEDAD, "tipo"));
+            propiedad.setCalle(request.calle().trim());
+            propiedad.setNumero(request.numero().trim());
+            propiedad.setPiso(request.piso() != null && !request.piso().isBlank() ? request.piso().trim() : null);
+            propiedad.setIdBarrio(request.idBarrio());
+            propiedad.setLongitud(request.longitud());
+            propiedad.setLatitud(request.latitud());
+            propiedadRepository.save(propiedad);
+        }
+
+        Optional<OrganizacionPropiedad> optPrevio = organizacionPropiedadRepository
+                .findByIdIdOrganizacionAndEsPrincipalTrueAndVigenteHastaIsNull(organizacionId);
+        boolean sinPrincipal = optPrevio.isEmpty();
+        boolean principal = Boolean.TRUE.equals(request.esPrincipal()) || sinPrincipal;
+
+        if (principal && optPrevio.isPresent()) {
+            OrganizacionPropiedad previo = optPrevio.get();
+            previo.setEsPrincipal(false);
+            organizacionPropiedadRepository.save(previo);
+            organizacionPropiedadRepository.flush();
+        }
+
+        OrganizacionPropiedad vinculo = organizacionPropiedadRepository
+                .findByIdIdOrganizacionAndIdIdPropiedad(organizacionId, propiedad.getPropiedadId())
+                .orElseGet(() -> {
+                    OrganizacionPropiedad nuevo = new OrganizacionPropiedad();
+                    nuevo.setId(new OrganizacionPropiedadId(organizacionId, propiedad.getPropiedadId()));
+                    return nuevo;
+                });
+
+        vinculo.setVigenteDesde(LocalDate.now());
+        vinculo.setVigenteHasta(null);
+        vinculo.setEsPrincipal(principal);
+        organizacionPropiedadRepository.save(vinculo);
+
+        return new DomicilioCreadoResponse(
+                propiedad.getPropiedadId(),
+                organizacionId,
+                propiedad.getTipo(),
+                propiedad.getCalle(),
+                propiedad.getNumero(),
+                propiedad.getIdBarrio(),
+                vinculo.getVigenteDesde(),
+                vinculo.isEsPrincipal()
+        );
+
+    }
+
+    @Transactional
+    public DomicilioPrincipalResponse marcarDomicilioPrincipal(Long organizacionId, Long propiedadId) {
+        autorizacion.exigirEscrituraSobreOrganizacion(organizacionId);
+        buscar(organizacionId);
+
+        OrganizacionPropiedad vinculo = organizacionPropiedadRepository
+                .findByIdIdOrganizacionAndIdIdPropiedad(organizacionId, propiedadId)
+                .orElseThrow(() -> ApiException.noEncontrado("La propiedad no pertenece a la organización"));
+
+        if (vinculo.getVigenteHasta() != null) {
+            throw ApiException.conflicto("No se puede marcar como principal una propiedad dada de baja");
+        }
+
+        if (!vinculo.isEsPrincipal()) {
+            organizacionPropiedadRepository
+                    .findByIdIdOrganizacionAndEsPrincipalTrueAndVigenteHastaIsNull(organizacionId)
+                    .ifPresent(previo -> {
+                        previo.setEsPrincipal(false);
+                        organizacionPropiedadRepository.save(previo);
+                    });
+            organizacionPropiedadRepository.flush();
+            vinculo.setEsPrincipal(true);
+            organizacionPropiedadRepository.save(vinculo);
+        }
+
+        return new DomicilioPrincipalResponse(propiedadId, organizacionId, true, OffsetDateTime.now());
+    }
+
+    @Transactional
+    public DomicilioCerradoResponse darDeBajaDomicilio(Long organizacionId, Long propiedadId) {
+        autorizacion.exigirEscrituraSobreOrganizacion(organizacionId);
+        buscar(organizacionId);
+
+        OrganizacionPropiedad vinculo = organizacionPropiedadRepository
+                .findByIdIdOrganizacionAndIdIdPropiedad(organizacionId, propiedadId)
+                .orElseThrow(() -> ApiException.noEncontrado("La propiedad no pertenece a la organización"));
+
+        if (vinculo.getVigenteHasta() != null) {
+            return new DomicilioCerradoResponse(propiedadId, vinculo.getVigenteHasta(), null);
+        }
+
+        LocalDate hoy = LocalDate.now();
+        vinculo.setVigenteHasta(hoy);
+        Long nuevoPrincipalId = null;
+
+        if (vinculo.isEsPrincipal()) {
+            vinculo.setEsPrincipal(false);
+            List<OrganizacionPropiedad> otras = organizacionPropiedadRepository.findByIdIdOrganizacion(organizacionId).stream()
+                    .filter(v -> !v.getId().getIdPropiedad().equals(propiedadId) && v.getVigenteHasta() == null)
+                    .toList();
+            if (!otras.isEmpty()) {
+                OrganizacionPropiedad nueva = otras.get(0);
+                nueva.setEsPrincipal(true);
+                organizacionPropiedadRepository.save(nueva);
+                nuevoPrincipalId = nueva.getId().getIdPropiedad();
+            }
+        }
+
+        organizacionPropiedadRepository.save(vinculo);
+        return new DomicilioCerradoResponse(propiedadId, hoy, nuevoPrincipalId);
+    }
+
     private ar.edu.uade.ciudadanos.domicilio.dto.DomicilioResponse domicilioPrincipalDe(Organizacion o) {
+        if (organizacionPropiedadRepository != null && propiedadRepository != null) {
+            Optional<OrganizacionPropiedad> principalOrg = organizacionPropiedadRepository
+                    .findByIdIdOrganizacionAndEsPrincipalTrueAndVigenteHastaIsNull(o.getOrganizacionId());
+            if (principalOrg.isPresent()) {
+                Propiedad p = propiedadRepository.findById(principalOrg.get().getId().getIdPropiedad()).orElse(null);
+                if (p != null) {
+                    return new DomicilioResponse(
+                            p.getPropiedadId(),
+                            p.getTipo(),
+                            p.getCalle(),
+                            p.getNumero(),
+                            p.getPiso(),
+                            p.getIdBarrio(),
+                            p.getLongitud(),
+                            p.getLatitud(),
+                            true,
+                            principalOrg.get().getVigenteDesde(),
+                            principalOrg.get().getVigenteHasta()
+                    );
+                }
+            }
+        }
+
         return duenoRepository.findByIdIdOrganizacion(o.getOrganizacionId()).stream()
                 .map(v -> v.getId().getIdCiudadano())
                 .filter(personaId -> String.valueOf(o.getCuit()).equals(directorio.resolver(personaId).cuit()))
@@ -485,6 +712,7 @@ public class OrganizacionService {
                 .flatMap(domicilioService::principalDe)
                 .orElse(null);
     }
+
 
     private List<DuenoResponse> duenos(Long organizacionId) {
         return duenoRepository.findByIdIdOrganizacion(organizacionId).stream()

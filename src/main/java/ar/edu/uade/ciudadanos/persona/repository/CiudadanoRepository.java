@@ -4,6 +4,7 @@ import ar.edu.uade.ciudadanos.persona.entity.Ciudadano;
 import ar.edu.uade.ciudadanos.persona.entity.EstadoCiudadano;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -15,9 +16,13 @@ public interface CiudadanoRepository extends JpaRepository<Ciudadano, Long> {
 
     Optional<Ciudadano> findByCuit(Long cuit);
 
+    Optional<Ciudadano> findByUuid(UUID uuid);
+
     boolean existsByDocumentoId(String documentoId);
 
     boolean existsByCuit(Long cuit);
+
+    boolean existsByUuid(UUID uuid);
 
     List<Ciudadano> findByEstado(EstadoCiudadano estado);
 

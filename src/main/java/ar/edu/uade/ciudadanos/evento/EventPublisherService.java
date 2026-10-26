@@ -78,12 +78,14 @@ public class EventPublisherService {
         return envelope;
     }
 
+    public static final String EJEMPLO_CITIZEN_UUID = "b63f5a2e-4b71-46e7-8b01-381c85d88f62";
+
     // ------------------------------------------------ Metodos de negocio
 
     /**
      * 1. citizenUpdated (M1 -> M2 y M5)
      */
-    public EventEnvelope<CitizenUpdatedData> publicarCitizenUpdated(Long citizenId,
+    public EventEnvelope<CitizenUpdatedData> publicarCitizenUpdated(String citizenId,
                                                                    String updateType,
                                                                    Map<String, Object> details,
                                                                    UpdatedBy updatedBy) {
@@ -98,6 +100,20 @@ public class EventPublisherService {
                 data
         );
         return publicar(envelope, "modulo1.citizens." + updateType.toLowerCase());
+    }
+
+    public EventEnvelope<CitizenUpdatedData> publicarCitizenUpdated(UUID citizenUuid,
+                                                                   String updateType,
+                                                                   Map<String, Object> details,
+                                                                   UpdatedBy updatedBy) {
+        return publicarCitizenUpdated(citizenUuid != null ? citizenUuid.toString() : null, updateType, details, updatedBy);
+    }
+
+    public EventEnvelope<CitizenUpdatedData> publicarCitizenUpdated(Long citizenId,
+                                                                   String updateType,
+                                                                   Map<String, Object> details,
+                                                                   UpdatedBy updatedBy) {
+        return publicarCitizenUpdated(citizenId != null ? String.valueOf(citizenId) : null, updateType, details, updatedBy);
     }
 
     /**
@@ -119,7 +135,7 @@ public class EventPublisherService {
     /**
      * 3. citizenInfoDelivered (M1 -> M6 Ambiente)
      */
-    public EventEnvelope<CitizenInfoDeliveredData> publicarCitizenInfoDelivered(Long citizenId,
+    public EventEnvelope<CitizenInfoDeliveredData> publicarCitizenInfoDelivered(String citizenId,
                                                                                String correlationId,
                                                                                CitizenInfoDeliveredData data) {
         String eventId = generarEventId();
@@ -133,6 +149,18 @@ public class EventPublisherService {
                 data
         );
         return publicar(envelope, "modulo1.citizens.infodelivered");
+    }
+
+    public EventEnvelope<CitizenInfoDeliveredData> publicarCitizenInfoDelivered(UUID citizenUuid,
+                                                                               String correlationId,
+                                                                               CitizenInfoDeliveredData data) {
+        return publicarCitizenInfoDelivered(citizenUuid != null ? citizenUuid.toString() : null, correlationId, data);
+    }
+
+    public EventEnvelope<CitizenInfoDeliveredData> publicarCitizenInfoDelivered(Long citizenId,
+                                                                               String correlationId,
+                                                                               CitizenInfoDeliveredData data) {
+        return publicarCitizenInfoDelivered(citizenId != null ? String.valueOf(citizenId) : null, correlationId, data);
     }
 
     /**
@@ -258,21 +286,21 @@ public class EventPublisherService {
                         "nationality", "argentina",
                         "address", address
                 );
-                yield publicarCitizenUpdated(8452L, "REGISTERED", details, UpdatedBy.selfService());
+                yield publicarCitizenUpdated(EJEMPLO_CITIZEN_UUID, "REGISTERED", details, UpdatedBy.selfService());
             }
             case "citizen-blocked" -> {
                 Map<String, Object> details = Map.of(
                         "reason", "DOCUMENTACION_APOCRIFA",
                         "reviewRequired", true
                 );
-                yield publicarCitizenUpdated(8452L, "BLOCKED", details, UpdatedBy.areaUser("USR-M1-14"));
+                yield publicarCitizenUpdated(EJEMPLO_CITIZEN_UUID, "BLOCKED", details, UpdatedBy.areaUser("USR-M1-14"));
             }
             case "citizen-deceased" -> {
                 Map<String, Object> details = Map.of(
                         "deceasedAt", "2026-08-19",
                         "source", "REGISTRO_CIVIL"
                 );
-                yield publicarCitizenUpdated(8452L, "DECEASED", details, UpdatedBy.areaUser("USR-M1-09"));
+                yield publicarCitizenUpdated(EJEMPLO_CITIZEN_UUID, "DECEASED", details, UpdatedBy.areaUser("USR-M1-09"));
             }
             case "citizen-address-updated" -> {
                 Map<String, Object> prev = Map.of(
@@ -292,7 +320,7 @@ public class EventPublisherService {
                         "previousAddress", prev,
                         "newAddress", next
                 );
-                yield publicarCitizenUpdated(8452L, "ADDRESS_UPDATED", details, UpdatedBy.areaUser("USR-M1-14"));
+                yield publicarCitizenUpdated(EJEMPLO_CITIZEN_UUID, "ADDRESS_UPDATED", details, UpdatedBy.areaUser("USR-M1-14"));
             }
             case "casefile-resolved" -> {
                 CaseFileResolvedData data = new CaseFileResolvedData(
@@ -302,7 +330,7 @@ public class EventPublisherService {
                         "approved",
                         "Obras Públicas",
                         "Aprobación y autorización de ejecución de obra pública",
-                        84L,
+                        EJEMPLO_CITIZEN_UUID,
                         Map.of("type", "PUBLIC_WORKS_PROJECT", "id", "OBRA-8832"),
                         "Dictamen administrativo favorable. Se autoriza la ejecución de la obra conforme al pliego técnico.",
                         UpdatedBy.areaUser(32424L),
@@ -312,14 +340,14 @@ public class EventPublisherService {
             }
             case "citizen-info-delivered" -> {
                 CitizenInfoDeliveredData data = new CitizenInfoDeliveredData(
-                        8452L,
+                        EJEMPLO_CITIZEN_UUID,
                         "Marcos Ferreyra",
                         "34567890",
                         "+54 11 4455-6677",
                         "marcos.ferreyra@mail.com",
                         Map.of("street", "San Martín", "number", "870", "neighborhoodId", "BARR-014")
                 );
-                yield publicarCitizenInfoDelivered(8452L, "M6-REQ-000045", data);
+                yield publicarCitizenInfoDelivered(EJEMPLO_CITIZEN_UUID, "M6-REQ-000045", data);
             }
             case "organization-info-delivered" -> {
                 OrganizationInfoDeliveredData data = new OrganizationInfoDeliveredData(
@@ -388,7 +416,7 @@ public class EventPublisherService {
                         "documentationRequests", List.of(doc1, doc2)
                 );
                 SocialDocumentationDeliveredData data = new SocialDocumentationDeliveredData(
-                        8452L,
+                        EJEMPLO_CITIZEN_UUID,
                         "sol-00456",
                         "prog-00789",
                         List.of(file)

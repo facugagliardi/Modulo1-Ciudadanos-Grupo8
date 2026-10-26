@@ -22,15 +22,9 @@ import java.time.OffsetDateTime;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-/**
- * Domicilios y su historial (RF-09 a RF-12).
- *
- * <p>Regla central: un domicilio nunca se borra. La baja cierra
- * {@code vigenteHasta} y la fila queda como historia.
- */
 import ar.edu.uade.ciudadanos.evento.EventPublisherService;
 import ar.edu.uade.ciudadanos.evento.dto.UpdatedBy;
 import java.util.Map;
@@ -57,6 +51,7 @@ public class DomicilioService {
         this(propiedadRepository, vinculoRepository, ciudadanoRepository, autorizacion, null);
     }
 
+    @Autowired
     public DomicilioService(PropiedadRepository propiedadRepository,
                             CiudadanoPropiedadRepository vinculoRepository,
                             CiudadanoRepository ciudadanoRepository,
@@ -119,8 +114,11 @@ public class DomicilioService {
                     }
                 });
                 details.put("newAddress", newAddr);
+                String citizenUuid = ciudadanoRepository.findById(ciudadanoId)
+                        .map(c -> c.getUuid() != null ? c.getUuid().toString() : String.valueOf(ciudadanoId))
+                        .orElse(String.valueOf(ciudadanoId));
                 eventPublisherService.publicarCitizenUpdated(
-                        ciudadanoId,
+                        citizenUuid,
                         "ADDRESS_UPDATED",
                         details,
                         UpdatedBy.areaUser("USR-M1-14")
@@ -200,8 +198,11 @@ public class DomicilioService {
                     }
                 });
                 details.put("newAddress", newAddr);
+                String citizenUuid = ciudadanoRepository.findById(ciudadanoId)
+                        .map(c -> c.getUuid() != null ? c.getUuid().toString() : String.valueOf(ciudadanoId))
+                        .orElse(String.valueOf(ciudadanoId));
                 eventPublisherService.publicarCitizenUpdated(
-                        ciudadanoId,
+                        citizenUuid,
                         "ADDRESS_UPDATED",
                         details,
                         UpdatedBy.areaUser("USR-M1-14")
@@ -294,6 +295,14 @@ public class DomicilioService {
         return propiedadRepository.findById(propiedadId)
                 .orElseThrow(() -> ApiException.noEncontrado("No existe el domicilio " + propiedadId));
     }
+
+    @Transactional(readOnly = true)
+    public DomicilioResponse obtener(Long propiedadId) {
+        Propiedad p = propiedad(propiedadId);
+        return new DomicilioResponse(p.getPropiedadId(), p.getTipo(), p.getCalle(), p.getNumero(),
+                p.getPiso(), p.getIdBarrio(), p.getLongitud(), p.getLatitud(), false, null, null);
+    }
+
 
     private void exigirCiudadano(Long ciudadanoId) {
         if (!ciudadanoRepository.existsById(ciudadanoId)) {

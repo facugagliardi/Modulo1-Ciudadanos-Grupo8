@@ -13,6 +13,7 @@ import ar.edu.uade.ciudadanos.persona.dto.IdentidadCiudadanoResponse;
 import ar.edu.uade.ciudadanos.security.SoloInterno;
 import java.util.Map;
 import java.util.UUID;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestHeader;
@@ -38,6 +39,7 @@ public class ConsultaInterModuloController {
         this(ciudadanoService, organizacionService, domicilioService, null);
     }
 
+    @Autowired
     public ConsultaInterModuloController(CiudadanoService ciudadanoService,
                                          OrganizacionService organizacionService,
                                          DomicilioService domicilioService,
@@ -70,15 +72,16 @@ public class ConsultaInterModuloController {
                 } catch (Exception ignored) {
                 }
 
+                String citizenUuid = identidad.uuid() != null ? identidad.uuid().toString() : String.valueOf(id);
                 CitizenInfoDeliveredData data = new CitizenInfoDeliveredData(
-                        id,
+                        citizenUuid,
                         identidad.nombre() + " " + identidad.apellido(),
                         identidad.dni(),
                         "",
                         "",
                         addressMap
                 );
-                eventPublisherService.publicarCitizenInfoDelivered(id, corrId, data);
+                eventPublisherService.publicarCitizenInfoDelivered(citizenUuid, corrId, data);
             } catch (Exception ignored) {
             }
         }
