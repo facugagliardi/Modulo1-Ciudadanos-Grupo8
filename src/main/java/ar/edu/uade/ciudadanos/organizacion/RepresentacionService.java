@@ -19,6 +19,7 @@ import ar.edu.uade.ciudadanos.persona.dto.DatosPersona;
 import ar.edu.uade.ciudadanos.security.AutorizacionService;
 import java.time.LocalDate;
 import java.util.List;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -43,6 +44,7 @@ public class RepresentacionService {
         this(representacionRepository, organizacionRepository, directorio, autorizacion, null);
     }
 
+    @Autowired
     public RepresentacionService(RepresentacionRepository representacionRepository,
                                  OrganizacionRepository organizacionRepository,
                                  CiudadanoDirectorioService directorio,

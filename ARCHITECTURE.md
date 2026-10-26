@@ -8,6 +8,7 @@ erDiagram
 
     Ciudadano {
         int id PK "FK a persona.id"
+        uuid uuid "UNIQUE NOT NULL (interoperabilidad eventos)"
         int domicilioId FK
         string documentoId FK "UNIQUE NOT NULL"
         string nombre
@@ -263,23 +264,29 @@ erDiagram
 
 ## 2. Eventos publicados (M1)
 
+### Acuerdo de Arquitectura Inter-Módulos (PO Agreement)
+1. **IDs internos libres**: Cada módulo mantiene su esquema de IDs internos en base de datos (`ciudadano_id` numérico en M1, sin modificaciones a FKs internas).
+2. **IDs en eventos como UUID**: Todo ID que viaja dentro de un evento (`ticketId`, `citizenId`, `organizationId`, `establishmentId`, `workOrderId`, etc.) es **UUID** (string estándar RFC 4122). Esto previene la enumeración de identidades ciudadanas y garantiza interoperabilidad directa con los módulos 2, 3, 4 y 6.
+3. **Referencias humanas**: CUIT, DNI, números de trámite/acta o expedientes (`EXP-2026-001042`) viajan en campos dedicados, nunca como clave primaria de correlación.
+
 Formato común obligatorio: `eventId, occurredAt, eventType, producer{moduleId,service}, subject, data{...}` (+ `correlationId` si responde a un evento consumido).
 
 | eventType | variante (`updateType`) | subject | data (campos clave) |
 |---|---|---|---|
-| `citizenUpdated` | REGISTERED | citizens/{id} | citizenId, updateType, details{dni,cuil,name,lastname,birthdate,state,address{propertyId,street,number,primary,effectiveFrom}}, updatedBy |
-| `citizenUpdated` | BLOCKED | citizens/{id} | citizenId, updateType, details{reason,reviewRequired}, updatedBy |
-| `citizenUpdated` | DECEASED | citizens/{id} | citizenId, updateType, details{deceasedAt,source}, updatedBy |
-| `citizenUpdated` | ADDRESS_UPDATED | citizens/{id} | citizenId, updateType, details{previousAddress{propertyId,street,number,effectiveUntil}, newAddress{propertyId,street,number,primary,effectiveFrom}}, updatedBy |
+| `citizenUpdated` | REGISTERED | citizens/{uuid} | citizenId (UUID), updateType, details{dni,cuil,name,lastname,birthdate,state,address{propertyId,street,number,primary,effectiveFrom}}, updatedBy |
+| `citizenUpdated` | BLOCKED | citizens/{uuid} | citizenId (UUID), updateType, details{reason,reviewRequired}, updatedBy |
+| `citizenUpdated` | DECEASED | citizens/{uuid} | citizenId (UUID), updateType, details{deceasedAt,source}, updatedBy |
+| `citizenUpdated` | ADDRESS_UPDATED | citizens/{uuid} | citizenId (UUID), updateType, details{previousAddress{propertyId,street,number,effectiveUntil}, newAddress{propertyId,street,number,primary,effectiveFrom}}, updatedBy |
 | `updateTicketStatus` (M2) | ADDITIONAL_INFO_REQUIRED / IN_PROGRESS / UPDATED / COMPLETED | tickets/{id} | ticketId, updateType, publicMessage, internalMessage, details (varía; UPDATED trae `changes{campo:{previous,new}}`; COMPLETED trae `attachments[]`), updatedBy, statusChangedAt |
-| `citizenInfoDelivered` | — (respuesta a consulta M6) | citizens/{id} | citizenId, fullName, documentId, phone, email, address{street,number,neighborhoodId}. Requiere `correlationId` |
+| `citizenInfoDelivered` | — (respuesta a consulta M6) | citizens/{uuid} | citizenId (UUID), fullName, documentId (DNI), phone, email, address{street,number,neighborhoodId}. Requiere `correlationId` |
 | `organizationInfoDelivered` | — (respuesta a consulta M6) | organizations/{cuit} | cuit, legalName, tradeName, taxId, status. Requiere `correlationId` |
-| `socialDocumentationDelivered` | responde a `socialDocumentationRequested` (M8) | citizens/{citizenId} | citizenId, applicationId, programId, files[]{fileId, number, initiatingArea, status, documentationRequests[]{requestId, documentType, status, documentId}}. Requiere `correlationId` |
+| `socialDocumentationDelivered` | responde a `socialDocumentationRequested` (M8) | citizens/{citizenId} | citizenId (UUID), applicationId, programId, files[]{fileId, number, initiatingArea, status, documentationRequests[]{requestId, documentType, status, documentId}}. Requiere `correlationId` |
+| `casefileResolved` | — | casefiles/{id} | caseFileId, fileNumber, status, outcome, initiatingArea, subject, citizenId (UUID), relatedObject, resolutionSummary, updatedBy, resolvedAt |
 | `organizationRegistered` | — | organizations/{cuit} | cuit, taxId, legalName, tradeName, type, status, holder{personId, personType} |
 | `representationGranted` | — | representations/{id} | representationId, personId, cuit, scope, from, status |
 | `representationExpired` | — | representations/{id} | representationId, personId, cuit, until, status |
 
-**Evento consumido:** `socialDocumentationRequested` (M8) → payload: citizenId, applicationId, programId, requiredDocuments[]{type,description,required}, deadline, notes.
+**Evento consumido:** `socialDocumentationRequested` (M8) → payload: citizenId (UUID), applicationId, programId, requiredDocuments[]{type,description,required}, deadline, notes.
 
 ---
 
@@ -290,8 +297,8 @@ Formato de fila: `Método Path | Auth | RF | Request | Respuesta OK | Errores ex
 ### Auth
 | Endpoint | Auth | RF | Request | Respuesta | Errores extra |
 |---|---|---|---|---|---|
-| `POST /auth/login` | Pub | RF-36 | cuit/cuil, password | 200 body:{personaId,tipoPersona,rol} · headers: Authorization, X-Refresh-Token, X-Token-Expires-In | 401 credenciales, 403 bloqueada/inactiva, 404 no registrado |
-| `POST /auth/register` | Pub | RF-01,02,37 | datos completos persona física o jurídica (sin domicilio) | 201: física {personaId,tipo,dni,nombre,apellido,fechaNacimiento,cuil,estado,creadoEn} · jurídica {personaId,tipo,cuit,razonSocial,nombreFantasia,estado,creadoEn} | 400 password débil/formato, 409 CUIT/CUIL ya existe |
+| `POST /auth/login` | Pub | RF-36 | cuit/cuil, password | 200 body:{personaId,tipoPersona,rol,uuid} · headers: Authorization, X-Refresh-Token, X-Token-Expires-In | 401 credenciales, 403 bloqueada/inactiva, 404 no registrado |
+| `POST /auth/register` | Pub | RF-01,02,37 | datos completos persona física o jurídica (sin domicilio) | 201: física {personaId,tipo,dni,nombre,apellido,fechaNacimiento,cuil,estado,creadoEn,uuid} · jurídica {personaId,tipo,cuit,razonSocial,nombreFantasia,estado,creadoEn} | 400 password débil/formato, 409 CUIT/CUIL ya existe |
 | `POST /auth/empleados/login` | Pub | — | mail, password | 200 body:{empleadoId,rol} · headers Authorization/X-Refresh-Token/X-Token-Expires-In | 401 credenciales, 403 empleado inactivo |
 | `POST /auth/refresh` | Pub (body) | — | refreshToken | 200/204, headers Authorization/X-Token-Expires-In | 400 refreshToken faltante, 401 vencido/inválido |
 | `POST /auth/logout` | Auth | — | — | 204 | 401 |
@@ -299,7 +306,7 @@ Formato de fila: `Método Path | Auth | RF | Request | Respuesta OK | Errores ex
 ### Ciudadanos
 | Endpoint | Auth | RF | Request | Respuesta | Errores extra |
 |---|---|---|---|---|---|
-| `GET /ciudadanos/{id}` | Auth | — | — | 200 {id,dni,nombre,apellido,fechaNacimiento,cuil,estado,domicilioPrincipal,contactos[]} | 404 |
+| `GET /ciudadanos/{id}` | Auth | — | — | 200 {id,dni,nombre,apellido,fechaNacimiento,cuil,estado,uuid,domicilioPrincipal,contactos[]} | 404 |
 | `PUT /ciudadanos/{id}` | Auth | RF-04 | campos a modificar | 200 ciudadano actualizado | 403, 404, 409 CUIL duplicado |
 | `GET /ciudadanos` | Auth | RF-07 | — (listado completo, filtra el front) | 200 {items:Ciudadano[]} | 403 |
 | `PATCH /ciudadanos/{id}/estado` | Auth | RF-05 | nuevo estado | 200 {id,estadoAnterior,estadoNuevo,actualizadoEn} | 400 transición inválida, 403, 404 |
@@ -379,7 +386,7 @@ Formato de fila: `Método Path | Auth | RF | Request | Respuesta OK | Errores ex
 ### Consultas inter-módulo (todas `Svc`)
 | Endpoint | RF | Respuesta | Errores extra |
 |---|---|---|---|
-| `GET /ciudadanos/{id}/identidad` | — | 200 {id,dni,nombre,apellido,estado} | 404 |
+| `GET /ciudadanos/{id}/identidad` | — | 200 {id,dni,nombre,apellido,estado,uuid} | 404 |
 | `GET /organizaciones/{id}/identidad` | — | 200 {organizacionId,cuit,razonSocial,estado} | 404 |
 | `GET /ciudadanos/{id}/estado` | — | 200 {id,estado:ACTIVO\|INACTIVO\|FALLECIDO\|BLOQUEADO} | 404 |
 | `GET /representaciones/vigencia` | RF-22 | ver tabla Representaciones | 400 |

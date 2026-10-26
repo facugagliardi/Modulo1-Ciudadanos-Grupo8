@@ -117,7 +117,7 @@ class AutomaticEventTriggerTest {
         assertThat(response).isNotNull();
         // Verifica que se disparó automáticamente el evento citizenUpdated REGISTERED
         verify(eventPublisherService).publicarCitizenUpdated(
-                eq(8452L),
+                eq(response.uuid().toString()),
                 eq("REGISTERED"),
                 any(),
                 any()
@@ -151,7 +151,7 @@ class AutomaticEventTriggerTest {
 
         assertThat(response).isNotNull();
         verify(eventPublisherService).publicarCitizenUpdated(
-                eq(8452L),
+                eq(c.getUuid().toString()),
                 eq("UPDATED"),
                 any(),
                 any()
@@ -175,7 +175,7 @@ class AutomaticEventTriggerTest {
 
         assertThat(res.estadoNuevo()).isEqualTo("BLOQUEADO");
         verify(eventPublisherService).publicarCitizenUpdated(
-                eq(8452L),
+                eq(c.getUuid().toString()),
                 eq("BLOCKED"),
                 any(),
                 any()
@@ -189,6 +189,9 @@ class AutomaticEventTriggerTest {
                 propiedadRepository, vinculoRepository, ciudadanoRepository, autorizacion, eventPublisherService
         );
 
+        Ciudadano c = new Ciudadano();
+        c.setId(8452L);
+        when(ciudadanoRepository.findById(8452L)).thenReturn(Optional.of(c));
         when(ciudadanoRepository.existsById(8452L)).thenReturn(true);
         when(propiedadRepository.save(any(Propiedad.class))).thenAnswer(inv -> {
             Propiedad p = inv.getArgument(0);
@@ -204,7 +207,7 @@ class AutomaticEventTriggerTest {
 
         assertThat(res.esPrincipal()).isTrue();
         verify(eventPublisherService).publicarCitizenUpdated(
-                eq(8452L),
+                eq(c.getUuid().toString()),
                 eq("ADDRESS_UPDATED"),
                 any(),
                 any()

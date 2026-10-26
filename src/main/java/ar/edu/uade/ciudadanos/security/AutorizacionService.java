@@ -123,9 +123,9 @@ public class AutorizacionService {
                 "Solo un dueno o un representante vigente puede operar en nombre de la organizacion");
     }
 
-    /** Otorgar o revocar poderes: mas restringido que editar datos (RF-20, RF-21). */
+    /** Otorgar o revocar poderes: dueno, representante vigente o empleado habilitado. */
     public void exigirGestionDeRepresentaciones(Long organizacionId) {
-        if (vinculadoALaOrganizacion(organizacionId) || puede(Permiso.GESTIONAR_REPRESENTACIONES)) {
+        if (vinculadoALaOrganizacion(organizacionId) || puede(Permiso.GESTIONAR_REPRESENTACIONES) || puede(Permiso.EDITAR_TERCEROS)) {
             return;
         }
         throw ApiException.prohibido(

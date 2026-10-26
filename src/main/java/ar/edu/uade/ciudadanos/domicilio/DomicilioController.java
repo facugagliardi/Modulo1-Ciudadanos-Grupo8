@@ -40,7 +40,13 @@ public class DomicilioController {
         return ListaResponse.de(domicilioService.listar(ciudadanoId));
     }
 
+    @GetMapping("/domicilios/{id}")
+    public DomicilioResponse obtener(@PathVariable Long id) {
+        return domicilioService.obtener(id);
+    }
+
     @PutMapping("/domicilios/{id}")
+
     public DomicilioResponse actualizar(@PathVariable Long id,
                                         @Valid @RequestBody ActualizarDomicilioRequest request) {
         return domicilioService.actualizar(id, request);

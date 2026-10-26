@@ -120,6 +120,12 @@ export function Domicilios() {
                         <p className="flex flex-wrap items-center gap-2 font-medium">
                           {d.calle} {d.numero}
                           {(d.piso ?? d.altura) ? `, ${d.piso ?? d.altura}` : ""}
+                          <span
+                            className="inline-flex items-center rounded border border-borde-fuerte bg-fondo-elevado px-1.5 py-0.5 font-mono text-[11px] font-semibold text-tinta"
+                            title="ID de propiedad para vincular a una organización"
+                          >
+                            ID: #{d.propiedadId}
+                          </span>
                           {d.esPrincipal && vigente && (
                             <span className="inline-flex items-center gap-1 rounded bg-expediente-suave px-1.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-expediente">
                               <Star className="size-3" aria-hidden="true" />
@@ -128,11 +134,12 @@ export function Domicilios() {
                           )}
                         </p>
                         <p className="text-[length:var(--texto-dato)] text-apagado">
-                          {etiquetaDe(TIPOS_PROPIEDAD, d.tipo)} ·{" "}
+                          Código: <strong className="font-mono text-tinta font-semibold">PROP-{d.propiedadId}</strong> · {etiquetaDe(TIPOS_PROPIEDAD, d.tipo)} ·{" "}
                           {vigente
                             ? `desde el ${formatearFecha(d.vigenteDesde)}`
                             : `del ${formatearFecha(d.vigenteDesde)} al ${formatearFecha(d.vigenteHasta)}`}
                         </p>
+
                       </div>
                     </div>
 
