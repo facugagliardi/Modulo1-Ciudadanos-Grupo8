@@ -140,7 +140,8 @@ public class EventoController {
 
     /**
      * Simula la recepcion del evento socialDocumentationRequested (del Modulo 8).
-     * Lo almacena como RECIBIDO y dispara automaticamente la respuesta socialDocumentationDelivered.
+     * Lo almacena como RECIBIDO, crea Expediente y Solicitud de Documentacion en BD,
+     * y dispara automaticamente la respuesta socialDocumentationDelivered.
      */
     @PostMapping("/recibir/social-documentation-requested")
     public ResponseEntity<Map<String, Object>> recibirSolicitudDocumentacion(@RequestBody SocialDocumentationRequestedEvent evento) {
@@ -155,9 +156,55 @@ public class EventoController {
         }
 
         return ResponseEntity.status(HttpStatus.CREATED).body(Map.of(
-                "mensaje", "Solicitud de documentacion de M8 recibida y respuesta generada",
+                "mensaje", "Solicitud de documentacion de M8 recibida, expediente y requerimiento creados en BD, y respuesta emitida",
                 "eventIdRecibido", evento.eventId(),
                 "status", "PROCESADO_Y_RESPONDIDO"
+        ));
+    }
+
+    /**
+     * Simula la recepcion de un evento de expediente iniciado desde otro modulo (ej: Obras Publicas).
+     * Crea automaticamente el Expediente en PostgreSQL (visible en 'Mis expedientes')
+     * y, si incluye documentacion complementaria, crea la solicitud (visible en 'Documentacion que te piden').
+     */
+    @PostMapping("/recibir/expediente-iniciado")
+    public ResponseEntity<Map<String, Object>> recibirExpedienteIniciado(
+            @RequestBody(required = false) Map<String, Object> body) {
+        String eventId = (body != null && body.containsKey("eventId"))
+                ? String.valueOf(body.get("eventId"))
+                : UUID.randomUUID().toString();
+
+        String rawJson;
+        try {
+            if (body != null) {
+                rawJson = objectMapper.writeValueAsString(body);
+            } else {
+                rawJson = "{\"eventType\":\"casefileInitiated\",\"data\":{\"caratula\":\"Aprobacion y ejecucion de obra publica\",\"areaIniciadora\":\"Obras Publicas\",\"requiredDocument\":\"CERTIFICADO_DOMICILIO\"}}";
+            }
+        } catch (Exception e) {
+            rawJson = "{}";
+        }
+
+        boolean procesado = eventConsumerService.procesarEventoGenericoRecibido(
+                eventId,
+                "casefile",
+                "expediente",
+                "casefileInitiated",
+                rawJson
+        );
+
+        if (!procesado) {
+            return ResponseEntity.ok(Map.of(
+                    "mensaje", "El evento de expediente ya habia sido procesado previamente (idempotencia activa)",
+                    "eventId", eventId,
+                    "status", "DUPLICADO_IGNORADO"
+            ));
+        }
+
+        return ResponseEntity.status(HttpStatus.CREATED).body(Map.of(
+                "mensaje", "Evento de expediente procesado: registrado en PostgreSQL e impactado en 'Mis expedientes' y 'Documentacion que te piden'",
+                "eventId", eventId,
+                "status", "EXPEDIENTE_CREADO_EXITOSAMENTE"
         ));
     }
 }
