@@ -105,26 +105,6 @@ export function MisTramites() {
           ejemplo={[]}
           etiqueta="Cargando tu domicilio…"
         >
-          {domicilios.cargando ? (
-            <p className="text-apagado">Cargando…</p>
-          ) : vigentes.length === 0 ? (
-            <p className="text-apagado">Todavía no cargaste ninguno.</p>
-          ) : (
-            (() => {
-              const principal = vigentes.find((d) => d.esPrincipal) ?? vigentes[0];
-              return (
-                <>
-                  <p className="font-medium">
-                    {principal.calle} {principal.numero}
-                    {(principal.piso ?? principal.altura) ? `, ${principal.piso ?? principal.altura}` : ""}
-                  </p>
-                  <p className="text-[length:var(--texto-dato)] text-apagado">
-                    Vigente desde el {formatearFecha(principal.vigenteDesde)}
-                    {vigentes.length > 1 && ` · ${vigentes.length} domicilios vigentes`}
-                  </p>
-                </>
-              );
-            })()
           {(lista) => (
             <Bloque
               icono={MapPin}
