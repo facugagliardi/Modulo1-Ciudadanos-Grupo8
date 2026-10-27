@@ -20,6 +20,7 @@ import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -48,10 +49,11 @@ public class EventPublisherService {
         this(eventoService, rabbitTemplate, objectMapper, null);
     }
 
+    @Autowired
     public EventPublisherService(EventoService eventoService,
                                  RabbitTemplate rabbitTemplate,
                                  ObjectMapper objectMapper,
-                                 @org.springframework.beans.factory.annotation.Autowired(required = false)
+                                 @Autowired(required = false)
                                  ar.edu.uade.ciudadanos.persona.repository.CiudadanoRepository ciudadanoRepository) {
         this.eventoService = eventoService;
         this.rabbitTemplate = rabbitTemplate;
