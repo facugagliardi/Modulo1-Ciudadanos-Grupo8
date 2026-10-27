@@ -1,7 +1,9 @@
 import { useCallback, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { ArrowLeft, ArrowRightLeft, Building2, MapPin, Plus, Star, Trash2, UserPlus } from "lucide-react";
+import { ArrowLeft, ArrowRightLeft, Building2, MapPin, Plus, Search, Star, Trash2, UserPlus } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { obtenerDomicilio } from "@/lib/api/endpoints/ciudadanos";
+
 import {
   actualizarDueno,
   actualizarOrganizacion,
@@ -221,6 +223,14 @@ export function DetalleOrganizacion({ zona = "admin" }) {
               <PanelPestania value="datos">
                 <Card>
                   <CardCuerpo>
+                    <p className="font-medium">
+                      {o.domicilioPrincipal.calle} {o.domicilioPrincipal.numero}
+                      {(o.domicilioPrincipal.piso ?? o.domicilioPrincipal.altura) ? `, ${o.domicilioPrincipal.piso ?? o.domicilioPrincipal.altura}` : ""}
+                    </p>
+                    <p className="text-[length:var(--texto-dato)] text-apagado">
+                      {etiquetaDe(TIPOS_PROPIEDAD, o.domicilioPrincipal.tipo)} · vigente desde{" "}
+                      {formatearFecha(o.domicilioPrincipal.vigenteDesde)}
+                    </p>
                     <dl className="grid gap-u3 sm:grid-cols-2 lg:grid-cols-3">
                       <Dato etiqueta="Razón social" valor={o.razonSocial} />
                       <Dato etiqueta="Nombre de fantasía" valor={o.nombreFantasia} />
@@ -277,6 +287,29 @@ export function DetalleOrganizacion({ zona = "admin" }) {
                         <Card>
                           <CardCuerpo className="flex flex-wrap items-center justify-between gap-u2">
                             <div className="min-w-0">
+                              <p className="flex flex-wrap items-center gap-u2 font-medium">
+                                <MapPin className="size-4 text-apagado" aria-hidden="true" />
+                                {p.calle} {p.numero}
+                                {(p.piso ?? p.altura) ? `, ${p.piso ?? p.altura}` : ""}
+                                <span className="inline-flex items-center rounded border border-borde-fuerte bg-fondo-elevado px-1.5 py-0.5 font-mono text-[11px] font-semibold text-tinta">
+                                  ID: #{p.propiedadId}
+                                </span>
+                                {p.esPrincipal && (
+                                  <span className="inline-flex items-center gap-1 rounded bg-expediente-suave px-2 py-0.5 text-xs font-semibold text-expediente">
+                                    <Star className="size-3 fill-current" aria-hidden="true" />
+                                    Principal
+                                  </span>
+                                )}
+                                {!vigente && (
+                                  <span className="inline-flex items-center rounded bg-apagado/15 px-2 py-0.5 text-xs font-medium text-apagado">
+                                    Baja
+                                  </span>
+                                )}
+                              </p>
+                              <p className="text-[length:var(--texto-dato)] text-apagado">
+                                Código: <strong className="font-mono text-tinta font-semibold">PROP-{p.propiedadId}</strong> · {etiquetaDe(TIPOS_PROPIEDAD, p.tipo)} · vigente desde{" "}
+                                {formatearFecha(p.vigenteDesde)}
+                                {p.vigenteHasta ? ` hasta el ${formatearFecha(p.vigenteHasta)}` : ""}
                               <p className="font-medium">
                                 {zona === "admin" && puedeEditarTerceros ? (
                                   <Link
@@ -294,6 +327,7 @@ export function DetalleOrganizacion({ zona = "admin" }) {
                                 {d.porcentajeTitularidad != null &&
                                   ` · ${d.porcentajeTitularidad}% de titularidad`}
                               </p>
+
                             </div>
 
                             {puedeEditar &&
@@ -946,9 +980,6 @@ function AgregarDueno({ organizacion, alGuardar }) {
       setPorcentaje("");
       setOrigen(DESDE_LIBRE);
     } catch (e) {
-      // Si el alta falló con el cedente ya bajado, el porcentaje quedó suelto.
-      // Decirlo explícitamente evita que alguien cierre el diálogo creyendo que
-      // no pasó nada y se encuentre después con la titularidad descuadrada.
       e.transferenciaAMedias = cedenteYaBajado;
       setErrorGeneral(e);
       if (cedenteYaBajado) alGuardar?.();
@@ -1217,15 +1248,20 @@ function OtorgarRepresentacion({ organizacionId, alGuardar }) {
 
 function FormularioPropiedadOrganizacion({ organizacionId, sinPropiedadesAun, disparador, alGuardar }) {
   const [abierto, setAbierto] = useState(false);
+  const [modo, setModo] = useState("existente");
+  const [codigoOId, setCodigoOId] = useState("");
+  const [propiedadEncontrada, setPropiedadEncontrada] = useState(null);
+  const [buscandoPropiedad, setBuscandoPropiedad] = useState(false);
   const [valores, setValores] = useState({
     tipo: "LOCAL",
     calle: "",
     numero: "",
-    altura: "",
+    piso: "",
     longitud: "",
     latitud: "",
     esPrincipal: false,
   });
+  const [esPrincipalExistente, setEsPrincipalExistente] = useState(false);
   const [errores, setErrores] = useState({});
   const [errorGeneral, setErrorGeneral] = useState(null);
   const [enviando, setEnviando] = useState(false);
@@ -1235,10 +1271,57 @@ function FormularioPropiedadOrganizacion({ organizacionId, sinPropiedadesAun, di
     setErrores((e) => ({ ...e, [campo]: undefined }));
   }
 
+  function reiniciar() {
+    setModo("existente");
+    setCodigoOId("");
+    setPropiedadEncontrada(null);
+    setBuscandoPropiedad(false);
+    setValores({
+      tipo: "LOCAL",
+      calle: "",
+      numero: "",
+      piso: "",
+      longitud: "",
+      latitud: "",
+      esPrincipal: false,
+    });
+    setEsPrincipalExistente(false);
+    setErrores({});
+    setErrorGeneral(null);
+  }
+
+  async function buscarInmueble() {
+    const limpio = String(codigoOId).replace(/^prop[-_]?/i, "").trim();
+    if (!limpio || isNaN(Number(limpio))) {
+      setErrores({ codigoOId: "Ingresá un número de ID válido (ej. 3 o PROP-3)." });
+      return;
+    }
+    setBuscandoPropiedad(true);
+    setErrores((e) => ({ ...e, codigoOId: undefined }));
+    try {
+      const res = await obtenerDomicilio(Number(limpio));
+      setPropiedadEncontrada(res);
+    } catch {
+      setPropiedadEncontrada(null);
+      setErrores({ codigoOId: "No se encontró ningún inmueble con ese ID o código." });
+    } finally {
+      setBuscandoPropiedad(false);
+    }
+  }
+
   function validar() {
     const e = {};
-    if (!valores.calle.trim()) e.calle = "Ingresá la calle.";
-    if (!valores.numero.trim()) e.numero = "Ingresá la altura.";
+    if (modo === "existente") {
+      const limpio = String(codigoOId).replace(/^prop[-_]?/i, "").trim();
+      if (!limpio) {
+        e.codigoOId = "Ingresá el ID o código de la propiedad existente.";
+      } else if (isNaN(Number(limpio))) {
+        e.codigoOId = "Ingresá un número de ID válido (ej. 3 o PROP-3).";
+      }
+    } else {
+      if (!valores.calle.trim()) e.calle = "Ingresá la calle.";
+      if (!valores.numero.trim()) e.numero = "Ingresá la altura.";
+    }
     setErrores(e);
     return Object.keys(e).length === 0;
   }
@@ -1250,10 +1333,18 @@ function FormularioPropiedadOrganizacion({ organizacionId, sinPropiedadesAun, di
 
     setEnviando(true);
     try {
-      await crearPropiedadOrganizacion(organizacionId, {
-        ...valores,
-        esPrincipal: sinPropiedadesAun || valores.esPrincipal,
-      });
+      if (modo === "existente") {
+        const idLimpio = Number(String(codigoOId).replace(/^prop[-_]?/i, "").trim());
+        await crearPropiedadOrganizacion(organizacionId, {
+          propiedadId: idLimpio,
+          esPrincipal: sinPropiedadesAun || esPrincipalExistente,
+        });
+      } else {
+        await crearPropiedadOrganizacion(organizacionId, {
+          ...valores,
+          esPrincipal: sinPropiedadesAun || valores.esPrincipal,
+        });
+      }
       alGuardar?.();
       setAbierto(false);
     } catch (error) {
@@ -1269,19 +1360,7 @@ function FormularioPropiedadOrganizacion({ organizacionId, sinPropiedadesAun, di
       open={abierto}
       onOpenChange={(v) => {
         setAbierto(v);
-        if (v) {
-          setValores({
-            tipo: "LOCAL",
-            calle: "",
-            numero: "",
-            altura: "",
-            longitud: "",
-            latitud: "",
-            esPrincipal: false,
-          });
-          setErrores({});
-          setErrorGeneral(null);
-        }
+        if (v) reiniciar();
       }}
     >
       <DisparadorDialogo asChild>{disparador}</DisparadorDialogo>
@@ -1289,60 +1368,148 @@ function FormularioPropiedadOrganizacion({ organizacionId, sinPropiedadesAun, di
       <ContenidoDialogo
         className="max-w-lg"
         titulo="Agregar propiedad a la organización"
-        descripcion="Registrá una sede, sucursal, local o depósito de la empresa."
+        descripcion="Asigná un inmueble existente de un vecino/dueño o registrá uno nuevo para la empresa."
       >
+        <div className="mb-u2 flex gap-2 border-b border-borde pb-2">
+          <Button
+            type="button"
+            variante={modo === "existente" ? "primario" : "secundario"}
+            tamano="chico"
+            onClick={() => {
+              setModo("existente");
+              setErrorGeneral(null);
+              setErrores({});
+            }}
+          >
+            Inmueble existente (por ID)
+          </Button>
+          <Button
+            type="button"
+            variante={modo === "nuevo" ? "primario" : "secundario"}
+            tamano="chico"
+            onClick={() => {
+              setModo("nuevo");
+              setErrorGeneral(null);
+              setErrores({});
+            }}
+          >
+            Registrar nuevo inmueble
+          </Button>
+        </div>
+
         <form onSubmit={enviar} noValidate className="flex flex-col gap-u2">
-          <Campo etiqueta="Tipo de inmueble" obligatorio>
-            {(props) => (
-              <Selector
-                {...props}
-                opciones={TIPOS_PROPIEDAD}
-                value={valores.tipo}
-                onChange={(e) => cambiar("tipo", e.target.value)}
-              />
-            )}
-          </Campo>
+          {modo === "existente" ? (
+            <div className="flex flex-col gap-u2">
+              <div className="flex items-end gap-2">
+                <div className="flex-1">
+                  <Campo
+                    etiqueta="ID o Código del inmueble"
+                    obligatorio
+                    ayuda="Ej: 3 o PROP-3 (figura en el panel de domicilios del vecino)."
+                    value={codigoOId}
+                    onChange={(e) => {
+                      setCodigoOId(e.target.value);
+                      setPropiedadEncontrada(null);
+                      setErrores((err) => ({ ...err, codigoOId: undefined }));
+                    }}
+                    error={errores.codigoOId}
+                  />
+                </div>
+                <Button
+                  type="button"
+                  variante="secundario"
+                  onClick={buscarInmueble}
+                  disabled={buscandoPropiedad || !codigoOId.trim()}
+                  className="mb-1"
+                >
+                  <Search className="size-4 mr-1" aria-hidden="true" />
+                  {buscandoPropiedad ? "Buscando…" : "Verificar"}
+                </Button>
+              </div>
 
-          <div className="grid gap-u2 sm:grid-cols-[2fr_1fr_1fr]">
-            <Campo
-              etiqueta="Calle"
-              obligatorio
-              value={valores.calle}
-              onChange={(e) => cambiar("calle", e.target.value)}
-              error={errores.calle}
-            />
-            <Campo
-              etiqueta="Número"
-              obligatorio
-              inputMode="numeric"
-              value={valores.numero}
-              onChange={(e) => cambiar("numero", e.target.value)}
-              error={errores.numero}
-            />
-            <Campo
-              etiqueta="Piso y depto."
-              ayuda="Opcional"
-              value={valores.altura}
-              onChange={(e) => cambiar("altura", e.target.value)}
-              error={errores.altura}
-            />
-          </div>
+              {propiedadEncontrada && (
+                <div className="rounded border border-expediente/40 bg-expediente-suave p-3 text-sm">
+                  <p className="font-semibold text-expediente">✓ Inmueble encontrado:</p>
+                  <p className="text-tinta">
+                    {propiedadEncontrada.calle} {propiedadEncontrada.numero}
+                    {propiedadEncontrada.piso ? `, ${propiedadEncontrada.piso}` : ""} (
+                    {etiquetaDe(TIPOS_PROPIEDAD, propiedadEncontrada.tipo)})
+                  </p>
+                </div>
+              )}
 
-          {!sinPropiedadesAun && (
-            <label className="flex cursor-pointer items-start gap-2 rounded border border-borde-fuerte p-3">
-              <input
-                type="checkbox"
-                checked={valores.esPrincipal}
-                onChange={(e) => cambiar("esPrincipal", e.target.checked)}
-                className="mt-0.5 size-4 accent-[color:var(--expediente)]"
-              />
-              <span>
-                <span className="font-medium text-tinta">Que sea la sede o domicilio principal</span>
-                <span className="block text-sm text-apagado">
-                  Reemplaza al anterior domicilio principal como sede legal de la organización.
-                </span>
-              </span>
-            </label>
+              {!sinPropiedadesAun && (
+                <label className="flex cursor-pointer items-start gap-2 rounded border border-borde-fuerte p-3">
+                  <input
+                    type="checkbox"
+                    checked={esPrincipalExistente}
+                    onChange={(e) => setEsPrincipalExistente(e.target.checked)}
+                    className="mt-0.5 size-4 accent-[color:var(--expediente)]"
+                  />
+                  <span>
+                    <span className="font-medium text-tinta">Que sea la sede o domicilio principal</span>
+                    <span className="block text-sm text-apagado">
+                      Reemplaza al anterior domicilio principal como sede legal de la organización.
+                    </span>
+                  </span>
+                </label>
+              )}
+            </div>
+          ) : (
+            <>
+              <Campo etiqueta="Tipo de inmueble" obligatorio>
+                {(props) => (
+                  <Selector
+                    {...props}
+                    opciones={TIPOS_PROPIEDAD}
+                    value={valores.tipo}
+                    onChange={(e) => cambiar("tipo", e.target.value)}
+                  />
+                )}
+              </Campo>
+
+              <div className="grid gap-u2 sm:grid-cols-[2fr_1fr_1fr]">
+                <Campo
+                  etiqueta="Calle"
+                  obligatorio
+                  value={valores.calle}
+                  onChange={(e) => cambiar("calle", e.target.value)}
+                  error={errores.calle}
+                />
+                <Campo
+                  etiqueta="Número"
+                  obligatorio
+                  inputMode="numeric"
+                  value={valores.numero}
+                  onChange={(e) => cambiar("numero", e.target.value)}
+                  error={errores.numero}
+                />
+                <Campo
+                  etiqueta="Piso y depto."
+                  ayuda="Opcional"
+                  value={valores.piso}
+                  onChange={(e) => cambiar("piso", e.target.value)}
+                  error={errores.piso}
+                />
+              </div>
+
+              {!sinPropiedadesAun && (
+                <label className="flex cursor-pointer items-start gap-2 rounded border border-borde-fuerte p-3">
+                  <input
+                    type="checkbox"
+                    checked={valores.esPrincipal}
+                    onChange={(e) => cambiar("esPrincipal", e.target.checked)}
+                    className="mt-0.5 size-4 accent-[color:var(--expediente)]"
+                  />
+                  <span>
+                    <span className="font-medium text-tinta">Que sea la sede o domicilio principal</span>
+                    <span className="block text-sm text-apagado">
+                      Reemplaza al anterior domicilio principal como sede legal de la organización.
+                    </span>
+                  </span>
+                </label>
+              )}
+            </>
           )}
 
           {sinPropiedadesAun && (
@@ -1367,7 +1534,11 @@ function FormularioPropiedadOrganizacion({ organizacionId, sinPropiedadesAun, di
               </Button>
             </CerrarDialogo>
             <Button type="submit" disabled={enviando}>
-              {enviando ? "Guardando…" : "Agregar propiedad"}
+              {enviando
+                ? "Guardando…"
+                : modo === "existente"
+                ? "Asignar propiedad"
+                : "Agregar propiedad"}
             </Button>
           </div>
         </form>
@@ -1375,4 +1546,5 @@ function FormularioPropiedadOrganizacion({ organizacionId, sinPropiedadesAun, di
     </Dialogo>
   );
 }
+
 

@@ -9,7 +9,7 @@ import static org.mockito.Mockito.when;
 
 import ar.edu.uade.ciudadanos.common.ApiException;
 import ar.edu.uade.ciudadanos.organizacion.entity.Representacion;
-import ar.edu.uade.ciudadanos.organizacion.repository.PersonaOrganizacionRepository;
+import ar.edu.uade.ciudadanos.organizacion.repository.CiudadanoOrganizacionRepository;
 import ar.edu.uade.ciudadanos.organizacion.repository.RepresentacionRepository;
 import java.time.LocalDate;
 import java.util.List;
@@ -36,7 +36,7 @@ class AutorizacionServiceTest {
     private static final Long OTRO = 2L;
     private static final Long ORG = 50L;
 
-    @Mock private PersonaOrganizacionRepository personaOrganizacionRepository;
+    @Mock private CiudadanoOrganizacionRepository ciudadanoOrganizacionRepository;
     @Mock private RepresentacionRepository representacionRepository;
 
     @InjectMocks private AutorizacionService autorizacion;
@@ -122,7 +122,7 @@ class AutorizacionServiceTest {
     @Test
     void unDuenoOperaSobreSuOrganizacion() {
         autenticadoComo(YO, TipoSujeto.CIUDADANO, Rol.PERSONA);
-        when(personaOrganizacionRepository.existsById(any())).thenReturn(true);
+        when(ciudadanoOrganizacionRepository.existsById(any())).thenReturn(true);
 
         assertThatCode(() -> autorizacion.exigirEscrituraSobreOrganizacion(ORG)).doesNotThrowAnyException();
     }
@@ -130,7 +130,7 @@ class AutorizacionServiceTest {
     @Test
     void unRepresentanteVigenteTambien() {
         autenticadoComo(YO, TipoSujeto.CIUDADANO, Rol.PERSONA);
-        when(personaOrganizacionRepository.existsById(any())).thenReturn(false);
+        when(ciudadanoOrganizacionRepository.existsById(any())).thenReturn(false);
         when(representacionRepository.findVigente(anyLong(), anyLong(), any(LocalDate.class)))
                 .thenReturn(Optional.of(new Representacion()));
 
@@ -140,7 +140,7 @@ class AutorizacionServiceTest {
     @Test
     void unExtranoNoOperaSobreLaOrganizacion() {
         autenticadoComo(YO, TipoSujeto.CIUDADANO, Rol.PERSONA);
-        when(personaOrganizacionRepository.existsById(any())).thenReturn(false);
+        when(ciudadanoOrganizacionRepository.existsById(any())).thenReturn(false);
         when(representacionRepository.findVigente(anyLong(), anyLong(), any(LocalDate.class)))
                 .thenReturn(Optional.empty());
 
@@ -153,7 +153,7 @@ class AutorizacionServiceTest {
     @Test
     void elAuditorNoAdministraRepresentaciones() {
         autenticadoComo(9L, TipoSujeto.EMPLEADO, Rol.AUDITOR);
-        when(personaOrganizacionRepository.existsById(any())).thenReturn(false);
+        when(ciudadanoOrganizacionRepository.existsById(any())).thenReturn(false);
         when(representacionRepository.findVigente(anyLong(), anyLong(), any(LocalDate.class)))
                 .thenReturn(Optional.empty());
 
@@ -164,7 +164,7 @@ class AutorizacionServiceTest {
     @Test
     void elAdministrativoSiAdministraRepresentaciones() {
         autenticadoComo(9L, TipoSujeto.EMPLEADO, Rol.ADMINISTRATIVO);
-        when(personaOrganizacionRepository.existsById(any())).thenReturn(false);
+        when(ciudadanoOrganizacionRepository.existsById(any())).thenReturn(false);
         when(representacionRepository.findVigente(anyLong(), anyLong(), any(LocalDate.class)))
                 .thenReturn(Optional.empty());
 

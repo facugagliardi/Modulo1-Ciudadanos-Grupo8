@@ -7,9 +7,11 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.util.UUID;
 
 /**
  * Persona fisica/ciudadano. Entidad raiz para todas las interacciones de los usuarios individuales.
@@ -22,6 +24,9 @@ public class Ciudadano {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "ciudadano_id")
     private Long id;
+
+    @Column(name = "uuid", nullable = false, unique = true)
+    private UUID uuid = UUID.randomUUID();
 
     @Column(name = "documento_id", nullable = false, unique = true, length = 255)
     private String documentoId;
@@ -110,4 +115,18 @@ public class Ciudadano {
         this.creadoEn = creadoEn;
     }
 
+    @PrePersist
+    public void asegurarUuid() {
+        if (this.uuid == null) {
+            this.uuid = UUID.randomUUID();
+        }
+    }
+
+    public UUID getUuid() {
+        return uuid;
+    }
+
+    public void setUuid(UUID uuid) {
+        this.uuid = uuid;
+    }
 }

@@ -22,6 +22,16 @@ import ar.edu.uade.ciudadanos.security.AuthPrincipal;
 import ar.edu.uade.ciudadanos.security.JwtService;
 import ar.edu.uade.ciudadanos.security.Rol;
 import ar.edu.uade.ciudadanos.security.TipoSujeto;
+import ar.edu.uade.ciudadanos.auth.dto.UsuarioLoginRequest;
+import ar.edu.uade.ciudadanos.auth.dto.UsuarioLoginResponse;
+import ar.edu.uade.ciudadanos.contacto.dto.ContactoResponse;
+import ar.edu.uade.ciudadanos.contacto.entity.TipoContacto;
+import ar.edu.uade.ciudadanos.contacto.repository.ContactoCiudadanoRepository;
+import ar.edu.uade.ciudadanos.evento.EventPublisherService;
+import ar.edu.uade.ciudadanos.evento.dto.UpdatedBy;
+import java.util.List;
+import java.util.Map;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -36,6 +46,8 @@ public class AuthService {
     private final CredencialEmpleadoRepository credencialEmpleadoRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
+    private final ContactoCiudadanoRepository contactoRepository;
+    private final EventPublisherService eventPublisherService;
 
     public AuthService(CiudadanoRepository ciudadanoRepository,
                        CredencialCiudadanoRepository credencialCiudadanoRepository,
@@ -43,12 +55,27 @@ public class AuthService {
                        CredencialEmpleadoRepository credencialEmpleadoRepository,
                        PasswordEncoder passwordEncoder,
                        JwtService jwtService) {
+        this(ciudadanoRepository, credencialCiudadanoRepository, cuentaEmpleadoRepository,
+             credencialEmpleadoRepository, passwordEncoder, jwtService, null, null);
+    }
+
+    @Autowired
+    public AuthService(CiudadanoRepository ciudadanoRepository,
+                       CredencialCiudadanoRepository credencialCiudadanoRepository,
+                       CuentaEmpleadoRepository cuentaEmpleadoRepository,
+                       CredencialEmpleadoRepository credencialEmpleadoRepository,
+                       PasswordEncoder passwordEncoder,
+                       JwtService jwtService,
+                       ContactoCiudadanoRepository contactoRepository,
+                       EventPublisherService eventPublisherService) {
         this.ciudadanoRepository = ciudadanoRepository;
         this.credencialCiudadanoRepository = credencialCiudadanoRepository;
         this.cuentaEmpleadoRepository = cuentaEmpleadoRepository;
         this.credencialEmpleadoRepository = credencialEmpleadoRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
+        this.contactoRepository = contactoRepository;
+        this.eventPublisherService = eventPublisherService;
     }
 
     // ---------------------------------------------------------------- registro
@@ -86,7 +113,28 @@ public class AuthService {
         credencial.setPassword(passwordEncoder.encode(request.password()));
         credencialCiudadanoRepository.save(credencial);
 
-        return RegisterResponse.fisica(ciudadano.getId(), ciudadano.getDocumentoId(), ciudadano.getNombre(),
+        if (eventPublisherService != null) {
+            try {
+                Map<String, Object> details = Map.of(
+                        "dni", ciudadano.getDocumentoId(),
+                        "cuil", String.valueOf(ciudadano.getCuit()),
+                        "name", ciudadano.getNombre(),
+                        "lastname", ciudadano.getApellido(),
+                        "birthdate", String.valueOf(ciudadano.getFechaNacimiento()),
+                        "state", ciudadano.getEstado().name(),
+                        "nationality", "argentina"
+                );
+                eventPublisherService.publicarCitizenUpdated(
+                        ciudadano.getUuid() != null ? ciudadano.getUuid().toString() : String.valueOf(ciudadano.getId()),
+                        "REGISTERED",
+                        details,
+                        UpdatedBy.selfService()
+                );
+            } catch (Exception ignored) {
+            }
+        }
+
+        return RegisterResponse.fisica(ciudadano.getId(), ciudadano.getUuid(), ciudadano.getDocumentoId(), ciudadano.getNombre(),
                 ciudadano.getApellido(), ciudadano.getFechaNacimiento(), String.valueOf(ciudadano.getCuit()),
                 ciudadano.getEstado().name(), ciudadano.getCreadoEn());
     }
@@ -115,7 +163,7 @@ public class AuthService {
         TipoSujeto tipoSujeto = TipoSujeto.CIUDADANO;
 
         TokenEmitido tokens = emitir(new AuthPrincipal(ciudadano.getId(), tipoSujeto, rol));
-        return new Sesion<>(new LoginResponse(ciudadano.getId(), "CIUDADANO", rol), tokens);
+        return new Sesion<>(new LoginResponse(ciudadano.getId(), "CIUDADANO", rol, ciudadano.getUuid()), tokens);
     }
 
     @Transactional(readOnly = true)
@@ -137,6 +185,86 @@ public class AuthService {
         String rol = Rol.deEmpleado(empleado.getRol()).name();
         TokenEmitido tokens = emitir(new AuthPrincipal(empleado.getEmpleadoId(), TipoSujeto.EMPLEADO, rol));
         return new Sesion<>(new EmpleadoLoginResponse(empleado.getEmpleadoId(), rol), tokens);
+    }
+
+    /**
+     * Endpoint unificado de login de usuario segun especificacion (pág. 9 del PDF).
+     * Recibe { "gmail": "...", "password": "..." } y responde con { user_id, dni, role, auth }.
+     */
+    @Transactional(readOnly = true)
+    public Sesion<UsuarioLoginResponse> loginUsuario(UsuarioLoginRequest request) {
+        String email = request.gmail().trim();
+
+        // 1. Probar si es empleado municipal por su mail
+        var optEmpleado = cuentaEmpleadoRepository.findByMailIgnoreCase(email);
+        if (optEmpleado.isPresent()) {
+            CuentaEmpleado emp = optEmpleado.get();
+            var cred = credencialEmpleadoRepository.findByEmpleadoId(emp.getEmpleadoId())
+                    .orElseThrow(() -> ApiException.noAutenticado("Credenciales invalidas"));
+            if (!passwordEncoder.matches(request.password(), cred.getPassword())) {
+                throw ApiException.noAutenticado("Credenciales invalidas");
+            }
+            if (!emp.isActivo()) {
+                throw ApiException.prohibido("El empleado esta inactivo");
+            }
+            AuthPrincipal principal = new AuthPrincipal(emp.getEmpleadoId(), TipoSujeto.EMPLEADO, emp.getRol().name());
+            TokenEmitido tokens = emitir(principal);
+            List<ContactoResponse> contactos = List.of(
+                    new ContactoResponse(null, TipoContacto.EMAIL, emp.getMail(), true)
+            );
+            UsuarioLoginResponse cuerpo = new UsuarioLoginResponse(
+                    emp.getEmpleadoId(),
+                    0,
+                    emp.getNombreEmpleado(),
+                    emp.getApellidoEmpleado(),
+                    null,
+                    emp.getRol().name(),
+                    true,
+                    contactos
+            );
+            return new Sesion<>(cuerpo, tokens);
+        }
+
+        // 2. Probar si es ciudadano registrado con ese email de contacto
+        if (contactoRepository != null) {
+            List<Long> ciudadanoIds = contactoRepository.findCiudadanoIdsByValor(email);
+            for (Long cId : ciudadanoIds) {
+                var optC = ciudadanoRepository.findById(cId);
+                if (optC.isPresent()) {
+                    Ciudadano c = optC.get();
+                    var cred = credencialCiudadanoRepository.findByCiudadano_Cuit(c.getCuit());
+                    if (cred.isPresent() && passwordEncoder.matches(request.password(), cred.get().getPassword())) {
+                        if (c.getEstado() != EstadoCiudadano.ACTIVO) {
+                            throw ApiException.prohibido("La cuenta esta " + c.getEstado());
+                        }
+                        int dni = 0;
+                        try {
+                            dni = Integer.parseInt(c.getDocumentoId());
+                        } catch (Exception ignored) {
+                        }
+                        AuthPrincipal principal = new AuthPrincipal(c.getId(), TipoSujeto.CIUDADANO, "CIUDADANO");
+                        TokenEmitido tokens = emitir(principal);
+                        List<ContactoResponse> contactos = contactoRepository.findByCiudadanoId(c.getId()).stream()
+                                .map(ContactoResponse::de)
+                                .toList();
+                        UsuarioLoginResponse cuerpo = new UsuarioLoginResponse(
+                                c.getId(),
+                                c.getUuid(),
+                                dni,
+                                c.getNombre(),
+                                c.getApellido(),
+                                c.getCuit(),
+                                "CIUDADANO",
+                                true,
+                                contactos
+                        );
+                        return new Sesion<>(cuerpo, tokens);
+                    }
+                }
+            }
+        }
+
+        throw ApiException.noAutenticado("Credenciales invalidas");
     }
 
     // ----------------------------------------------------------------- refresh

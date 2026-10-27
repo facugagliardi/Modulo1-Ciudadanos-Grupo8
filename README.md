@@ -387,6 +387,7 @@ Ninguna está en el diagrama; cada una la exige un endpoint documentado.
 
 | Tabla | Columna | Por qué |
 |---|---|---|
+| `ciudadano` | `uuid` | Acuerdo de POs: identificador público para eventos intermódulo. Previene enumeración y unifica el formato entre módulos (2, 3, 4, 6) sin alterar el ID numérico interno (`ciudadano_id`). |
 | `persona_juridica` | `razon_social`, `estado` | respuesta de `POST /auth/register` para jurídica |
 | `personas_propiedades` | `es_principal` | RF-10/RF-12; el diagrama no tiene dónde marcar el principal |
 | `persona_organizacion` | `porcentaje_titularidad`, `asociado_en` | los devuelven los endpoints de dueños |
@@ -465,9 +466,27 @@ registro porque el modelo tiene una sola columna `version`. Los archivos viejos 
 disco con su número de versión, pero **no hay historial consultable de versiones
 anteriores**: haría falta una tabla `documento_version`.
 
-**7. Los eventos todavía no se publican.** `EventoOutbox` y su repositorio están, pero no
-hay ni productor que escriba los eventos de la sección 2 de `ARCHITECTURE.md` ni publisher
-que los tome de la cola.
+---
+
+## Eventos e interoperabilidad inter-módulo (Acuerdo de POs)
+
+Conforme a lo acordado en la mesa de Product Owners para evitar desalineaciones en la integración con el Core y demás módulos (2, 3, 4, 6 y 8):
+
+### Reglas de consenso
+1. **IDs internos soberanos:** Los esquemas de ID internos de cada base de datos son libres. Módulo 1 conserva su ID numérico relacional (`ciudadano_id`) como clave primaria para operaciones internas, claves foráneas e integridad referencial.
+2. **IDs en eventos siempre UUID:** Todo ID que viaja en el payload de un evento (`citizenId`, `ticketId`, `organizationId`, `establishmentId`, `workOrderId`, etc.) debe ser un UUID estándar. Esto previene la enumeración de ciudadanos y elimina la necesidad de conversiones heterogéneas entre módulos.
+3. **Referencias humanas aisladas:** DNI, CUIT/CUIL, números de expediente o actas viajan en atributos específicos de datos y nunca como clave de correlación.
+
+### Implementación en M1
+- **Columna `uuid` en tabla `ciudadano`:** UUID v4 único generado automáticamente (`gen_random_uuid()`), indexado (`uk_ciudadano_uuid`).
+- **Respuesta de Login y Registro:** `POST /auth/login`, `POST /auth/usuario/login` y `POST /auth/register` exponen el campo `uuid` para que el frontend o servicios consumidores conozcan su clave pública para eventos.
+- **Eventos emitidos vía RabbitMQ y persistidos en PostgreSQL (`eventos` / Outbox):**
+  - `citizenUpdated` (variantes `REGISTERED`, `UPDATED`, `BLOCKED`, `DECEASED`, `ADDRESS_UPDATED`): transmite `citizenId` en formato UUID.
+  - `citizenInfoDelivered`: respuesta inter-módulo con `citizenId` en formato UUID y `correlationId`.
+  - `socialDocumentationDelivered`: respuesta a M8 con `citizenId` en formato UUID.
+  - `casefileResolved`: resolución de expedientes transmitiendo el UUID resuelto del titular (`citizenId`).
+  - `organizationRegistered`, `representationGranted`, `representationExpired`.
 
 ---
+
 

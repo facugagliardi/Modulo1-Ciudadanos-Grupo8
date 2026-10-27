@@ -1,9 +1,15 @@
 package ar.edu.uade.ciudadanos.organizacion;
 
 import ar.edu.uade.ciudadanos.common.ListaResponse;
+import ar.edu.uade.ciudadanos.domicilio.dto.DomicilioCerradoResponse;
+import ar.edu.uade.ciudadanos.domicilio.dto.DomicilioCreadoResponse;
+import ar.edu.uade.ciudadanos.domicilio.dto.DomicilioPrincipalResponse;
+import ar.edu.uade.ciudadanos.domicilio.dto.DomicilioResponse;
 import ar.edu.uade.ciudadanos.organizacion.dto.ActualizarDuenoRequest;
 import ar.edu.uade.ciudadanos.organizacion.dto.ActualizarOrganizacionRequest;
 import ar.edu.uade.ciudadanos.organizacion.dto.AgregarDuenoRequest;
+import ar.edu.uade.ciudadanos.organizacion.dto.CrearDomicilioOrganizacionRequest;
+
 import ar.edu.uade.ciudadanos.organizacion.dto.CambioEstadoOrganizacionRequest;
 import ar.edu.uade.ciudadanos.organizacion.dto.CrearOrganizacionRequest;
 import ar.edu.uade.ciudadanos.organizacion.dto.DuenoAgregadoResponse;
@@ -42,7 +48,7 @@ public class OrganizacionController {
     @PostMapping
     public ResponseEntity<OrganizacionResponse> crear(@AuthenticationPrincipal AuthPrincipal principal,
                                                       @Valid @RequestBody CrearOrganizacionRequest request) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(organizacionService.crear(principal.id(), request));
+        return ResponseEntity.status(HttpStatus.CREATED).body(organizacionService.crear(principal, request));
     }
 
     @GetMapping
@@ -112,4 +118,28 @@ public class OrganizacionController {
         organizacionService.quitarDueno(id, personaId, beneficiarioId);
         return ResponseEntity.noContent().build();
     }
+
+    @GetMapping("/{id}/domicilios")
+    public ListaResponse<DomicilioResponse> listarDomicilios(@PathVariable Long id) {
+        return ListaResponse.de(organizacionService.listarDomicilios(id));
+    }
+
+    @PostMapping("/{id}/domicilios")
+    public ResponseEntity<DomicilioCreadoResponse> agregarDomicilio(@PathVariable Long id,
+                                                                   @Valid @RequestBody CrearDomicilioOrganizacionRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(organizacionService.agregarDomicilio(id, request));
+    }
+
+    @PatchMapping("/{id}/domicilios/{propiedadId}/principal")
+    public DomicilioPrincipalResponse marcarDomicilioPrincipal(@PathVariable Long id,
+                                                               @PathVariable Long propiedadId) {
+        return organizacionService.marcarDomicilioPrincipal(id, propiedadId);
+    }
+
+    @DeleteMapping("/{id}/domicilios/{propiedadId}")
+    public DomicilioCerradoResponse darDeBajaDomicilio(@PathVariable Long id,
+                                                      @PathVariable Long propiedadId) {
+        return organizacionService.darDeBajaDomicilio(id, propiedadId);
+    }
 }
+

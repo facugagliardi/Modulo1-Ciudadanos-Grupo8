@@ -2,6 +2,7 @@ package ar.edu.uade.ciudadanos.domicilio.dto;
 
 import ar.edu.uade.ciudadanos.domicilio.entity.CiudadanoPropiedad;
 import ar.edu.uade.ciudadanos.domicilio.entity.Propiedad;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import java.time.LocalDate;
 import java.util.UUID;
 
@@ -11,7 +12,7 @@ public record DomicilioResponse(
         String tipo,
         String calle,
         String numero,
-        String altura,
+        String piso,
         UUID idBarrio,
         String longitud,
         String latitud,
@@ -20,8 +21,13 @@ public record DomicilioResponse(
         LocalDate vigenteHasta) {
 
     public static DomicilioResponse de(Propiedad p, CiudadanoPropiedad vinculo) {
-        return new DomicilioResponse(p.getPropiedadId(), p.getTipo(), p.getCalle(), p.getNumero(), p.getAltura(),
+        return new DomicilioResponse(p.getPropiedadId(), p.getTipo(), p.getCalle(), p.getNumero(), p.getPiso(),
                 p.getIdBarrio(), p.getLongitud(), p.getLatitud(),
                 vinculo.isEsPrincipal(), vinculo.getVigenteDesde(), vinculo.getVigenteHasta());
+    }
+
+    @JsonProperty("altura")
+    public String altura() {
+        return piso;
     }
 }

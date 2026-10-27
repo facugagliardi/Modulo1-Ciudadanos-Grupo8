@@ -20,10 +20,17 @@ import ar.edu.uade.ciudadanos.security.Permiso;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import ar.edu.uade.ciudadanos.evento.EventPublisherService;
+import ar.edu.uade.ciudadanos.evento.dto.CaseFileResolvedData;
+import ar.edu.uade.ciudadanos.evento.dto.UpdatedBy;
 import java.time.LocalDate;
+import java.time.OffsetDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -38,17 +45,29 @@ public class ExpedienteService {
     private final CiudadanoDirectorioService directorio;
     private final AutorizacionService autorizacion;
     private final ObjectMapper objectMapper;
+    private final EventPublisherService eventPublisherService;
 
     public ExpedienteService(ExpedienteRepository expedienteRepository,
                              ActuacionRepository actuacionRepository,
                              CiudadanoDirectorioService directorio,
                              AutorizacionService autorizacion,
                              ObjectMapper objectMapper) {
+        this(expedienteRepository, actuacionRepository, directorio, autorizacion, objectMapper, null);
+    }
+
+    @Autowired
+    public ExpedienteService(ExpedienteRepository expedienteRepository,
+                             ActuacionRepository actuacionRepository,
+                             CiudadanoDirectorioService directorio,
+                             AutorizacionService autorizacion,
+                             ObjectMapper objectMapper,
+                             EventPublisherService eventPublisherService) {
         this.expedienteRepository = expedienteRepository;
         this.actuacionRepository = actuacionRepository;
         this.directorio = directorio;
         this.autorizacion = autorizacion;
         this.objectMapper = objectMapper;
+        this.eventPublisherService = eventPublisherService;
     }
 
     /** RF-30, RF-31. Iniciar expediente es tarea de mesa de entradas. */
@@ -99,6 +118,29 @@ public class ExpedienteService {
         EstadoExpediente anterior = expediente.getEstado();
         TransicionesEstado.exigirExpediente(anterior, nuevo);
         expediente.setEstado(nuevo);
+
+        if (eventPublisherService != null && nuevo == EstadoExpediente.RESUELTO) {
+            try {
+                String citizenUuid = directorio.resolverUuid(expediente.getCiudadanoId())
+                        .map(java.util.UUID::toString)
+                        .orElse(expediente.getCiudadanoId() != null ? String.valueOf(expediente.getCiudadanoId()) : null);
+                CaseFileResolvedData data = new CaseFileResolvedData(
+                        expediente.getExpedienteId(),
+                        expediente.getNumero(),
+                        "resolved",
+                        "approved",
+                        expediente.getAreaIniciadora(),
+                        expediente.getCaratula(),
+                        citizenUuid,
+                        Map.of("type", "PUBLIC_WORKS_PROJECT", "id", "OBRA-" + expediente.getExpedienteId()),
+                        "Dictamen administrativo favorable. Se autoriza la ejecucion conforme al pliego tecnico.",
+                        UpdatedBy.areaUser("USR-M1-07"),
+                        OffsetDateTime.now().format(DateTimeFormatter.ISO_OFFSET_DATE_TIME)
+                );
+                eventPublisherService.publicarCasefileResolved(data);
+            } catch (Exception ignored) {
+            }
+        }
 
         return CambioEstadoResponse.de(id, anterior, nuevo);
     }

@@ -51,6 +51,11 @@ export function actualizarDomicilio(domicilioId, datos) {
   return put(`/domicilios/${domicilioId}`, cuerpo("actualizarDomicilio", datos));
 }
 
+export function obtenerDomicilio(domicilioId) {
+  return get(`/domicilios/${domicilioId}`);
+}
+
+
 /** Sin cuerpo. Mandar campos da 400. */
 export function marcarDomicilioPrincipal(domicilioId) {
   return patch(`/domicilios/${domicilioId}/principal`);

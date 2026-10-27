@@ -27,8 +27,8 @@ ON CONFLICT (empleado_id) DO NOTHING;
 
 -- Ciudadano de prueba para POST /auth/login. Se puede crear igual por
 -- POST /auth/register; esto solo evita tener que hacerlo a mano cada vez.
-INSERT INTO ciudadano (documento_id, nombre, apellido, fecha_nacimiento, estado, cuit) VALUES
-    ('34567890', 'Diego', 'Lopez', DATE '1989-04-12', 'ACTIVO', 20345678901)
+INSERT INTO ciudadano (uuid, documento_id, nombre, apellido, fecha_nacimiento, estado, cuit) VALUES
+    ('b63f5a2e-4b71-46e7-8b01-381c85d88f62', '34567890', 'Diego', 'Lopez', DATE '1989-04-12', 'ACTIVO', 20345678901)
 ON CONFLICT (cuit) DO NOTHING;
 
 -- Clave: Ciudadano.2026

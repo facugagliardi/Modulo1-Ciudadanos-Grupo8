@@ -1,5 +1,6 @@
 package ar.edu.uade.ciudadanos.organizacion.dto;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
 import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotNull;
@@ -8,6 +9,7 @@ import java.util.List;
 
 /** POST /organizaciones/{id}/duenos (RF-19). */
 public record AgregarDuenoRequest(
+        @JsonAlias({"ciudadanoId"})
         @NotNull(message = "personaId es obligatorio")
         Long personaId,
 
@@ -17,4 +19,9 @@ public record AgregarDuenoRequest(
         
         @jakarta.validation.Valid
         List<AjusteDuenoRequest> ajustes) {
+
+    public AgregarDuenoRequest(Long personaId, BigDecimal porcentajeTitularidad) {
+        this(personaId, porcentajeTitularidad, null);
+    }
 }
+
