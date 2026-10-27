@@ -37,6 +37,7 @@ public class EventPublisherService {
     private final EventoService eventoService;
     private final RabbitTemplate rabbitTemplate;
     private final ObjectMapper objectMapper;
+    private final ar.edu.uade.ciudadanos.persona.repository.CiudadanoRepository ciudadanoRepository;
 
     @Value("${app.events.exchange:muni.inbox}")
     private String exchangeName;
@@ -44,9 +45,18 @@ public class EventPublisherService {
     public EventPublisherService(EventoService eventoService,
                                  RabbitTemplate rabbitTemplate,
                                  ObjectMapper objectMapper) {
+        this(eventoService, rabbitTemplate, objectMapper, null);
+    }
+
+    public EventPublisherService(EventoService eventoService,
+                                 RabbitTemplate rabbitTemplate,
+                                 ObjectMapper objectMapper,
+                                 @org.springframework.beans.factory.annotation.Autowired(required = false)
+                                 ar.edu.uade.ciudadanos.persona.repository.CiudadanoRepository ciudadanoRepository) {
         this.eventoService = eventoService;
         this.rabbitTemplate = rabbitTemplate;
         this.objectMapper = objectMapper;
+        this.ciudadanoRepository = ciudadanoRepository;
     }
 
     /**
@@ -80,6 +90,45 @@ public class EventPublisherService {
 
     public static final String EJEMPLO_CITIZEN_UUID = "b63f5a2e-4b71-46e7-8b01-381c85d88f62";
 
+    /**
+     * Resuelve de forma robusta el identificador de un ciudadano al formato UUID.
+     * Si ya es un UUID válido, lo retorna tal cual. Si es numérico (ID interno, CUIT o DNI),
+     * busca en la base de datos para obtener el UUID canónico asignado al ciudadano.
+     */
+    public String resolverCitizenUuid(String rawCitizenId) {
+        if (rawCitizenId == null || rawCitizenId.isBlank()) {
+            return rawCitizenId;
+        }
+        // 1. Si ya tiene formato UUID válido, devolverlo tal cual
+        try {
+            return UUID.fromString(rawCitizenId.trim()).toString();
+        } catch (IllegalArgumentException ignored) {
+        }
+        // 2. Si es numérico (ID de BD, CUIT o DNI), buscar en repositorio para obtener su UUID
+        if (ciudadanoRepository != null) {
+            try {
+                String digits = rawCitizenId.trim().replaceAll("[^0-9]", "");
+                if (!digits.isEmpty()) {
+                    Long idNum = Long.parseLong(digits);
+                    var porId = ciudadanoRepository.findById(idNum);
+                    if (porId.isPresent() && porId.get().getUuid() != null) {
+                        return porId.get().getUuid().toString();
+                    }
+                    var porCuit = ciudadanoRepository.findByCuit(idNum);
+                    if (porCuit.isPresent() && porCuit.get().getUuid() != null) {
+                        return porCuit.get().getUuid().toString();
+                    }
+                    var porDni = ciudadanoRepository.findByDocumentoId(digits);
+                    if (porDni.isPresent() && porDni.get().getUuid() != null) {
+                        return porDni.get().getUuid().toString();
+                    }
+                }
+            } catch (Exception ignored) {
+            }
+        }
+        return rawCitizenId;
+    }
+
     // ------------------------------------------------ Metodos de negocio
 
     /**
@@ -89,9 +138,10 @@ public class EventPublisherService {
                                                                    String updateType,
                                                                    Map<String, Object> details,
                                                                    UpdatedBy updatedBy) {
+        String citizenUuid = resolverCitizenUuid(citizenId);
         String eventId = generarEventId();
         String occuredAt = fechaActualIso();
-        CitizenUpdatedData data = new CitizenUpdatedData(citizenId, updateType, details, updatedBy);
+        CitizenUpdatedData data = new CitizenUpdatedData(citizenUuid, updateType, details, updatedBy);
         EventEnvelope<CitizenUpdatedData> envelope = EventEnvelope.de(
                 eventId,
                 occuredAt,
@@ -113,13 +163,25 @@ public class EventPublisherService {
                                                                    String updateType,
                                                                    Map<String, Object> details,
                                                                    UpdatedBy updatedBy) {
-        return publicarCitizenUpdated(citizenId != null ? String.valueOf(citizenId) : null, updateType, details, updatedBy);
+        String citizenUuid = citizenId != null ? resolverCitizenUuid(String.valueOf(citizenId)) : null;
+        return publicarCitizenUpdated(citizenUuid, updateType, details, updatedBy);
     }
 
     /**
      * 2. casefileResolved (M1 -> M3 Obras Publicas)
      */
     public EventEnvelope<CaseFileResolvedData> publicarCasefileResolved(CaseFileResolvedData data) {
+        CaseFileResolvedData dataConUuid = data;
+        if (data != null && data.citizenId() != null) {
+            String uuid = resolverCitizenUuid(data.citizenId());
+            if (!uuid.equals(data.citizenId())) {
+                dataConUuid = new CaseFileResolvedData(
+                        data.caseFileId(), data.caseFileNumber(), data.state(), data.resolution(),
+                        data.initiatingArea(), data.title(), uuid, data.externalReference(),
+                        data.resolutionSummary(), data.updatedBy(), data.statusChangedAt()
+                );
+            }
+        }
         String eventId = generarEventId();
         String occuredAt = fechaActualIso();
         EventEnvelope<CaseFileResolvedData> envelope = EventEnvelope.de(
@@ -127,7 +189,7 @@ public class EventPublisherService {
                 occuredAt,
                 "casefileResolved",
                 EventEnvelope.SOURCE_MODULE_CIUDADANOS,
-                data
+                dataConUuid
         );
         return publicar(envelope, "modulo1.casefiles.resolved");
     }
@@ -138,6 +200,13 @@ public class EventPublisherService {
     public EventEnvelope<CitizenInfoDeliveredData> publicarCitizenInfoDelivered(String citizenId,
                                                                                String correlationId,
                                                                                CitizenInfoDeliveredData data) {
+        String citizenUuid = resolverCitizenUuid(citizenId);
+        CitizenInfoDeliveredData dataConUuid = data;
+        if (data != null && (data.citizenId() == null || !data.citizenId().equals(citizenUuid))) {
+            dataConUuid = new CitizenInfoDeliveredData(
+                    citizenUuid, data.fullName(), data.documentId(), data.phone(), data.email(), data.address()
+            );
+        }
         String eventId = generarEventId();
         String occuredAt = fechaActualIso();
         EventEnvelope<CitizenInfoDeliveredData> envelope = EventEnvelope.de(
@@ -146,7 +215,7 @@ public class EventPublisherService {
                 "citizenInfoDelivered",
                 EventEnvelope.SOURCE_MODULE_CIUDADANOS,
                 correlationId,
-                data
+                dataConUuid
         );
         return publicar(envelope, "modulo1.citizens.infodelivered");
     }
@@ -160,7 +229,8 @@ public class EventPublisherService {
     public EventEnvelope<CitizenInfoDeliveredData> publicarCitizenInfoDelivered(Long citizenId,
                                                                                String correlationId,
                                                                                CitizenInfoDeliveredData data) {
-        return publicarCitizenInfoDelivered(citizenId != null ? String.valueOf(citizenId) : null, correlationId, data);
+        String citizenUuid = citizenId != null ? resolverCitizenUuid(String.valueOf(citizenId)) : null;
+        return publicarCitizenInfoDelivered(citizenUuid, correlationId, data);
     }
 
     /**
@@ -239,6 +309,15 @@ public class EventPublisherService {
     public EventEnvelope<SocialDocumentationDeliveredData> publicarSocialDocumentationDelivered(String causationId,
                                                                                                String correlationId,
                                                                                                SocialDocumentationDeliveredData data) {
+        SocialDocumentationDeliveredData dataConUuid = data;
+        if (data != null && data.citizenId() != null) {
+            String uuid = resolverCitizenUuid(data.citizenId());
+            if (!uuid.equals(data.citizenId())) {
+                dataConUuid = new SocialDocumentationDeliveredData(
+                        uuid, data.applicationId(), data.programId(), data.files()
+                );
+            }
+        }
         String eventId = generarEventId();
         String occuredAt = fechaActualIso();
         String corrId = (correlationId != null && !correlationId.isBlank()) ? correlationId : UUID.randomUUID().toString();
@@ -249,7 +328,7 @@ public class EventPublisherService {
                 EventEnvelope.SOURCE_MODULE_CIUDADANOS,
                 corrId,
                 causationId,
-                data
+                dataConUuid
         );
         return publicar(envelope, "socialDocumentationDelivered");
     }
