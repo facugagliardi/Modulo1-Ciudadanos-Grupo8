@@ -1,4 +1,6 @@
 @import "./tokens.css";
+@import "./transiciones.css";
+@import "./menuMovil.css";
 
 @tailwind base;
 @tailwind components;

@@ -10,7 +10,8 @@ import { diasHasta } from "@/lib/dominio/formato";
 import { ENTIDADES, etiquetaEstado } from "@/lib/dominio/estados";
 import { etiquetaDe, TIPOS_ORGANIZACION } from "@/lib/dominio/listasBlancas";
 import { BadgeEstado } from "@/componentes/BadgeEstado";
-import { Cargando, ErrorEnPantalla } from "@/componentes/Estados";
+import { ErrorEnPantalla } from "@/componentes/Estados";
+import { CargaConEsqueleto, useUltimosDatos } from "@/componentes/Esqueleto";
 import { Encabezado } from "@/componentes/Encabezado";
 import { GraficoBarras, Indicador } from "@/componentes/tablero/GraficoBarras";
 import { Button } from "@/componentes/ui/button";
@@ -48,8 +49,9 @@ export function Tablero() {
     [ciudadanos.datos, organizaciones.datos, expedientes.datos, solicitudes.datos],
   );
 
-  const cargandoTodo =
-    ciudadanos.cargando && organizaciones.cargando && expedientes.cargando && solicitudes.cargando;
+  const algoCargando =
+    ciudadanos.cargando || organizaciones.cargando || expedientes.cargando || solicitudes.cargando;
+  const ultimas = useUltimosDatos("tablero", algoCargando ? null : metricas);
 
   // Si una sola consulta falla, el resto del tablero se sigue viendo.
   const fallos = [
@@ -67,7 +69,6 @@ export function Tablero() {
         descripcion="El estado del registro municipal y lo que está esperando una decisión."
       />
 
-      {cargandoTodo && <Cargando texto="Calculando indicadores…" />}
 
       {fallos.length > 0 && (
         <div className="mb-u3 rounded border border-sello bg-sello-suave px-u3 py-u2" role="alert">
@@ -86,124 +87,152 @@ export function Tablero() {
         </div>
       )}
 
-      {!cargandoTodo && (
-        <>
-          {/* La cifra que encabeza: de qué tamaño es el registro. */}
-          <div className="mb-u3">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-apagado">
-              Padrón municipal
-            </p>
-            <p className="text-5xl font-semibold leading-none text-tinta">
-              {metricas.totalVecinos.toLocaleString("es-AR")}
-            </p>
-            <p className="mt-1.5 text-apagado">
-              {metricas.vecinosActivos.toLocaleString("es-AR")} activos ·{" "}
-              {metricas.totalOrganizaciones.toLocaleString("es-AR")}{" "}
-              {metricas.totalOrganizaciones === 1 ? "organización" : "organizaciones"} ·{" "}
-              {metricas.totalExpedientes.toLocaleString("es-AR")}{" "}
-              {metricas.totalExpedientes === 1 ? "expediente" : "expedientes"}
-            </p>
-          </div>
-
-          {/* --- Lo que reclama una acción --- */}
-          <h2 className="mb-u2">Requiere atención</h2>
-          <div className="mb-u4 grid gap-u2 sm:grid-cols-2 lg:grid-cols-3">
-            <Indicador
-              etiqueta="Expedientes sin ninguna actuación"
-              valor={metricas.expedientesEstancados}
-              severidad={metricas.expedientesEstancados > 0 ? "atencion" : "buena"}
-              icono={FileWarning}
-              detalle={
-                metricas.expedientesEstancados > 0
-                  ? "Están abiertos y nadie registró nada todavía."
-                  : "Todos los expedientes abiertos tienen movimiento."
-              }
-              accion={
-                metricas.expedientesEstancados > 0 && (
-                  <Button asChild variante="secundario" tamano="chico">
-                    <Link to="/admin/expedientes">Ver expedientes</Link>
-                  </Button>
-                )
-              }
-            />
-
-            <Indicador
-              etiqueta="Documentación con el plazo vencido"
-              valor={metricas.solicitudesVencidas}
-              severidad={metricas.solicitudesVencidas > 0 ? "grave" : "buena"}
-              icono={AlertTriangle}
-              detalle={
-                metricas.solicitudesVencidas > 0
-                  ? "Se pidieron y el plazo ya pasó, pero siguen pendientes."
-                  : "Ninguna solicitud pendiente pasó su plazo."
-              }
-              accion={
-                metricas.solicitudesVencidas > 0 && (
-                  <Button asChild variante="secundario" tamano="chico">
-                    <Link to="/admin/documentacion">Ver documentación</Link>
-                  </Button>
-                )
-              }
-            />
-
-            <Indicador
-              etiqueta="Documentación que vence esta semana"
-              valor={metricas.solicitudesPorVencer}
-              severidad={metricas.solicitudesPorVencer > 0 ? "atencion" : "buena"}
-              icono={Clock}
-              detalle={
-                metricas.solicitudesPorVencer > 0
-                  ? "Vencen en los próximos siete días."
-                  : "Nada vence en los próximos siete días."
-              }
-            />
-          </div>
-
-          {/* --- Cómo está compuesto el registro --- */}
-          <h2 className="mb-u2">Composición</h2>
-          <div className="grid gap-u3 lg:grid-cols-2">
-            <GraficoBarras
-              titulo="Vecinos por estado"
-              descripcion="Todo el padrón, agrupado por su situación registral."
-              unidad="Estado"
-              datos={metricas.vecinosPorEstado}
-              vacio="El padrón está vacío"
-            />
-
-            <GraficoBarras
-              titulo="Expedientes por estado"
-              descripcion="Dónde está parado cada trámite formal."
-              unidad="Estado"
-              datos={metricas.expedientesPorEstado}
-              vacio="No hay expedientes"
-            />
-
-            <GraficoBarras
-              titulo="Expedientes por área iniciadora"
-              descripcion="Qué áreas del municipio están abriendo trámites."
-              unidad="Área"
-              datos={metricas.expedientesPorArea}
-              vacio="No hay expedientes"
-            />
-
-            <GraficoBarras
-              titulo="Organizaciones por tipo"
-              descripcion="Empresas, comercios y asociaciones registradas."
-              unidad="Tipo"
-              datos={metricas.organizacionesPorTipo}
-              vacio="No hay organizaciones registradas"
-            />
-          </div>
-
-          <p className="mt-u4 max-w-prose text-sm text-apagado">
-            Los indicadores se calculan sobre los listados completos que devuelve la API, así
-            que reflejan el estado del momento en que se abrió la pantalla.
-          </p>
-        </>
-      )}
+      {/* Mientras carga, el tablero mismo en cuadraditos: con los últimos
+          indicadores que se vieron o, la primera vez, con unos de ejemplo. */}
+      <CargaConEsqueleto
+        cargando={algoCargando}
+        etiqueta="Calculando indicadores…"
+        molde={() => <Indicadores metricas={ultimas ?? METRICAS_DE_EJEMPLO} />}
+      >
+        <Indicadores metricas={metricas} />
+      </CargaConEsqueleto>
     </>
   );
 }
+
+/** Las cifras, los indicadores y los gráficos. Es el contenido y el molde de su carga. */
+function Indicadores({ metricas }) {
+  return (
+    <>
+      {/* La cifra que encabeza: de qué tamaño es el registro. */}
+      <div className="mb-u3">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-apagado">
+          Padrón municipal
+        </p>
+        <p className="text-5xl font-semibold leading-none text-tinta">
+          {metricas.totalVecinos.toLocaleString("es-AR")}
+        </p>
+        <p className="mt-1.5 text-apagado">
+          {metricas.vecinosActivos.toLocaleString("es-AR")} activos ·{" "}
+          {metricas.totalOrganizaciones.toLocaleString("es-AR")}{" "}
+          {metricas.totalOrganizaciones === 1 ? "organización" : "organizaciones"} ·{" "}
+          {metricas.totalExpedientes.toLocaleString("es-AR")}{" "}
+          {metricas.totalExpedientes === 1 ? "expediente" : "expedientes"}
+        </p>
+      </div>
+
+      {/* --- Lo que reclama una acción --- */}
+      <h2 className="mb-u2">Requiere atención</h2>
+      <div className="mb-u4 grid gap-u2 sm:grid-cols-2 lg:grid-cols-3">
+        <Indicador
+          etiqueta="Expedientes sin ninguna actuación"
+          valor={metricas.expedientesEstancados}
+          severidad={metricas.expedientesEstancados > 0 ? "atencion" : "buena"}
+          icono={FileWarning}
+          detalle={
+            metricas.expedientesEstancados > 0
+              ? "Están abiertos y nadie registró nada todavía."
+              : "Todos los expedientes abiertos tienen movimiento."
+          }
+          accion={
+            metricas.expedientesEstancados > 0 && (
+              <Button asChild variante="secundario" tamano="chico">
+                <Link to="/admin/expedientes">Ver expedientes</Link>
+              </Button>
+            )
+          }
+        />
+
+        <Indicador
+          etiqueta="Documentación con el plazo vencido"
+          valor={metricas.solicitudesVencidas}
+          severidad={metricas.solicitudesVencidas > 0 ? "grave" : "buena"}
+          icono={AlertTriangle}
+          detalle={
+            metricas.solicitudesVencidas > 0
+              ? "Se pidieron y el plazo ya pasó, pero siguen pendientes."
+              : "Ninguna solicitud pendiente pasó su plazo."
+          }
+          accion={
+            metricas.solicitudesVencidas > 0 && (
+              <Button asChild variante="secundario" tamano="chico">
+                <Link to="/admin/documentacion">Ver documentación</Link>
+              </Button>
+            )
+          }
+        />
+
+        <Indicador
+          etiqueta="Documentación que vence esta semana"
+          valor={metricas.solicitudesPorVencer}
+          severidad={metricas.solicitudesPorVencer > 0 ? "atencion" : "buena"}
+          icono={Clock}
+          detalle={
+            metricas.solicitudesPorVencer > 0
+              ? "Vencen en los próximos siete días."
+              : "Nada vence en los próximos siete días."
+          }
+        />
+      </div>
+
+      {/* --- Cómo está compuesto el registro --- */}
+      <h2 className="mb-u2">Composición</h2>
+      <div className="grid gap-u3 lg:grid-cols-2">
+        <GraficoBarras
+          titulo="Vecinos por estado"
+          descripcion="Todo el padrón, agrupado por su situación registral."
+          unidad="Estado"
+          datos={metricas.vecinosPorEstado}
+          vacio="El padrón está vacío"
+        />
+
+        <GraficoBarras
+          titulo="Expedientes por estado"
+          descripcion="Dónde está parado cada trámite formal."
+          unidad="Estado"
+          datos={metricas.expedientesPorEstado}
+          vacio="No hay expedientes"
+        />
+
+        <GraficoBarras
+          titulo="Expedientes por área iniciadora"
+          descripcion="Qué áreas del municipio están abriendo trámites."
+          unidad="Área"
+          datos={metricas.expedientesPorArea}
+          vacio="No hay expedientes"
+        />
+
+        <GraficoBarras
+          titulo="Organizaciones por tipo"
+          descripcion="Empresas, comercios y asociaciones registradas."
+          unidad="Tipo"
+          datos={metricas.organizacionesPorTipo}
+          vacio="No hay organizaciones registradas"
+        />
+      </div>
+
+      <p className="mt-u4 max-w-prose text-sm text-apagado">
+        Los indicadores se calculan sobre los listados completos que devuelve la API, así
+        que reflejan el estado del momento en que se abrió la pantalla.
+      </p>
+    </>
+  );
+}
+
+/**
+ * Los indicadores de la primera carga: un registro chico, inventado, para que
+ * los gráficos del esqueleto tengan barras y no el cartel de vacío.
+ */
+const METRICAS_DE_EJEMPLO = calcularMetricas({
+  ciudadanos: [{ estado: "ACTIVO" }, { estado: "ACTIVO" }, { estado: "ACTIVO" }, { estado: "INACTIVO" }],
+  organizaciones: [{ tipo: "SRL" }, { tipo: "SA" }, { tipo: "SRL" }],
+  expedientes: [
+    { estado: "INICIADO", areaIniciadora: "Mesa de entradas", actuacionesCount: 1 },
+    { estado: "EN_TRAMITE", areaIniciadora: "Obras públicas", actuacionesCount: 2 },
+    { estado: "EN_TRAMITE", areaIniciadora: "Mesa de entradas", actuacionesCount: 3 },
+  ],
+  solicitudes: [],
+});
 
 /**
  * Toda la aritmética del tablero, separada de la pantalla para poder probarla

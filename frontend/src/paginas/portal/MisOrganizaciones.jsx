@@ -9,7 +9,8 @@ import { formatearFecha } from "@/lib/dominio/formato";
 import { ENTIDADES } from "@/lib/dominio/estados";
 import { ALCANCES_REPRESENTACION, etiquetaDe } from "@/lib/dominio/listasBlancas";
 import { BadgeEstado } from "@/componentes/BadgeEstado";
-import { Cargando, ErrorEnPantalla, EstadoVacio } from "@/componentes/Estados";
+import { ErrorEnPantalla, EstadoVacio } from "@/componentes/Estados";
+import { ConEsqueleto } from "@/componentes/Esqueleto";
 import { Encabezado } from "@/componentes/Encabezado";
 import { Button } from "@/componentes/ui/button";
 import { Card, CardCuerpo } from "@/componentes/ui/card";
@@ -62,75 +63,85 @@ export function MisOrganizaciones() {
         }
       />
 
-      {vinculos.cargando && <Cargando />}
       {vinculos.error && (
         <ErrorEnPantalla error={vinculos.error} alReintentar={vinculos.recargar} />
       )}
 
-      {vinculos.datos?.length === 0 && (
-        <Card>
-          <CardCuerpo>
-            <EstadoVacio
-              titulo="Todavía no tenés organizaciones"
-              descripcion="Si sos dueño de una empresa o comercio, registralo acá. Si sos apoderado de una que ya existe, alguien de la organización tiene que otorgarte la representación."
-              accion={
-                <Button asChild variante="secundario">
-                  <Link to="/portal/organizaciones/nueva">Registrar una organización</Link>
-                </Button>
-              }
-            />
-          </CardCuerpo>
-        </Card>
-      )}
-
-      {vinculos.datos?.length > 0 && (
-        <ul className="lista-escalonada flex flex-col gap-u2">
-          {vinculos.datos.map((v) => (
-            <li key={v.organizacionId}>
+      <ConEsqueleto
+        recurso={vinculos}
+        clave={`organizaciones:${id}`}
+        ejemplo={[]}
+        etiqueta="Cargando tus organizaciones…"
+      >
+        {(lista) => (
+          <>
+            {lista.length === 0 && (
               <Card>
                 <CardCuerpo>
-                  <Link
-                    to={`/portal/organizaciones/${v.organizacionId}`}
-                    className="group flex flex-wrap items-start justify-between gap-u2"
-                  >
-                    <span className="min-w-0">
-                      <span className="flex flex-wrap items-center gap-u2">
-                        <span className="font-medium text-expediente group-hover:underline">
-                          {v.razonSocial}
-                        </span>
-                        {v.esDueno && (
-                          <span className="inline-flex items-center rounded bg-expediente-suave px-1.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-expediente">
-                            Dueño
-                          </span>
-                        )}
-                        {v.estado && (
-                          <BadgeEstado
-                            entidad={ENTIDADES.ORGANIZACION}
-                            estado={v.estado}
-                          />
-                        )}
-                        {v.representacion && (
-                          <BadgeEstado
-                            entidad={ENTIDADES.REPRESENTACION}
-                            estado={v.representacion.estado}
-                          />
-                        )}
-                      </span>
-                      <span className="block text-[length:var(--texto-dato)] text-apagado">
-                        {describir(v)}
-                      </span>
-                    </span>
-                    <ArrowRight
-                      className="mt-1 size-4 shrink-0 text-apagado transition-transform duration-150 group-hover:translate-x-0.5 group-hover:text-expediente"
-                      aria-hidden="true"
-                    />
-                  </Link>
+                  <EstadoVacio
+                    titulo="Todavía no tenés organizaciones"
+                    descripcion="Si sos dueño de una empresa o comercio, registralo acá. Si sos apoderado de una que ya existe, alguien de la organización tiene que otorgarte la representación."
+                    accion={
+                      <Button asChild variante="secundario">
+                        <Link to="/portal/organizaciones/nueva">Registrar una organización</Link>
+                      </Button>
+                    }
+                  />
                 </CardCuerpo>
               </Card>
-            </li>
-          ))}
-        </ul>
-      )}
+            )}
+
+            {lista.length > 0 && (
+              <ul className="lista-escalonada flex flex-col gap-u2">
+                {lista.map((v) => (
+                  <li key={v.organizacionId}>
+                    <Card>
+                      <CardCuerpo>
+                        <Link
+                          to={`/portal/organizaciones/${v.organizacionId}`}
+                          className="group flex flex-wrap items-start justify-between gap-u2"
+                        >
+                          <span className="min-w-0">
+                            <span className="flex flex-wrap items-center gap-u2">
+                              <span className="font-medium text-expediente group-hover:underline">
+                                {v.razonSocial}
+                              </span>
+                              {v.esDueno && (
+                                <span className="inline-flex items-center rounded bg-expediente-suave px-1.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-expediente">
+                                  Dueño
+                                </span>
+                              )}
+                              {v.estado && (
+                                <BadgeEstado
+                                  entidad={ENTIDADES.ORGANIZACION}
+                                  estado={v.estado}
+                                />
+                              )}
+                              {v.representacion && (
+                                <BadgeEstado
+                                  entidad={ENTIDADES.REPRESENTACION}
+                                  estado={v.representacion.estado}
+                                />
+                              )}
+                            </span>
+                            <span className="block text-[length:var(--texto-dato)] text-apagado">
+                              {describir(v)}
+                            </span>
+                          </span>
+                          <ArrowRight
+                            className="mt-1 size-4 shrink-0 text-apagado transition-transform duration-150 group-hover:translate-x-0.5 group-hover:text-expediente"
+                            aria-hidden="true"
+                          />
+                        </Link>
+                      </CardCuerpo>
+                    </Card>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </>
+        )}
+      </ConEsqueleto>
     </>
   );
 }

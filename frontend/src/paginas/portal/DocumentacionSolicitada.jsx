@@ -13,7 +13,8 @@ import { useSesion } from "@/lib/auth/SesionContext";
 import { mensajeAmable } from "@/lib/api/cliente";
 import { diasHasta, formatearFecha } from "@/lib/dominio/formato";
 import { ARCHIVOS_PERMITIDOS, etiquetaDe, TIPOS_DOCUMENTO } from "@/lib/dominio/listasBlancas";
-import { Cargando, ErrorEnPantalla, EstadoVacio } from "@/componentes/Estados";
+import { ErrorEnPantalla, EstadoVacio } from "@/componentes/Estados";
+import { ConEsqueleto } from "@/componentes/Esqueleto";
 import { Encabezado } from "@/componentes/Encabezado";
 import { Button } from "@/componentes/ui/button";
 import { Campo, Selector } from "@/componentes/ui/campo";
@@ -37,10 +38,6 @@ export function DocumentacionSolicitada() {
   const { id } = useSesion();
   const solicitudes = useRecurso(useCallback((s) => listarSolicitudes(s), []));
 
-  const lista = solicitudes.datos ?? [];
-  const pendientes = lista.filter((s) => s.estado !== "CUMPLIDA");
-  const cumplidas = lista.filter((s) => s.estado === "CUMPLIDA");
-
   return (
     <>
       <Encabezado
@@ -49,59 +46,73 @@ export function DocumentacionSolicitada() {
         descripcion="Cuando el municipio necesita un papel tuyo para seguir con un trámite, aparece acá."
       />
 
-      {solicitudes.cargando && <Cargando />}
       {solicitudes.error && (
         <ErrorEnPantalla error={solicitudes.error} alReintentar={solicitudes.recargar} />
       )}
 
-      {solicitudes.datos && pendientes.length === 0 && cumplidas.length === 0 && (
-        <Card>
-          <CardCuerpo>
-            <EstadoVacio
-              titulo="No te están pidiendo nada"
-              descripcion="Si el municipio necesita algún documento tuyo, te va a aparecer en esta pantalla."
-            />
-          </CardCuerpo>
-        </Card>
-      )}
+      <ConEsqueleto
+        recurso={solicitudes}
+        clave={`solicitudes:${id}`}
+        ejemplo={[]}
+        etiqueta="Cargando lo que te piden…"
+      >
+        {(lista) => {
+          const pendientes = lista.filter((s) => s.estado !== "CUMPLIDA");
+          const cumplidas = lista.filter((s) => s.estado === "CUMPLIDA");
+          return (
+            <>
+              {pendientes.length === 0 && cumplidas.length === 0 && (
+                <Card>
+                  <CardCuerpo>
+                    <EstadoVacio
+                      titulo="No te están pidiendo nada"
+                      descripcion="Si el municipio necesita algún documento tuyo, te va a aparecer en esta pantalla."
+                    />
+                  </CardCuerpo>
+                </Card>
+              )}
 
-      {pendientes.length > 0 && (
-        <ul className="lista-escalonada flex flex-col gap-u2">
-          {pendientes.map((s) => (
-            <li key={s.solicitudId}>
-              <Solicitud solicitud={s} ciudadanoId={id} alCumplir={() => solicitudes.recargar()} />
-            </li>
-          ))}
-        </ul>
-      )}
+              {pendientes.length > 0 && (
+                <ul className="lista-escalonada flex flex-col gap-u2">
+                  {pendientes.map((s) => (
+                    <li key={s.solicitudId}>
+                      <Solicitud solicitud={s} ciudadanoId={id} alCumplir={() => solicitudes.recargar()} />
+                    </li>
+                  ))}
+                </ul>
+              )}
 
-      {cumplidas.length > 0 && (
-        <section className="mt-u4">
-          <h2 className="mb-u2">Ya entregadas</h2>
-          <ul className="flex flex-col gap-u1">
-            {cumplidas.map((s) => (
-              <li
-                key={s.solicitudId}
-                className="flex flex-wrap items-center gap-u2 rounded border border-borde bg-superficie px-u3 py-u2"
-              >
-                <CheckCircle2 className="size-4 shrink-0 text-vigente" aria-hidden="true" />
-                <span className="font-medium">
-                  {etiquetaDe(TIPOS_DOCUMENTO, s.tipoDocumento)}
-                </span>
-                <span className="text-[length:var(--texto-dato)] text-apagado">
-                  entregada
-                  {s.documentoId && (
-                    <>
-                      {" "}
-                      · documento <span className="identificador">#{s.documentoId}</span>
-                    </>
-                  )}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
+              {cumplidas.length > 0 && (
+                <section className="mt-u4">
+                  <h2 className="mb-u2">Ya entregadas</h2>
+                  <ul className="flex flex-col gap-u1">
+                    {cumplidas.map((s) => (
+                      <li
+                        key={s.solicitudId}
+                        className="flex flex-wrap items-center gap-u2 rounded border border-borde bg-superficie px-u3 py-u2"
+                      >
+                        <CheckCircle2 className="size-4 shrink-0 text-vigente" aria-hidden="true" />
+                        <span className="font-medium">
+                          {etiquetaDe(TIPOS_DOCUMENTO, s.tipoDocumento)}
+                        </span>
+                        <span className="text-[length:var(--texto-dato)] text-apagado">
+                          entregada
+                          {s.documentoId && (
+                            <>
+                              {" "}
+                              · documento <span className="identificador">#{s.documentoId}</span>
+                            </>
+                          )}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              )}
+            </>
+          );
+        }}
+      </ConEsqueleto>
     </>
   );
 }

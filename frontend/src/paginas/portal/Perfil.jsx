@@ -6,7 +6,8 @@ import { mensajeAmable } from "@/lib/api/cliente";
 import { soloDigitos } from "@/lib/dominio/formato";
 import { ENTIDADES } from "@/lib/dominio/estados";
 import { BadgeEstado } from "@/componentes/BadgeEstado";
-import { Cargando, ErrorEnPantalla } from "@/componentes/Estados";
+import { ErrorEnPantalla } from "@/componentes/Estados";
+import { CargaConEsqueleto, useUltimosDatos } from "@/componentes/Esqueleto";
 import { Encabezado } from "@/componentes/Encabezado";
 import { Button } from "@/componentes/ui/button";
 import { Campo } from "@/componentes/ui/campo";
@@ -20,6 +21,15 @@ import { Card, CardCuerpo } from "@/componentes/ui/card";
  * estado no está entre ellos a propósito: se cambia sólo desde el backoffice y
  * con el permiso más alto del sistema.
  */
+/** La ficha de la primera carga, con largos típicos: los campos van enteros en el esqueleto. */
+const EJEMPLO = {
+  nombre: "Nombre",
+  apellido: "Apellido",
+  fechaNacimiento: "1990-01-01",
+  dni: "30111222",
+  cuil: "20301112223",
+};
+
 export function Perfil() {
   const { id } = useSesion();
   const ciudadano = useRecurso(useCallback((s) => obtenerCiudadano(id, s), [id]));
@@ -29,6 +39,7 @@ export function Perfil() {
   const [errorGeneral, setErrorGeneral] = useState(null);
   const [guardando, setGuardando] = useState(false);
   const [guardado, setGuardado] = useState(false);
+  const ultimosValores = useUltimosDatos(`perfil:${id}`, valores);
 
   useEffect(() => {
     if (!ciudadano.datos) return;
@@ -79,6 +90,88 @@ export function Perfil() {
     }
   }
 
+  /* El formulario como función de los valores: es el contenido y es también el
+     molde del esqueleto de carga, con los últimos valores vistos. */
+  const formulario = (v) => (
+    <Card>
+      <CardCuerpo>
+        <form onSubmit={guardar} noValidate className="flex flex-col gap-u3">
+          <div className="grid gap-u2 sm:grid-cols-2">
+            <Campo
+              etiqueta="Nombre"
+              obligatorio
+              autoComplete="given-name"
+              value={v.nombre}
+              onChange={(e) => cambiar("nombre", e.target.value)}
+              error={errores.nombre}
+            />
+            <Campo
+              etiqueta="Apellido"
+              obligatorio
+              autoComplete="family-name"
+              value={v.apellido}
+              onChange={(e) => cambiar("apellido", e.target.value)}
+              error={errores.apellido}
+            />
+          </div>
+
+          <div className="grid gap-u2 sm:grid-cols-3">
+            <CampoFecha
+              etiqueta="Fecha de nacimiento"
+              obligatorio
+              max={hoyISO()}
+              value={v.fechaNacimiento}
+              onChange={(e) => cambiar("fechaNacimiento", e.target.value)}
+              error={errores.fechaNacimiento}
+            />
+            <Campo
+              etiqueta="DNI"
+              obligatorio
+              inputMode="numeric"
+              ayuda="Sin puntos"
+              value={v.dni}
+              onChange={(e) => cambiar("dni", e.target.value)}
+              error={errores.dni}
+            />
+            <Campo
+              etiqueta="CUIL"
+              inputMode="numeric"
+              ayuda="Once dígitos"
+              value={v.cuil}
+              onChange={(e) => cambiar("cuil", e.target.value)}
+              error={errores.cuil}
+            />
+          </div>
+
+          {errorGeneral && (
+            <p
+              role="alert"
+              className="rounded border border-sello bg-sello-suave px-3 py-2 text-[length:var(--texto-dato)] font-medium text-sello"
+            >
+              {errorGeneral.status === 409
+                ? "Ya hay otra ciudadano registrada con ese DNI o CUIL."
+                : mensajeAmable(errorGeneral)}
+            </p>
+          )}
+
+          <div className="flex items-center gap-u2">
+            <Button type="submit" disabled={guardando}>
+              {guardando ? "Guardando…" : "Guardar cambios"}
+            </Button>
+            {guardado && (
+              <p
+                role="status"
+                className="aparece text-[length:var(--texto-dato)] font-medium text-vigente"
+              >
+                Datos actualizados.
+              </p>
+            )}
+          </div>
+        </form>
+      </CardCuerpo>
+    </Card>
+  );
+
   return (
     <>
       <Encabezado
@@ -92,88 +185,15 @@ export function Perfil() {
         }
       />
 
-      {ciudadano.cargando && <Cargando />}
       {ciudadano.error && <ErrorEnPantalla error={ciudadano.error} alReintentar={ciudadano.recargar} />}
 
-      {valores && (
-        <Card>
-          <CardCuerpo>
-            <form onSubmit={guardar} noValidate className="flex flex-col gap-u3">
-              <div className="grid gap-u2 sm:grid-cols-2">
-                <Campo
-                  etiqueta="Nombre"
-                  obligatorio
-                  autoComplete="given-name"
-                  value={valores.nombre}
-                  onChange={(e) => cambiar("nombre", e.target.value)}
-                  error={errores.nombre}
-                />
-                <Campo
-                  etiqueta="Apellido"
-                  obligatorio
-                  autoComplete="family-name"
-                  value={valores.apellido}
-                  onChange={(e) => cambiar("apellido", e.target.value)}
-                  error={errores.apellido}
-                />
-              </div>
-
-              <div className="grid gap-u2 sm:grid-cols-3">
-                <CampoFecha
-                  etiqueta="Fecha de nacimiento"
-                  obligatorio
-                  max={hoyISO()}
-                  value={valores.fechaNacimiento}
-                  onChange={(e) => cambiar("fechaNacimiento", e.target.value)}
-                  error={errores.fechaNacimiento}
-                />
-                <Campo
-                  etiqueta="DNI"
-                  obligatorio
-                  inputMode="numeric"
-                  ayuda="Sin puntos"
-                  value={valores.dni}
-                  onChange={(e) => cambiar("dni", e.target.value)}
-                  error={errores.dni}
-                />
-                <Campo
-                  etiqueta="CUIL"
-                  inputMode="numeric"
-                  ayuda="Once dígitos"
-                  value={valores.cuil}
-                  onChange={(e) => cambiar("cuil", e.target.value)}
-                  error={errores.cuil}
-                />
-              </div>
-
-              {errorGeneral && (
-                <p
-                  role="alert"
-                  className="rounded border border-sello bg-sello-suave px-3 py-2 text-[length:var(--texto-dato)] font-medium text-sello"
-                >
-                  {errorGeneral.status === 409
-                    ? "Ya hay otra ciudadano registrada con ese DNI o CUIL."
-                    : mensajeAmable(errorGeneral)}
-                </p>
-              )}
-
-              <div className="flex items-center gap-u2">
-                <Button type="submit" disabled={guardando}>
-                  {guardando ? "Guardando…" : "Guardar cambios"}
-                </Button>
-                {guardado && (
-                  <p
-                    role="status"
-                    className="aparece text-[length:var(--texto-dato)] font-medium text-vigente"
-                  >
-                    Datos actualizados.
-                  </p>
-                )}
-              </div>
-            </form>
-          </CardCuerpo>
-        </Card>
-      )}
+      <CargaConEsqueleto
+        cargando={!valores && !ciudadano.error}
+        etiqueta="Cargando tus datos…"
+        molde={() => formulario(ultimosValores ?? EJEMPLO)}
+      >
+        {valores && formulario(valores)}
+      </CargaConEsqueleto>
     </>
   );
 }

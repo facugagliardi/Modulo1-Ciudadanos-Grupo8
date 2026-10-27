@@ -10,7 +10,8 @@ import {
 import { useRecurso } from "@/lib/useRecurso";
 import { useSesion } from "@/lib/auth/SesionContext";
 import { mensajeAmable } from "@/lib/api/cliente";
-import { Cargando, ErrorEnPantalla, EstadoVacio } from "@/componentes/Estados";
+import { ErrorEnPantalla, EstadoVacio } from "@/componentes/Estados";
+import { ConEsqueleto } from "@/componentes/Esqueleto";
 import { Encabezado } from "@/componentes/Encabezado";
 import { ConfirmarAccion } from "@/componentes/ConfirmarAccion";
 import { Button } from "@/componentes/ui/button";
@@ -59,102 +60,112 @@ export function Contactos() {
         }
       />
 
-      {contactos.cargando && <Cargando />}
       {contactos.error && (
         <ErrorEnPantalla error={contactos.error} alReintentar={contactos.recargar} />
       )}
 
-      {contactos.datos?.length === 0 && (
-        <Card>
-          <CardCuerpo>
-            <EstadoVacio
-              titulo="Todavía no cargaste ningún contacto"
-              descripcion="Sin un correo o un teléfono no podemos avisarte cuando avanza un trámite tuyo."
-              accion={
-                <FormularioContacto
-                  ciudadanoId={id}
-                  alGuardar={() => contactos.recargar()}
-                  disparador={<Button>Agregar el primero</Button>}
-                />
-              }
-            />
-          </CardCuerpo>
-        </Card>
-      )}
-
-      {contactos.datos?.length > 0 && (
-        <ul className="lista-escalonada flex flex-col gap-u2">
-          {contactos.datos.map((c) => (
-            <li key={c.contactoId}>
+      <ConEsqueleto
+        recurso={contactos}
+        clave={`contactos:${id}`}
+        ejemplo={[]}
+        etiqueta="Cargando tus contactos…"
+      >
+        {(lista) => (
+          <>
+            {lista.length === 0 && (
               <Card>
-                <CardCuerpo className="flex flex-wrap items-center justify-between gap-u2">
-                  <div className="flex min-w-0 items-center gap-u2">
-                    {c.tipo === "EMAIL" ? (
-                      <Mail className="size-5 shrink-0 text-apagado" aria-hidden="true" />
-                    ) : (
-                      <Phone className="size-5 shrink-0 text-apagado" aria-hidden="true" />
-                    )}
-                    <div className="min-w-0">
-                      <p className="text-[11px] font-semibold uppercase tracking-wide text-apagado">
-                        {c.tipo === "EMAIL" ? "Correo electrónico" : "Teléfono"}
-                      </p>
-                      <p className="identificador truncate">{c.valor}</p>
-                    </div>
-                  </div>
-
-                  <div className="flex flex-wrap items-center gap-u2">
-                    {c.verificado ? (
-                      <span className="inline-flex items-center gap-1.5 text-[length:var(--texto-dato)] font-medium text-vigente">
-                        <BadgeCheck className="size-4" aria-hidden="true" />
-                        Verificado
-                      </span>
-                    ) : (
-                      <>
-                        <span className="inline-flex items-center gap-1.5 text-[length:var(--texto-dato)] text-apagado">
-                          <CircleDashed className="size-4" aria-hidden="true" />
-                          Sin verificar
-                        </span>
-                        <DialogoVerificar
-                          contacto={c}
-                          alVerificar={() => contactos.recargar()}
-                        />
-                      </>
-                    )}
-
-                    <FormularioContacto
-                      ciudadanoId={id}
-                      contacto={c}
-                      abierto={editando === c.contactoId}
-                      alCambiarApertura={(v) => setEditando(v ? c.contactoId : null)}
-                      alGuardar={() => contactos.recargar()}
-                      disparador={
-                        <Button variante="secundario" tamano="chico">
-                          Editar
-                        </Button>
-                      }
-                    />
-
-                    <ConfirmarAccion
-                      titulo="Eliminar este contacto"
-                      descripcion={`Vamos a borrar ${c.valor}. Si es el único que tenés, el municipio no va a poder avisarte nada.`}
-                      textoConfirmar="Eliminar"
-                      alConfirmar={async () => {
-                        await eliminarContacto(c.contactoId);
-                        contactos.recargar();
-                      }}
-                      disparador={
-                        <Button variante="fantasma" tamano="chico" aria-label={`Eliminar ${c.valor}`}>
-                          <Trash2 aria-hidden="true" />
-                        </Button>
-                      }
-                    />
-                  </div>
+                <CardCuerpo>
+                  <EstadoVacio
+                    titulo="Todavía no cargaste ningún contacto"
+                    descripcion="Sin un correo o un teléfono no podemos avisarte cuando avanza un trámite tuyo."
+                    accion={
+                      <FormularioContacto
+                        ciudadanoId={id}
+                        alGuardar={() => contactos.recargar()}
+                        disparador={<Button>Agregar el primero</Button>}
+                      />
+                    }
+                  />
                 </CardCuerpo>
               </Card>
-            </li>
-          ))}
-        </ul>
-      )}
+            )}
+
+            {lista.length > 0 && (
+              <ul className="lista-escalonada flex flex-col gap-u2">
+                {lista.map((c) => (
+                  <li key={c.contactoId}>
+                    <Card>
+                      <CardCuerpo className="flex flex-wrap items-center justify-between gap-u2">
+                        <div className="flex min-w-0 items-center gap-u2">
+                          {c.tipo === "EMAIL" ? (
+                            <Mail className="size-5 shrink-0 text-apagado" aria-hidden="true" />
+                          ) : (
+                            <Phone className="size-5 shrink-0 text-apagado" aria-hidden="true" />
+                          )}
+                          <div className="min-w-0">
+                            <p className="text-[11px] font-semibold uppercase tracking-wide text-apagado">
+                              {c.tipo === "EMAIL" ? "Correo electrónico" : "Teléfono"}
+                            </p>
+                            <p className="identificador truncate">{c.valor}</p>
+                          </div>
+                        </div>
+
+                        <div className="flex flex-wrap items-center gap-u2">
+                          {c.verificado ? (
+                            <span className="inline-flex items-center gap-1.5 text-[length:var(--texto-dato)] font-medium text-vigente">
+                              <BadgeCheck className="size-4" aria-hidden="true" />
+                              Verificado
+                            </span>
+                          ) : (
+                            <>
+                              <span className="inline-flex items-center gap-1.5 text-[length:var(--texto-dato)] text-apagado">
+                                <CircleDashed className="size-4" aria-hidden="true" />
+                                Sin verificar
+                              </span>
+                              <DialogoVerificar
+                                contacto={c}
+                                alVerificar={() => contactos.recargar()}
+                              />
+                            </>
+                          )}
+
+                          <FormularioContacto
+                            ciudadanoId={id}
+                            contacto={c}
+                            abierto={editando === c.contactoId}
+                            alCambiarApertura={(v) => setEditando(v ? c.contactoId : null)}
+                            alGuardar={() => contactos.recargar()}
+                            disparador={
+                              <Button variante="secundario" tamano="chico">
+                                Editar
+                              </Button>
+                            }
+                          />
+
+                          <ConfirmarAccion
+                            titulo="Eliminar este contacto"
+                            descripcion={`Vamos a borrar ${c.valor}. Si es el único que tenés, el municipio no va a poder avisarte nada.`}
+                            textoConfirmar="Eliminar"
+                            alConfirmar={async () => {
+                              await eliminarContacto(c.contactoId);
+                              contactos.recargar();
+                            }}
+                            disparador={
+                              <Button variante="fantasma" tamano="chico" aria-label={`Eliminar ${c.valor}`}>
+                                <Trash2 aria-hidden="true" />
+                              </Button>
+                            }
+                          />
+                        </div>
+                      </CardCuerpo>
+                    </Card>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </>
+        )}
+      </ConEsqueleto>
     </>
   );
 }
