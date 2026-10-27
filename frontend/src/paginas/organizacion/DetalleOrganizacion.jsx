@@ -223,14 +223,6 @@ export function DetalleOrganizacion({ zona = "admin" }) {
               <PanelPestania value="datos">
                 <Card>
                   <CardCuerpo>
-                    <p className="font-medium">
-                      {o.domicilioPrincipal.calle} {o.domicilioPrincipal.numero}
-                      {(o.domicilioPrincipal.piso ?? o.domicilioPrincipal.altura) ? `, ${o.domicilioPrincipal.piso ?? o.domicilioPrincipal.altura}` : ""}
-                    </p>
-                    <p className="text-[length:var(--texto-dato)] text-apagado">
-                      {etiquetaDe(TIPOS_PROPIEDAD, o.domicilioPrincipal.tipo)} · vigente desde{" "}
-                      {formatearFecha(o.domicilioPrincipal.vigenteDesde)}
-                    </p>
                     <dl className="grid gap-u3 sm:grid-cols-2 lg:grid-cols-3">
                       <Dato etiqueta="Razón social" valor={o.razonSocial} />
                       <Dato etiqueta="Nombre de fantasía" valor={o.nombreFantasia} />
@@ -287,29 +279,6 @@ export function DetalleOrganizacion({ zona = "admin" }) {
                         <Card>
                           <CardCuerpo className="flex flex-wrap items-center justify-between gap-u2">
                             <div className="min-w-0">
-                              <p className="flex flex-wrap items-center gap-u2 font-medium">
-                                <MapPin className="size-4 text-apagado" aria-hidden="true" />
-                                {p.calle} {p.numero}
-                                {(p.piso ?? p.altura) ? `, ${p.piso ?? p.altura}` : ""}
-                                <span className="inline-flex items-center rounded border border-borde-fuerte bg-fondo-elevado px-1.5 py-0.5 font-mono text-[11px] font-semibold text-tinta">
-                                  ID: #{p.propiedadId}
-                                </span>
-                                {p.esPrincipal && (
-                                  <span className="inline-flex items-center gap-1 rounded bg-expediente-suave px-2 py-0.5 text-xs font-semibold text-expediente">
-                                    <Star className="size-3 fill-current" aria-hidden="true" />
-                                    Principal
-                                  </span>
-                                )}
-                                {!vigente && (
-                                  <span className="inline-flex items-center rounded bg-apagado/15 px-2 py-0.5 text-xs font-medium text-apagado">
-                                    Baja
-                                  </span>
-                                )}
-                              </p>
-                              <p className="text-[length:var(--texto-dato)] text-apagado">
-                                Código: <strong className="font-mono text-tinta font-semibold">PROP-{p.propiedadId}</strong> · {etiquetaDe(TIPOS_PROPIEDAD, p.tipo)} · vigente desde{" "}
-                                {formatearFecha(p.vigenteDesde)}
-                                {p.vigenteHasta ? ` hasta el ${formatearFecha(p.vigenteHasta)}` : ""}
                               <p className="font-medium">
                                 {zona === "admin" && puedeEditarTerceros ? (
                                   <Link
@@ -327,7 +296,6 @@ export function DetalleOrganizacion({ zona = "admin" }) {
                                 {d.porcentajeTitularidad != null &&
                                   ` · ${d.porcentajeTitularidad}% de titularidad`}
                               </p>
-
                             </div>
 
                             {puedeEditar &&
@@ -500,7 +468,10 @@ export function DetalleOrganizacion({ zona = "admin" }) {
                                       <p className="flex flex-wrap items-center gap-u2 font-medium">
                                         <MapPin className="size-4 text-apagado" aria-hidden="true" />
                                         {p.calle} {p.numero}
-                                        {p.altura ? `, ${p.altura}` : ""}
+                                        {(p.piso ?? p.altura) ? `, ${p.piso ?? p.altura}` : ""}
+                                        <span className="inline-flex items-center rounded border border-borde-fuerte bg-fondo-elevado px-1.5 py-0.5 font-mono text-[11px] font-semibold text-tinta">
+                                          ID: #{p.propiedadId}
+                                        </span>
                                         {p.esPrincipal && (
                                           <span className="inline-flex items-center gap-1 rounded bg-expediente-suave px-2 py-0.5 text-xs font-semibold text-expediente">
                                             <Star className="size-3 fill-current" aria-hidden="true" />
@@ -514,7 +485,7 @@ export function DetalleOrganizacion({ zona = "admin" }) {
                                         )}
                                       </p>
                                       <p className="text-[length:var(--texto-dato)] text-apagado">
-                                        {etiquetaDe(TIPOS_PROPIEDAD, p.tipo)} · vigente desde{" "}
+                                        Código: <strong className="font-mono text-tinta font-semibold">PROP-{p.propiedadId}</strong> · {etiquetaDe(TIPOS_PROPIEDAD, p.tipo)} · vigente desde{" "}
                                         {formatearFecha(p.vigenteDesde)}
                                         {p.vigenteHasta ? ` hasta el ${formatearFecha(p.vigenteHasta)}` : ""}
                                       </p>
