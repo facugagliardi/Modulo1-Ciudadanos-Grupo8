@@ -29,11 +29,10 @@ public class Propiedad {
     private String numero;
 
     /**
-     * Piso/depto o altura complementaria. El diagrama la marca NOT NULL, pero
-     * POST /personas/{id}/domicilios no la recibe: queda opcional (ver README).
+     * Piso/depto o complemento. Opcional.
      */
-    @Column(name = "altura", length = 50)
-    private String altura;
+    @Column(name = "piso", length = 50)
+    private String piso;
 
     @Column(name = "id_barrio")
     private UUID idBarrio;
@@ -76,12 +75,20 @@ public class Propiedad {
         this.numero = numero;
     }
 
+    public String getPiso() {
+        return piso;
+    }
+
+    public void setPiso(String piso) {
+        this.piso = piso;
+    }
+
     public String getAltura() {
-        return altura;
+        return piso;
     }
 
     public void setAltura(String altura) {
-        this.altura = altura;
+        this.piso = altura;
     }
 
     public UUID getIdBarrio() {

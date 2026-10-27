@@ -28,4 +28,15 @@ public class CiudadanoDirectorioService {
             throw ApiException.noEncontrado("No existe el ciudadano " + ciudadanoId);
         }
     }
+
+    @Transactional(readOnly = true)
+    public boolean existe(Long ciudadanoId) {
+        return ciudadanoId != null && ciudadanoRepository.existsById(ciudadanoId);
+    }
+
+    @Transactional(readOnly = true)
+    public java.util.Optional<java.util.UUID> resolverUuid(Long ciudadanoId) {
+        if (ciudadanoId == null) return java.util.Optional.empty();
+        return ciudadanoRepository.findById(ciudadanoId).map(ar.edu.uade.ciudadanos.persona.entity.Ciudadano::getUuid);
+    }
 }

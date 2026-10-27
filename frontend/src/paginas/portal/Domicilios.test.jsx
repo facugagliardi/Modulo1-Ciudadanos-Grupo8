@@ -19,15 +19,15 @@ vi.mock("@/lib/api/endpoints/ciudadanos", () => ({
 }));
 
 const VIGENTE_PRINCIPAL = {
-  propiedadId: 3, tipo: "DEPARTAMENTO", calle: "Corrientes", numero: "1500", altura: "3B",
+  propiedadId: 3, tipo: "DEPARTAMENTO", calle: "Corrientes", numero: "1500", piso: "3B", altura: "3B",
   esPrincipal: true, vigenteDesde: "2026-03-01", vigenteHasta: null,
 };
 const VIGENTE_SECUNDARIO = {
-  propiedadId: 4, tipo: "LOCAL", calle: "Rivadavia", numero: "980", altura: null,
+  propiedadId: 4, tipo: "LOCAL", calle: "Rivadavia", numero: "980", piso: null, altura: null,
   esPrincipal: false, vigenteDesde: "2026-04-01", vigenteHasta: null,
 };
 const CERRADO = {
-  propiedadId: 2, tipo: "CASA", calle: "Siempreviva", numero: "742", altura: null,
+  propiedadId: 2, tipo: "CASA", calle: "Siempreviva", numero: "742", piso: null, altura: null,
   esPrincipal: false, vigenteDesde: "2020-01-01", vigenteHasta: "2026-03-01",
 };
 

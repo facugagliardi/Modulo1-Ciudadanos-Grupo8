@@ -22,8 +22,12 @@ import java.time.OffsetDateTime;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import ar.edu.uade.ciudadanos.evento.EventPublisherService;
+import ar.edu.uade.ciudadanos.evento.dto.UpdatedBy;
+import java.util.Map;
 
 /**
  * Domicilios y su historial (RF-09 a RF-12).
@@ -38,15 +42,26 @@ public class DomicilioService {
     private final CiudadanoPropiedadRepository vinculoRepository;
     private final CiudadanoRepository ciudadanoRepository;
     private final AutorizacionService autorizacion;
+    private final EventPublisherService eventPublisherService;
 
     public DomicilioService(PropiedadRepository propiedadRepository,
                             CiudadanoPropiedadRepository vinculoRepository,
                             CiudadanoRepository ciudadanoRepository,
                             AutorizacionService autorizacion) {
+        this(propiedadRepository, vinculoRepository, ciudadanoRepository, autorizacion, null);
+    }
+
+    @Autowired
+    public DomicilioService(PropiedadRepository propiedadRepository,
+                            CiudadanoPropiedadRepository vinculoRepository,
+                            CiudadanoRepository ciudadanoRepository,
+                            AutorizacionService autorizacion,
+                            EventPublisherService eventPublisherService) {
         this.propiedadRepository = propiedadRepository;
         this.vinculoRepository = vinculoRepository;
         this.ciudadanoRepository = ciudadanoRepository;
         this.autorizacion = autorizacion;
+        this.eventPublisherService = eventPublisherService;
     }
 
     @Transactional
@@ -56,14 +71,15 @@ public class DomicilioService {
 
         Propiedad propiedad = new Propiedad();
         aplicar(propiedad, ListasBlancas.exigir(request.tipo(), ListasBlancas.TIPOS_PROPIEDAD, "tipo"),
-                request.calle(), request.numero(), request.altura(), request.idBarrio(),
+                request.calle(), request.numero(), request.piso(), request.idBarrio(),
                 request.longitud(), request.latitud());
         propiedadRepository.save(propiedad);
 
         // Si todavia no hay principal vigente, este lo es: nadie deberia quedar
         // sin domicilio principal por haber omitido el flag.
-        boolean sinPrincipal = vinculoRepository
-                .findByIdIdCiudadanoAndEsPrincipalTrueAndVigenteHastaIsNull(ciudadanoId).isEmpty();
+        Optional<CiudadanoPropiedad> optPrevio = vinculoRepository
+                .findByIdIdCiudadanoAndEsPrincipalTrueAndVigenteHastaIsNull(ciudadanoId);
+        boolean sinPrincipal = optPrevio.isEmpty();
         boolean principal = Boolean.TRUE.equals(request.esPrincipal()) || sinPrincipal;
 
         if (principal) {
@@ -76,6 +92,40 @@ public class DomicilioService {
         vinculo.setEsPrincipal(principal);
         vinculoRepository.save(vinculo);
 
+        if (eventPublisherService != null && principal) {
+            try {
+                Map<String, Object> newAddr = Map.of(
+                        "propertyId", propiedad.getPropiedadId(),
+                        "street", propiedad.getCalle(),
+                        "number", propiedad.getNumero(),
+                        "primary", true,
+                        "effectiveFrom", String.valueOf(vinculo.getVigenteDesde())
+                );
+                Map<String, Object> details = new java.util.HashMap<>();
+                optPrevio.ifPresent(prevVinculo -> {
+                    Propiedad pPrev = propiedadRepository.findById(prevVinculo.getId().getIdPropiedad()).orElse(null);
+                    if (pPrev != null) {
+                        details.put("previousAddress", Map.of(
+                                "propertyId", pPrev.getPropiedadId(),
+                                "street", pPrev.getCalle(),
+                                "number", pPrev.getNumero(),
+                                "effectiveUntil", String.valueOf(LocalDate.now())
+                        ));
+                    }
+                });
+                details.put("newAddress", newAddr);
+                String citizenUuid = ciudadanoRepository.findById(ciudadanoId)
+                        .map(c -> c.getUuid() != null ? c.getUuid().toString() : String.valueOf(ciudadanoId))
+                        .orElse(String.valueOf(ciudadanoId));
+                eventPublisherService.publicarCitizenUpdated(
+                        citizenUuid,
+                        "ADDRESS_UPDATED",
+                        details,
+                        UpdatedBy.areaUser("USR-M1-14")
+                );
+            } catch (Exception ignored) {
+            }
+        }
 
         return new DomicilioCreadoResponse(propiedad.getPropiedadId(), ciudadanoId, propiedad.getTipo(),
                 propiedad.getCalle(), propiedad.getNumero(), propiedad.getIdBarrio(),
@@ -100,7 +150,7 @@ public class DomicilioService {
         CiudadanoPropiedad vinculo = vinculoOperable(propiedadId);
 
         aplicar(propiedad, ListasBlancas.exigir(request.tipo(), ListasBlancas.TIPOS_PROPIEDAD, "tipo"),
-                request.calle(), request.numero(), request.altura(), request.idBarrio(),
+                request.calle(), request.numero(), request.piso(), request.idBarrio(),
                 request.longitud(), request.latitud());
 
         return DomicilioResponse.de(propiedad, vinculo);
@@ -119,8 +169,47 @@ public class DomicilioService {
             throw ApiException.conflicto("El domicilio ya es el principal");
         }
 
+        Optional<CiudadanoPropiedad> optPrevio = vinculoRepository
+                .findByIdIdCiudadanoAndEsPrincipalTrueAndVigenteHastaIsNull(ciudadanoId);
+
         desmarcarPrincipalVigente(ciudadanoId);
         vinculo.setEsPrincipal(true);
+
+        if (eventPublisherService != null) {
+            try {
+                Propiedad propiedad = propiedad(propiedadId);
+                Map<String, Object> newAddr = Map.of(
+                        "propertyId", propiedad.getPropiedadId(),
+                        "street", propiedad.getCalle(),
+                        "number", propiedad.getNumero(),
+                        "primary", true,
+                        "effectiveFrom", String.valueOf(LocalDate.now())
+                );
+                Map<String, Object> details = new java.util.HashMap<>();
+                optPrevio.ifPresent(prevVinculo -> {
+                    Propiedad pPrev = propiedadRepository.findById(prevVinculo.getId().getIdPropiedad()).orElse(null);
+                    if (pPrev != null) {
+                        details.put("previousAddress", Map.of(
+                                "propertyId", pPrev.getPropiedadId(),
+                                "street", pPrev.getCalle(),
+                                "number", pPrev.getNumero(),
+                                "effectiveUntil", String.valueOf(LocalDate.now())
+                        ));
+                    }
+                });
+                details.put("newAddress", newAddr);
+                String citizenUuid = ciudadanoRepository.findById(ciudadanoId)
+                        .map(c -> c.getUuid() != null ? c.getUuid().toString() : String.valueOf(ciudadanoId))
+                        .orElse(String.valueOf(ciudadanoId));
+                eventPublisherService.publicarCitizenUpdated(
+                        citizenUuid,
+                        "ADDRESS_UPDATED",
+                        details,
+                        UpdatedBy.areaUser("USR-M1-14")
+                );
+            } catch (Exception ignored) {
+            }
+        }
 
         return new DomicilioPrincipalResponse(propiedadId, ciudadanoId, true, OffsetDateTime.now());
     }
@@ -183,12 +272,12 @@ public class DomicilioService {
 
     // ------------------------------------------------------------------ helpers
 
-    private void aplicar(Propiedad propiedad, String tipo, String calle, String numero, String altura,
+    private void aplicar(Propiedad propiedad, String tipo, String calle, String numero, String piso,
                          java.util.UUID idBarrio, String longitud, String latitud) {
         propiedad.setTipo(tipo);
         propiedad.setCalle(calle.trim());
         propiedad.setNumero(numero.trim());
-        propiedad.setAltura(altura);
+        propiedad.setPiso(piso);
         propiedad.setIdBarrio(idBarrio);
         propiedad.setLongitud(longitud);
         propiedad.setLatitud(latitud);
@@ -206,6 +295,14 @@ public class DomicilioService {
         return propiedadRepository.findById(propiedadId)
                 .orElseThrow(() -> ApiException.noEncontrado("No existe el domicilio " + propiedadId));
     }
+
+    @Transactional(readOnly = true)
+    public DomicilioResponse obtener(Long propiedadId) {
+        Propiedad p = propiedad(propiedadId);
+        return new DomicilioResponse(p.getPropiedadId(), p.getTipo(), p.getCalle(), p.getNumero(),
+                p.getPiso(), p.getIdBarrio(), p.getLongitud(), p.getLatitud(), false, null, null);
+    }
+
 
     private void exigirCiudadano(Long ciudadanoId) {
         if (!ciudadanoRepository.existsById(ciudadanoId)) {

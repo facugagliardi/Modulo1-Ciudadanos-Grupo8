@@ -1,5 +1,6 @@
 package ar.edu.uade.ciudadanos.domicilio.dto;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import java.util.UUID;
@@ -17,8 +18,9 @@ public record ActualizarDomicilioRequest(
         @Size(max = 50, message = "numero no puede superar los 50 caracteres")
         String numero,
 
-        @Size(max = 50, message = "altura no puede superar los 50 caracteres")
-        String altura,
+        @JsonAlias("altura")
+        @Size(max = 50, message = "piso no puede superar los 50 caracteres")
+        String piso,
 
         UUID idBarrio,
 
@@ -27,4 +29,8 @@ public record ActualizarDomicilioRequest(
 
         @Size(max = 50, message = "latitud no puede superar los 50 caracteres")
         String latitud) {
+
+    public String altura() {
+        return piso;
+    }
 }

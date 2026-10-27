@@ -34,6 +34,16 @@ spring:
       max-request-size: 12MB
 
 
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USER:guest}
+    password: ${RABBITMQ_PASS:guest}
+    listener:
+      simple:
+        auto-startup: ${RABBITMQ_AUTO_STARTUP:false}
+        default-requeue-rejected: false
+
 server:
   port: ${SERVER_PORT:8080}
   error:
@@ -41,6 +51,10 @@ server:
     include-stacktrace: never
 
 app:
+  events:
+    exchange: ${APP_EVENTS_EXCHANGE:muni.inbox}
+    queue: ${APP_EVENTS_QUEUE:q.ciudadanos}
+    source-module: ${APP_EVENTS_SOURCE_MODULE:ciudadanos}
   # Donde se guardan los archivos de POST /personas/{id}/documentos.
   almacenamiento:
     directorio: ${ALMACENAMIENTO_DIR:./archivos-documentos}

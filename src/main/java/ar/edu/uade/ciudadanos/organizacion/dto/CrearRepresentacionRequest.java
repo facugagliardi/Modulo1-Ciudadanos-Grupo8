@@ -1,11 +1,13 @@
 package ar.edu.uade.ciudadanos.organizacion.dto;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import java.time.LocalDate;
 
 /** POST /representaciones (RF-20). */
 public record CrearRepresentacionRequest(
+        @JsonAlias({"ciudadanoId"})
         @NotNull(message = "personaId es obligatorio")
         Long personaId,
 
@@ -22,3 +24,4 @@ public record CrearRepresentacionRequest(
         /** null = sin vencimiento. */
         LocalDate hasta) {
 }
+

@@ -272,23 +272,37 @@ export function LegajoVecino() {
                         key={ct.contactoId}
                         className="flex items-center justify-between gap-u2 rounded border border-borde bg-superficie px-u3 py-u2"
                       >
-                        <span>
-                          <span className="block text-[11px] font-semibold uppercase tracking-wide text-apagado">
-                            {ct.tipo === "EMAIL" ? "Correo" : "Teléfono"}
-                          </span>
-                          <span className="identificador">{ct.valor}</span>
-                        </span>
-                        {ct.verificado ? (
-                          <span className="inline-flex items-center gap-1.5 text-[length:var(--texto-dato)] font-medium text-vigente">
-                            <BadgeCheck className="size-4" aria-hidden="true" />
-                            Verificado
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1.5 text-[length:var(--texto-dato)] text-apagado">
-                            <CircleDashed className="size-4" aria-hidden="true" />
-                            Sin verificar
-                          </span>
-                        )}
+                        <span
+                          aria-hidden="true"
+                          className={cn(
+                            "absolute -left-[5px] top-1.5 size-2 rounded-full",
+                            vigente ? "bg-expediente" : "bg-borde-fuerte",
+                          )}
+                        />
+                        <div className={cn(!vigente && "opacity-70")}>
+                          <p className="font-medium">
+                            {d.calle} {d.numero}
+                            {(d.piso ?? d.altura) ? `, ${d.piso ?? d.altura}` : ""}
+                            <span
+                              className="ml-2 inline-flex items-center rounded border border-borde-fuerte bg-fondo-elevado px-1.5 py-0.5 font-mono text-[11px] font-semibold text-tinta"
+                              title="ID de propiedad para vincular a una organización"
+                            >
+                              ID: #{d.propiedadId}
+                            </span>
+                            {d.esPrincipal && vigente && (
+                              <span className="ml-2 rounded bg-expediente-suave px-1.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-expediente">
+                                Principal
+                              </span>
+                            )}
+                          </p>
+                          <p className="text-[length:var(--texto-dato)] text-apagado">
+                            Código: <strong className="font-mono text-tinta font-semibold">PROP-{d.propiedadId}</strong> · {etiquetaDe(TIPOS_PROPIEDAD, d.tipo)} ·{" "}
+                            {vigente
+                              ? `desde ${formatearFecha(d.vigenteDesde)}`
+                              : `${formatearFecha(d.vigenteDesde)} — ${formatearFecha(d.vigenteHasta)}`}
+                          </p>
+
+                        </div>
                       </li>
                     ))}
                   </ul>

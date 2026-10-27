@@ -48,6 +48,7 @@ const DOMICILIOS = [
     tipo: "DEPARTAMENTO",
     calle: "Corrientes",
     numero: "1500",
+    piso: "3B",
     altura: "3B",
     esPrincipal: true,
     vigenteDesde: "2026-03-01",

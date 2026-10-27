@@ -5,10 +5,12 @@ import ar.edu.uade.ciudadanos.domicilio.dto.DomicilioResponse;
 import ar.edu.uade.ciudadanos.persona.entity.EstadoCiudadano;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.UUID;
 
 /** 200 de GET /ciudadanos/{id} y de PUT /ciudadanos/{id}. */
 public record CiudadanoResponse(
         Long id,
+        UUID uuid,
         String dni,
         String nombre,
         String apellido,
@@ -18,4 +20,10 @@ public record CiudadanoResponse(
         /** null si todavia no cargo ningun domicilio. */
         DomicilioResponse domicilioPrincipal,
         List<ContactoResponse> contactos) {
+
+    public CiudadanoResponse(Long id, String dni, String nombre, String apellido,
+                             LocalDate fechaNacimiento, String cuil, EstadoCiudadano estado,
+                             DomicilioResponse domicilioPrincipal, List<ContactoResponse> contactos) {
+        this(id, null, dni, nombre, apellido, fechaNacimiento, cuil, estado, domicilioPrincipal, contactos);
+    }
 }

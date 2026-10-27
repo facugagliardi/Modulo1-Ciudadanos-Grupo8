@@ -1,11 +1,13 @@
 package ar.edu.uade.ciudadanos.organizacion.dto;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
 import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotNull;
 import java.math.BigDecimal;
 
 public record AjusteDuenoRequest(
+        @JsonAlias({"ciudadanoId"})
         @NotNull(message = "personaId es obligatorio para el ajuste")
         Long personaId,
 
@@ -14,3 +16,4 @@ public record AjusteDuenoRequest(
         @DecimalMax(value = "100.00", message = "nuevoPorcentaje no puede superar 100")
         BigDecimal nuevoPorcentaje) {
 }
+

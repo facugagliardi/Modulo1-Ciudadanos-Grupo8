@@ -9,6 +9,8 @@ import ar.edu.uade.ciudadanos.auth.dto.RegisterRequest;
 import ar.edu.uade.ciudadanos.auth.dto.RegisterResponse;
 import ar.edu.uade.ciudadanos.auth.dto.Sesion;
 import ar.edu.uade.ciudadanos.auth.dto.TokenEmitido;
+import ar.edu.uade.ciudadanos.auth.dto.UsuarioLoginRequest;
+import ar.edu.uade.ciudadanos.auth.dto.UsuarioLoginResponse;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -53,6 +55,17 @@ public class AuthController {
     @PostMapping("/empleados/login")
     public ResponseEntity<EmpleadoLoginResponse> loginEmpleado(@Valid @RequestBody EmpleadoLoginRequest request) {
         Sesion<EmpleadoLoginResponse> sesion = authService.loginEmpleado(request);
+        return ResponseEntity.ok().headers(headersDe(sesion.tokens())).body(sesion.cuerpo());
+    }
+
+    /**
+     * Endpoint de inicio de sesion de usuario (segun pagina 9 de la especificacion).
+     * Datos de entrada: { gmail: usuario1@gmail.com, password: ******** }
+     * Respuesta: { user_id: bigint, dni: int, role: string, auth: boolean }
+     */
+    @PostMapping("/usuario/login")
+    public ResponseEntity<UsuarioLoginResponse> loginUsuario(@Valid @RequestBody UsuarioLoginRequest request) {
+        Sesion<UsuarioLoginResponse> sesion = authService.loginUsuario(request);
         return ResponseEntity.ok().headers(headersDe(sesion.tokens())).body(sesion.cuerpo());
     }
 

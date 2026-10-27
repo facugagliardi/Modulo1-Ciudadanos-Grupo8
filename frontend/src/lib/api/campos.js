@@ -38,9 +38,12 @@ export const CAMPOS = {
 
   // --- domicilios ---
   crearDomicilio: [
+    "propiedadId",
+    "codigoPropiedad",
     "tipo",
     "calle",
     "numero",
+    "piso",
     "altura",
     "idBarrio",
     "longitud",
@@ -49,7 +52,7 @@ export const CAMPOS = {
   ],
   // El PUT no acepta esPrincipal, y ademas no es parcial: tipo, calle y numero
   // son obligatorios y sobreescriben.
-  actualizarDomicilio: ["tipo", "calle", "numero", "altura", "idBarrio", "longitud", "latitud"],
+  actualizarDomicilio: ["tipo", "calle", "numero", "piso", "altura", "idBarrio", "longitud", "latitud"],
 
   // --- contactos ---
   crearContacto: ["tipo", "valor"],
@@ -59,7 +62,7 @@ export const CAMPOS = {
   // --- organizaciones ---
   crearOrganizacion: ["cuit", "razonSocial", "nombreFantasia", "tipo", "taxId", "porcentajeCreador", "otrosDuenos"],
   actualizarOrganizacion: ["razonSocial", "nombreFantasia", "tipo"],
-  agregarDueno: ["ciudadanoId", "personaId", "porcentajeTitularidad"],
+  agregarDueno: ["ciudadanoId", "personaId", "porcentajeTitularidad", "ajustes"],
   // El PUT sólo mueve el porcentaje: la ciudadano ya viene en la URL.
   actualizarDueno: ["porcentajeTitularidad"],
 

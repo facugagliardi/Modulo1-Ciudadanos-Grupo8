@@ -91,7 +91,7 @@ CREATE TABLE propiedades (
     tipo         VARCHAR(100) NOT NULL,
     calle        VARCHAR(255) NOT NULL,
     numero       VARCHAR(50)  NOT NULL,
-    altura       VARCHAR(50),
+    piso         VARCHAR(50),
     id_barrio    UUID,
     longitud     VARCHAR(50),
     latitud      VARCHAR(50)
@@ -143,6 +143,24 @@ CREATE TABLE ciudadano_organizacion (
     CONSTRAINT ck_co_porcentaje   CHECK (porcentaje_titularidad IS NULL
                                          OR (porcentaje_titularidad > 0 AND porcentaje_titularidad <= 100))
 );
+
+-- Domicilios/propiedades de la organizacion.
+CREATE TABLE organizaciones_propiedades (
+    id_organizacion BIGINT NOT NULL,
+    id_propiedad    BIGINT NOT NULL,
+    vigente_desde   DATE    NOT NULL DEFAULT CURRENT_DATE,
+    vigente_hasta   DATE,
+    es_principal    BOOLEAN NOT NULL DEFAULT FALSE,
+    PRIMARY KEY (id_organizacion, id_propiedad),
+    CONSTRAINT fk_op_organizacion FOREIGN KEY (id_organizacion) REFERENCES organizacion (organizacion_id) ON DELETE CASCADE,
+    CONSTRAINT fk_op_propiedad    FOREIGN KEY (id_propiedad)    REFERENCES propiedades (propiedad_id) ON DELETE CASCADE,
+    CONSTRAINT ck_op_vigencia     CHECK (vigente_hasta IS NULL OR vigente_hasta >= vigente_desde)
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS uk_op_principal_vigente
+    ON organizaciones_propiedades (id_organizacion)
+    WHERE es_principal AND vigente_hasta IS NULL;
+
 
 -- Poder para operar en nombre de una organizacion
 CREATE TABLE representacion (
