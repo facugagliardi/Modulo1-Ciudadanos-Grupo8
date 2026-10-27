@@ -3,7 +3,8 @@ import { Upload } from "lucide-react";
 import { listarDocumentos } from "@/lib/api/endpoints/ciudadanos";
 import { useRecurso } from "@/lib/useRecurso";
 import { useSesion } from "@/lib/auth/SesionContext";
-import { Cargando, ErrorEnPantalla } from "@/componentes/Estados";
+import { ErrorEnPantalla } from "@/componentes/Estados";
+import { ConEsqueleto } from "@/componentes/Esqueleto";
 import { Encabezado } from "@/componentes/Encabezado";
 import { ListaDocumentos, SubirDocumento } from "@/componentes/documentacion/ListaDocumentos";
 import { Button } from "@/componentes/ui/button";
@@ -34,24 +35,30 @@ export function MisDocumentos() {
         }
       />
 
-      {documentos.cargando && <Cargando />}
       {documentos.error && (
         <ErrorEnPantalla error={documentos.error} alReintentar={documentos.recargar} />
       )}
 
-      {documentos.datos && (
-        <ListaDocumentos
-          ciudadanoId={id}
-          documentos={documentos.datos}
-          puedeSubir
-          alCambiar={() => documentos.recargar()}
-          vacio={{
-            titulo: "Todavía no subiste ningún documento",
-            descripcion:
-              "Acá van tu DNI, certificados y todo lo que el municipio te vaya pidiendo para tus trámites.",
-          }}
-        />
-      )}
+      <ConEsqueleto
+        recurso={documentos}
+        clave={`documentos:${id}`}
+        ejemplo={[]}
+        etiqueta="Cargando tus documentos…"
+      >
+        {(lista) => (
+          <ListaDocumentos
+            ciudadanoId={id}
+            documentos={lista}
+            puedeSubir
+            alCambiar={() => documentos.recargar()}
+            vacio={{
+              titulo: "Todavía no subiste ningún documento",
+              descripcion:
+                "Acá van tu DNI, certificados y todo lo que el municipio te vaya pidiendo para tus trámites.",
+            }}
+          />
+        )}
+      </ConEsqueleto>
     </>
   );
 }

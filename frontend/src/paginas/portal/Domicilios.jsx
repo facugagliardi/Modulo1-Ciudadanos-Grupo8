@@ -13,7 +13,8 @@ import { useSesion } from "@/lib/auth/SesionContext";
 import { mensajeAmable } from "@/lib/api/cliente";
 import { formatearFecha } from "@/lib/dominio/formato";
 import { etiquetaDe, TIPOS_PROPIEDAD } from "@/lib/dominio/listasBlancas";
-import { Cargando, ErrorEnPantalla, EstadoVacio } from "@/componentes/Estados";
+import { ErrorEnPantalla, EstadoVacio } from "@/componentes/Estados";
+import { CargaConEsqueleto, useUltimosDatos } from "@/componentes/Esqueleto";
 import { Encabezado } from "@/componentes/Encabezado";
 import { ConfirmarAccion } from "@/componentes/ConfirmarAccion";
 import { Button } from "@/componentes/ui/button";
@@ -32,11 +33,8 @@ export function Domicilios() {
   const { id } = useSesion();
   const domicilios = useRecurso(useCallback((s) => listarDomicilios(id, s), [id]));
 
+  const ultimos = useUltimosDatos(`domicilios:${id}`, domicilios.datos);
   const lista = domicilios.datos ?? [];
-  const vigentes = lista.filter((d) => !d.vigenteHasta);
-  // El backend devuelve 409 al cerrar el único domicilio principal vigente.
-  // Es preferible desactivar la acción y explicarlo que dejar que falle.
-  const esElUnicoVigente = vigentes.length <= 1;
 
   return (
     <>
@@ -59,12 +57,44 @@ export function Domicilios() {
         }
       />
 
-      {domicilios.cargando && <Cargando />}
-      {domicilios.error && (
-        <ErrorEnPantalla error={domicilios.error} alReintentar={domicilios.recargar} />
-      )}
+      <CargaConEsqueleto
+        cargando={domicilios.cargando}
+        etiqueta="Cargando tus domicilios…"
+        // El molde es la misma lista, con los últimos domicilios que se vieron
+        // en la sesión; la primera vez, vacía: el "Cargar mi domicilio".
+        molde={<ListaDeDomicilios ciudadanoId={id} lista={ultimos ?? []} recargar={() => {}} />}
+      >
+        {domicilios.error && (
+          <ErrorEnPantalla error={domicilios.error} alReintentar={domicilios.recargar} />
+        )}
 
-      {domicilios.datos?.length === 0 && (
+        {domicilios.datos && (
+          <ListaDeDomicilios
+            ciudadanoId={id}
+            lista={domicilios.datos}
+            recargando={domicilios.recargando}
+            recargar={domicilios.recargar}
+          />
+        )}
+      </CargaConEsqueleto>
+    </>
+  );
+}
+
+/**
+ * La lista con su historia, o la invitación a cargar el primero. Va aparte
+ * porque es también el molde del esqueleto de carga: la misma pieza, con los
+ * últimos datos vistos.
+ */
+function ListaDeDomicilios({ ciudadanoId, lista, recargando, recargar }) {
+  const vigentes = lista.filter((d) => !d.vigenteHasta);
+  // El backend devuelve 409 al cerrar el único domicilio principal vigente.
+  // Es preferible desactivar la acción y explicarlo que dejar que falle.
+  const esElUnicoVigente = vigentes.length <= 1;
+
+  return (
+    <>
+      {lista.length === 0 && (
         <Card>
           <CardCuerpo>
             <EstadoVacio
@@ -72,9 +102,9 @@ export function Domicilios() {
               descripcion="El municipio necesita saber dónde vivís para notificarte y para asignarte los servicios de tu zona."
               accion={
                 <FormularioDomicilio
-                  ciudadanoId={id}
+                  ciudadanoId={ciudadanoId}
                   sinDomiciliosAun
-                  alGuardar={() => domicilios.recargar()}
+                  alGuardar={() => recargar()}
                   disparador={<Button>Cargar mi domicilio</Button>}
                 />
               }
@@ -87,10 +117,10 @@ export function Domicilios() {
         // `aria-busy` mientras se recarga, pero sin sacar la lista de su lugar:
         // marcar el cambio de domicilio principal no tiene que mover la página.
         <ol
-          aria-busy={domicilios.recargando || undefined}
+          aria-busy={recargando || undefined}
           className={cn(
             "lista-escalonada flex flex-col transition-opacity duration-150",
-            domicilios.recargando && "opacity-60",
+            recargando && "opacity-60",
           )}
         >
           {lista.map((d, i) => {
@@ -144,7 +174,7 @@ export function Domicilios() {
                             tamano="chico"
                             onClick={async () => {
                               await marcarDomicilioPrincipal(d.propiedadId);
-                              domicilios.recargar();
+                              recargar();
                             }}
                           >
                             Hacer principal
@@ -152,9 +182,9 @@ export function Domicilios() {
                         )}
 
                         <FormularioDomicilio
-                          ciudadanoId={id}
+                          ciudadanoId={ciudadanoId}
                           domicilio={d}
-                          alGuardar={() => domicilios.recargar()}
+                          alGuardar={() => recargar()}
                           disparador={
                             <Button variante="secundario" tamano="chico">
                               Editar
@@ -173,7 +203,7 @@ export function Domicilios() {
                             textoConfirmar="Dar de baja"
                             alConfirmar={async () => {
                               await cerrarDomicilio(d.propiedadId);
-                              domicilios.recargar();
+                              recargar();
                             }}
                             disparador={
                               <Button variante="fantasma" tamano="chico">

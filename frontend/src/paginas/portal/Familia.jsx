@@ -13,7 +13,8 @@ import { useSesion } from "@/lib/auth/SesionContext";
 import { mensajeAmable } from "@/lib/api/cliente";
 import { soloDigitos } from "@/lib/dominio/formato";
 import { etiquetaDe, reciprocoDe, TIPOS_RELACION } from "@/lib/dominio/listasBlancas";
-import { Cargando, ErrorEnPantalla, EstadoVacio } from "@/componentes/Estados";
+import { ErrorEnPantalla, EstadoVacio } from "@/componentes/Estados";
+import { ConEsqueleto } from "@/componentes/Esqueleto";
 import { Encabezado } from "@/componentes/Encabezado";
 import { ConfirmarAccion } from "@/componentes/ConfirmarAccion";
 import { Identificador } from "@/componentes/Identificador";
@@ -56,100 +57,110 @@ export function Familia() {
         }
       />
 
-      {relaciones.cargando && <Cargando />}
       {relaciones.error && (
         <ErrorEnPantalla error={relaciones.error} alReintentar={relaciones.recargar} />
       )}
 
-      {relaciones.datos?.length === 0 && (
-        <Card>
-          <CardCuerpo>
-            <EstadoVacio
-              titulo="No tenés vínculos cargados"
-              descripcion="Registrar a tu familia sirve para los programas sociales y para que alguien pueda hacer trámites por vos."
-              accion={
-                <FormularioRelacion
-                  miId={id}
-                  alGuardar={() => relaciones.recargar()}
-                  disparador={<Button>Agregar el primero</Button>}
-                />
-              }
-            />
-          </CardCuerpo>
-        </Card>
-      )}
-
-      {relaciones.datos?.length > 0 && (
-        <ul className="lista-escalonada flex flex-col gap-u2">
-          {relaciones.datos.map((r) => (
-            <li key={r.relacionId}>
+      <ConEsqueleto
+        recurso={relaciones}
+        clave={`familia:${id}`}
+        ejemplo={[]}
+        etiqueta="Cargando tu grupo familiar…"
+      >
+        {(lista) => (
+          <>
+            {lista.length === 0 && (
               <Card>
-                <CardCuerpo className="flex flex-wrap items-center justify-between gap-u2">
-                  <div className="flex min-w-0 items-center gap-u2">
-                    <span
-                      aria-hidden="true"
-                      className="grid size-9 shrink-0 place-items-center rounded-full bg-expediente-suave text-expediente"
-                    >
-                      <UserRound className="size-4" />
-                    </span>
-                    <div className="min-w-0">
-                      <p className="truncate font-medium">
-                        {[r.nombre, r.apellido].filter(Boolean).join(" ") ||
-                          `Vecino #${r.ciudadanoRelacionadoId}`}
-                      </p>
-                      <p className="text-[length:var(--texto-dato)] text-apagado">
-                        {etiquetaDe(TIPOS_RELACION, r.tipoRelacion)}
-                        {r.esResponsable && " · es responsable"}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex flex-wrap items-center gap-u2">
-                    <label className="flex cursor-pointer items-center gap-2 text-[length:var(--texto-dato)]">
-                      <input
-                        type="checkbox"
-                        checked={Boolean(r.esResponsable)}
-                        onChange={async (e) => {
-                          await cambiarResponsable(r.relacionId, e.target.checked);
-                          relaciones.recargar();
-                        }}
-                        className="size-4 accent-[color:var(--expediente)]"
+                <CardCuerpo>
+                  <EstadoVacio
+                    titulo="No tenés vínculos cargados"
+                    descripcion="Registrar a tu familia sirve para los programas sociales y para que alguien pueda hacer trámites por vos."
+                    accion={
+                      <FormularioRelacion
+                        miId={id}
+                        alGuardar={() => relaciones.recargar()}
+                        disparador={<Button>Agregar el primero</Button>}
                       />
-                      Es responsable
-                    </label>
-
-                    <FormularioRelacion
-                      miId={id}
-                      relacion={r}
-                      alGuardar={() => relaciones.recargar()}
-                      disparador={
-                        <Button variante="secundario" tamano="chico">
-                          Editar
-                        </Button>
-                      }
-                    />
-
-                    <ConfirmarAccion
-                      titulo="Eliminar este vínculo"
-                      descripcion={`Se borra la relación con ${[r.nombre, r.apellido].filter(Boolean).join(" ")}. Los datos de esa ciudadano no se tocan.`}
-                      textoConfirmar="Eliminar vínculo"
-                      alConfirmar={async () => {
-                        await eliminarRelacion(r.relacionId);
-                        relaciones.recargar();
-                      }}
-                      disparador={
-                        <Button variante="fantasma" tamano="chico" aria-label="Eliminar vínculo">
-                          <Trash2 aria-hidden="true" />
-                        </Button>
-                      }
-                    />
-                  </div>
+                    }
+                  />
                 </CardCuerpo>
               </Card>
-            </li>
-          ))}
-        </ul>
-      )}
+            )}
+
+            {lista.length > 0 && (
+              <ul className="lista-escalonada flex flex-col gap-u2">
+                {lista.map((r) => (
+                  <li key={r.relacionId}>
+                    <Card>
+                      <CardCuerpo className="flex flex-wrap items-center justify-between gap-u2">
+                        <div className="flex min-w-0 items-center gap-u2">
+                          <span
+                            aria-hidden="true"
+                            className="grid size-9 shrink-0 place-items-center rounded-full bg-expediente-suave text-expediente"
+                          >
+                            <UserRound className="size-4" />
+                          </span>
+                          <div className="min-w-0">
+                            <p className="truncate font-medium">
+                              {[r.nombre, r.apellido].filter(Boolean).join(" ") ||
+                                `Vecino #${r.ciudadanoRelacionadoId}`}
+                            </p>
+                            <p className="text-[length:var(--texto-dato)] text-apagado">
+                              {etiquetaDe(TIPOS_RELACION, r.tipoRelacion)}
+                              {r.esResponsable && " · es responsable"}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="flex flex-wrap items-center gap-u2">
+                          <label className="flex cursor-pointer items-center gap-2 text-[length:var(--texto-dato)]">
+                            <input
+                              type="checkbox"
+                              checked={Boolean(r.esResponsable)}
+                              onChange={async (e) => {
+                                await cambiarResponsable(r.relacionId, e.target.checked);
+                                relaciones.recargar();
+                              }}
+                              className="size-4 accent-[color:var(--expediente)]"
+                            />
+                            Es responsable
+                          </label>
+
+                          <FormularioRelacion
+                            miId={id}
+                            relacion={r}
+                            alGuardar={() => relaciones.recargar()}
+                            disparador={
+                              <Button variante="secundario" tamano="chico">
+                                Editar
+                              </Button>
+                            }
+                          />
+
+                          <ConfirmarAccion
+                            titulo="Eliminar este vínculo"
+                            descripcion={`Se borra la relación con ${[r.nombre, r.apellido].filter(Boolean).join(" ")}. Los datos de esa ciudadano no se tocan.`}
+                            textoConfirmar="Eliminar vínculo"
+                            alConfirmar={async () => {
+                              await eliminarRelacion(r.relacionId);
+                              relaciones.recargar();
+                            }}
+                            disparador={
+                              <Button variante="fantasma" tamano="chico" aria-label="Eliminar vínculo">
+                                <Trash2 aria-hidden="true" />
+                              </Button>
+                            }
+                          />
+                        </div>
+                      </CardCuerpo>
+                    </Card>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </>
+        )}
+      </ConEsqueleto>
     </>
   );
 }
