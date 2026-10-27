@@ -1,4 +1,5 @@
-import { createContext, useCallback, useContext, useMemo, useSyncExternalStore } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useSyncExternalStore } from "react";
+import { olvidarUltimosDatos } from "@/componentes/Esqueleto";
 import { obtenerSesion, suscribirse } from "./almacen";
 import { esEmpleado, puede } from "./permisos";
 
@@ -11,6 +12,13 @@ const Contexto = createContext(null);
  */
 export function ProveedorDeSesion({ children }) {
   const sesion = useSyncExternalStore(suscribirse, obtenerSesion, () => null);
+
+  /* Los moldes de carga recuerdan lo último que se vio (`useUltimosDatos`).
+     Cuando cambia quién está —se cierra la sesión, entra otra persona— se
+     olvida todo: el esqueleto de alguien no se arma con lo que vio otro. La
+     rotación de tokens no cuenta: es la misma persona. */
+  const quien = sesion ? `${sesion.subType}:${sesion.id}` : null;
+  useEffect(() => olvidarUltimosDatos, [quien]);
 
   const tienePermiso = useCallback(
     (permiso) => (sesion ? puede(sesion.rol, permiso) : false),

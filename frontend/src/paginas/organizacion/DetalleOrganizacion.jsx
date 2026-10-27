@@ -34,14 +34,21 @@ import { BadgeEstado } from "@/componentes/BadgeEstado";
 import { BuscadorDeCiudadano, CiudadanoElegida } from "@/componentes/BuscadorDePersona";
 import { CambiarEstado } from "@/componentes/CambiarEstado";
 import { ConfirmarAccion } from "@/componentes/ConfirmarAccion";
-import { Cargando, ErrorEnPantalla, EstadoVacio } from "@/componentes/Estados";
+import { ErrorEnPantalla, EstadoVacio } from "@/componentes/Estados";
+import { ConEsqueleto } from "@/componentes/Esqueleto";
 import { Identificador } from "@/componentes/Identificador";
 import { Button } from "@/componentes/ui/button";
 import { Campo, Selector } from "@/componentes/ui/campo";
 import { CampoFecha, hoyISO } from "@/componentes/ui/fecha";
 import { Card, CardCuerpo, CardEncabezado, CardTitulo } from "@/componentes/ui/card";
 import { CerrarDialogo, ContenidoDialogo, Dialogo, DisparadorDialogo } from "@/componentes/ui/dialog";
-import { ListaPestanias, PanelPestania, Pestania, Pestanias } from "@/componentes/ui/tabs";
+import {
+  ContadorDePestania,
+  ListaPestanias,
+  PanelPestania,
+  Pestania,
+  Pestanias,
+} from "@/componentes/ui/tabs";
 
 /**
  * Una organización con sus dueños y sus representantes.
@@ -52,6 +59,17 @@ import { ListaPestanias, PanelPestania, Pestania, Pestanias } from "@/componente
  * el permiso correspondiente. Como el detalle devuelve las dos listas, la
  * pantalla puede calcular esa titularidad en vez de adivinarla.
  */
+/** La organización de la primera carga: largos típicos para que el esqueleto tenga su forma. */
+const ORGANIZACION_DE_EJEMPLO = {
+  organizacionId: 0,
+  tipo: "SRL",
+  razonSocial: "Razón social de la organización",
+  nombreFantasia: "Nombre de fantasía",
+  cuit: "30712345678",
+  estado: "ACTIVA",
+  duenos: [],
+};
+
 export function DetalleOrganizacion({ zona = "admin" }) {
   const { id } = useParams();
   const { id: miId } = useSesion();
@@ -88,141 +106,122 @@ export function DetalleOrganizacion({ zona = "admin" }) {
         Volver a organizaciones
       </Link>
 
-      {organizacion.cargando && <Cargando texto="Buscando la organización…" />}
       {organizacion.error && (
         <ErrorEnPantalla error={organizacion.error} alReintentar={organizacion.recargar} />
       )}
 
-      {o && (
-        <>
-          <header className="mb-u3 flex flex-wrap items-start justify-between gap-u2 border-b border-borde pb-u3">
-            <div className="min-w-0">
-              <p className="mb-0.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-apagado">
-                {etiquetaDe(TIPOS_ORGANIZACION, o.tipo)}
-              </p>
-              <h1 className="flex flex-wrap items-center gap-u2">
-                <Building2 className="size-6 shrink-0 text-apagado" aria-hidden="true" />
-                {o.razonSocial}
-                <BadgeEstado entidad={ENTIDADES.ORGANIZACION} estado={o.estado} />
-              </h1>
-              <dl className="mt-1.5 flex flex-wrap gap-x-u4 gap-y-1 text-[length:var(--texto-dato)] text-apagado">
-                {o.nombreFantasia && (
+      <ConEsqueleto
+        recurso={organizacion}
+        clave={`organizacion:${id}`}
+        ejemplo={ORGANIZACION_DE_EJEMPLO}
+        etiqueta="Buscando la organización…"
+      >
+        {(o) => (
+          <>
+            <header className="mb-u3 flex flex-wrap items-start justify-between gap-u2 border-b border-borde pb-u3">
+              <div className="min-w-0">
+                <p className="mb-0.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-apagado">
+                  {etiquetaDe(TIPOS_ORGANIZACION, o.tipo)}
+                </p>
+                <h1 className="flex flex-wrap items-center gap-u2">
+                  <Building2 className="size-6 shrink-0 text-apagado" aria-hidden="true" />
+                  {o.razonSocial}
+                  <BadgeEstado entidad={ENTIDADES.ORGANIZACION} estado={o.estado} />
+                </h1>
+                <dl className="mt-1.5 flex flex-wrap gap-x-u4 gap-y-1 text-[length:var(--texto-dato)] text-apagado">
+                  {o.nombreFantasia && (
+                    <div className="flex gap-1.5">
+                      <dt>Nombre de fantasía</dt>
+                      <dd className="text-tinta">{o.nombreFantasia}</dd>
+                    </div>
+                  )}
                   <div className="flex gap-1.5">
-                    <dt>Nombre de fantasía</dt>
-                    <dd className="text-tinta">{o.nombreFantasia}</dd>
+                    <dt>CUIT</dt>
+                    <dd className="text-tinta">
+                      <Identificador valor={o.cuit} tipo="cuit" />
+                    </dd>
                   </div>
-                )}
-                <div className="flex gap-1.5">
-                  <dt>CUIT</dt>
-                  <dd className="text-tinta">
-                    <Identificador valor={o.cuit} tipo="cuit" />
-                  </dd>
-                </div>
-              </dl>
-            </div>
+                </dl>
+              </div>
 
-            <div className="flex flex-wrap items-center gap-u2">
-              {o.estado === "PENDIENTE" && puedeAprobarOrg && (
-                <>
-                  <Button
-                    type="button"
-                    disabled={procesandoAprobacion}
-                    onClick={async () => {
-                      setProcesandoAprobacion(true);
-                      try {
-                        await aprobarOrganizacion(o.organizacionId);
-                        organizacion.recargar();
-                      } finally {
-                        setProcesandoAprobacion(false);
-                      }
+              <div className="flex flex-wrap items-center gap-u2">
+                {o.estado === "PENDIENTE" && puedeAprobarOrg && (
+                  <>
+                    <Button
+                      type="button"
+                      disabled={procesandoAprobacion}
+                      onClick={async () => {
+                        setProcesandoAprobacion(true);
+                        try {
+                          await aprobarOrganizacion(o.organizacionId);
+                          organizacion.recargar();
+                        } finally {
+                          setProcesandoAprobacion(false);
+                        }
+                      }}
+                    >
+                      Aprobar organización
+                    </Button>
+                    <Button
+                      type="button"
+                      variante="destructivo"
+                      disabled={procesandoAprobacion}
+                      onClick={async () => {
+                        setProcesandoAprobacion(true);
+                        try {
+                          await rechazarOrganizacion(o.organizacionId);
+                          organizacion.recargar();
+                        } finally {
+                          setProcesandoAprobacion(false);
+                        }
+                      }}
+                    >
+                      Rechazar
+                    </Button>
+                  </>
+                )}
+                {puedeEditar && (
+                  <EditarOrganizacion organizacion={o} alGuardar={organizacion.recargar} />
+                )}
+                {puedeCambiarEstado && (
+                  <CambiarEstado
+                    entidad={ENTIDADES.ORGANIZACION}
+                    estadoActual={o.estado}
+                    nombreEntidad="esta organización"
+                    alConfirmar={async (nuevo) => {
+                      await cambiarEstadoOrganizacion(o.organizacionId, nuevo);
+                      organizacion.recargar();
                     }}
-                  >
-                    Aprobar organización
-                  </Button>
-                  <Button
-                    type="button"
-                    variante="destructivo"
-                    disabled={procesandoAprobacion}
-                    onClick={async () => {
-                      setProcesandoAprobacion(true);
-                      try {
-                        await rechazarOrganizacion(o.organizacionId);
-                        organizacion.recargar();
-                      } finally {
-                        setProcesandoAprobacion(false);
-                      }
-                    }}
-                  >
-                    Rechazar
-                  </Button>
-                </>
-              )}
-              {puedeEditar && (
-                <EditarOrganizacion organizacion={o} alGuardar={organizacion.recargar} />
-              )}
-              {puedeCambiarEstado && (
-                <CambiarEstado
-                  entidad={ENTIDADES.ORGANIZACION}
-                  estadoActual={o.estado}
-                  nombreEntidad="esta organización"
-                  alConfirmar={async (nuevo) => {
-                    await cambiarEstadoOrganizacion(o.organizacionId, nuevo);
-                    organizacion.recargar();
-                  }}
-                />
-              )}
-            </div>
-          </header>
-
-          {o.estado === "PENDIENTE" && (
-            <div className="mb-u3 rounded border border-aviso/40 bg-aviso-suave p-3 text-sm text-tinta">
-              <strong>Organización pendiente de aprobación:</strong> Esta entidad fue registrada y requiere ser aprobada por el área administrativa para quedar activa.
-            </div>
-          )}
-
-          <Pestanias defaultValue="datos">
-            <ListaPestanias>
-              <Pestania value="datos">Datos</Pestania>
-              <Pestania value="duenos">
-                Dueños
-                <span className="ml-1.5 text-apagado">{o.duenos?.length ?? 0}</span>
-              </Pestania>
-              <Pestania value="representaciones">
-                Representantes
-                {representaciones.datos && (
-                  <span className="ml-1.5 text-apagado">{representaciones.datos.length}</span>
+                  />
                 )}
-              </Pestania>
-              <Pestania value="propiedades">
-                Propiedades
-                {propiedades.datos && (
-                  <span className="ml-1.5 text-apagado">{propiedades.datos.length}</span>
-                )}
-              </Pestania>
-            </ListaPestanias>
+              </div>
+            </header>
 
-            <PanelPestania value="datos">
-              <Card>
-                <CardCuerpo>
-                  <dl className="grid gap-u3 sm:grid-cols-2 lg:grid-cols-3">
-                    <Dato etiqueta="Razón social" valor={o.razonSocial} />
-                    <Dato etiqueta="Nombre de fantasía" valor={o.nombreFantasia} />
-                    <Dato etiqueta="Tipo" valor={etiquetaDe(TIPOS_ORGANIZACION, o.tipo)} />
-                    <Dato etiqueta="CUIT" valor={<Identificador valor={o.cuit} tipo="cuit" />} />
-                    <Dato etiqueta="Identificador fiscal" valor={<Identificador valor={o.taxId} />} />
-                    <Dato
-                      etiqueta="Estado"
-                      valor={<BadgeEstado entidad={ENTIDADES.ORGANIZACION} estado={o.estado} />}
-                    />
-                  </dl>
-                </CardCuerpo>
-              </Card>
+            {o.estado === "PENDIENTE" && (
+              <div className="mb-u3 rounded border border-aviso/40 bg-aviso-suave p-3 text-sm text-tinta">
+                <strong>Organización pendiente de aprobación:</strong> Esta entidad fue registrada y requiere ser aprobada por el área administrativa para quedar activa.
+              </div>
+            )}
 
-              {o.domicilioPrincipal && (
-                <Card className="mt-u3">
-                  <CardEncabezado>
-                    <CardTitulo>Domicilio principal</CardTitulo>
-                  </CardEncabezado>
+            <Pestanias defaultValue="datos">
+              <ListaPestanias>
+                <Pestania value="datos">Datos</Pestania>
+                <Pestania value="duenos">
+                  Dueños
+                  <span className="ml-1.5 text-apagado">{o.duenos?.length ?? 0}</span>
+                </Pestania>
+                <Pestania value="representaciones">
+                  Representantes
+                  <ContadorDePestania valor={representaciones.datos?.length} />
+                </Pestania>
+                <Pestania value="propiedades">
+                  Propiedades
+                  <ContadorDePestania valor={propiedades.datos?.length} />
+                </Pestania>
+              </ListaPestanias>
+
+              <PanelPestania value="datos">
+                <Card>
                   <CardCuerpo>
                     <p className="font-medium">
                       {o.domicilioPrincipal.calle} {o.domicilioPrincipal.numero}
@@ -232,201 +231,60 @@ export function DetalleOrganizacion({ zona = "admin" }) {
                       {etiquetaDe(TIPOS_PROPIEDAD, o.domicilioPrincipal.tipo)} · vigente desde{" "}
                       {formatearFecha(o.domicilioPrincipal.vigenteDesde)}
                     </p>
+                    <dl className="grid gap-u3 sm:grid-cols-2 lg:grid-cols-3">
+                      <Dato etiqueta="Razón social" valor={o.razonSocial} />
+                      <Dato etiqueta="Nombre de fantasía" valor={o.nombreFantasia} />
+                      <Dato etiqueta="Tipo" valor={etiquetaDe(TIPOS_ORGANIZACION, o.tipo)} />
+                      <Dato etiqueta="CUIT" valor={<Identificador valor={o.cuit} tipo="cuit" />} />
+                      <Dato etiqueta="Identificador fiscal" valor={<Identificador valor={o.taxId} />} />
+                      <Dato
+                        etiqueta="Estado"
+                        valor={<BadgeEstado entidad={ENTIDADES.ORGANIZACION} estado={o.estado} />}
+                      />
+                    </dl>
                   </CardCuerpo>
                 </Card>
-              )}
-            </PanelPestania>
 
-            {/* --- Dueños --- */}
-            <PanelPestania value="duenos">
-              {puedeEditar && (
-                <div className="mb-u2 flex justify-end">
-                  <AgregarDueno
-                    organizacion={o}
-                    alGuardar={organizacion.recargar}
+                {o.domicilioPrincipal && (
+                  <Card className="mt-u3">
+                    <CardEncabezado>
+                      <CardTitulo>Domicilio principal</CardTitulo>
+                    </CardEncabezado>
+                    <CardCuerpo>
+                      <p className="font-medium">
+                        {o.domicilioPrincipal.calle} {o.domicilioPrincipal.numero}
+                        {o.domicilioPrincipal.altura ? `, ${o.domicilioPrincipal.altura}` : ""}
+                      </p>
+                      <p className="text-[length:var(--texto-dato)] text-apagado">
+                        {etiquetaDe(TIPOS_PROPIEDAD, o.domicilioPrincipal.tipo)} · vigente desde{" "}
+                        {formatearFecha(o.domicilioPrincipal.vigenteDesde)}
+                      </p>
+                    </CardCuerpo>
+                  </Card>
+                )}
+              </PanelPestania>
+
+              {/* --- Dueños --- */}
+              <PanelPestania value="duenos">
+                {puedeEditar && (
+                  <div className="mb-u2 flex justify-end">
+                    <AgregarDueno
+                      organizacion={o}
+                      alGuardar={organizacion.recargar}
+                    />
+                  </div>
+                )}
+
+                {(o.duenos?.length ?? 0) === 0 ? (
+                  <EstadoVacio
+                    titulo="Sin dueños registrados"
+                    descripcion="Toda organización debería tener al menos un titular."
                   />
-                </div>
-              )}
-
-              {(o.duenos?.length ?? 0) === 0 ? (
-                <EstadoVacio
-                  titulo="Sin dueños registrados"
-                  descripcion="Toda organización debería tener al menos un titular."
-                />
-              ) : (
-                <ul className="lista-escalonada flex flex-col gap-u2">
-                  {o.duenos.map((d) => (
-                    <li key={d.ciudadanoId ?? d.personaId}>
-                      <Card>
-                        <CardCuerpo className="flex flex-wrap items-center justify-between gap-u2">
-                          <div className="min-w-0">
-                            <p className="font-medium">
-                              {zona === "admin" && puedeEditarTerceros ? (
-                                <Link
-                                  to={`/admin/padron/${d.ciudadanoId ?? d.personaId}`}
-                                  className="text-expediente hover:underline"
-                                >
-                                  {[d.nombre, d.apellido].filter(Boolean).join(" ")}
-                                </Link>
-                              ) : (
-                                [d.nombre, d.apellido].filter(Boolean).join(" ")
-                              )}
-                            </p>
-                            <p className="text-[length:var(--texto-dato)] text-apagado">
-                              DNI <Identificador valor={d.dni} tipo="dni" />
-                              {d.porcentajeTitularidad != null &&
-                                ` · ${d.porcentajeTitularidad}% de titularidad`}
-                            </p>
-                          </div>
-
-                          {puedeEditar &&
-                            (o.duenos.length === 1 ? (
-                              <p className="max-w-[16rem] text-right text-sm text-apagado">
-                                Es el único dueño. Agregá otro antes de quitarlo.
-                              </p>
-                            ) : (
-                              <QuitarDueno
-                                organizacion={o}
-                                dueno={d}
-                                alGuardar={organizacion.recargar}
-                              />
-                            ))}
-                        </CardCuerpo>
-                      </Card>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </PanelPestania>
-
-            {/* --- Representaciones --- */}
-            <PanelPestania value="representaciones">
-              {puedeRepresentaciones && (
-                <div className="mb-u2 flex justify-end">
-                  <OtorgarRepresentacion
-                    organizacionId={o.organizacionId}
-                    alGuardar={() => {
-                      representaciones.recargar();
-                      organizacion.recargar();
-                    }}
-                  />
-                </div>
-              )}
-
-              {representaciones.cargando && <Cargando />}
-              {representaciones.error && (
-                <ErrorEnPantalla
-                  error={representaciones.error}
-                  alReintentar={representaciones.recargar}
-                />
-              )}
-
-              {representaciones.datos?.length === 0 && (
-                <EstadoVacio
-                  titulo="Nadie tiene poder para actuar por esta organización"
-                  descripcion="Un representante puede hacer trámites en su nombre ante otras áreas del municipio."
-                />
-              )}
-
-              {representaciones.datos?.length > 0 && (
-                <ul className="lista-escalonada flex flex-col gap-u2">
-                  {representaciones.datos.map((r) => (
-                    <li key={r.representacionId}>
-                      <Card className={cn(r.estado !== "VIGENTE" && "opacity-75")}>
-                        <CardCuerpo className="flex flex-wrap items-center justify-between gap-u2">
-                          <div className="min-w-0">
-                            <p className="flex flex-wrap items-center gap-u2 font-medium">
-                              {[r.nombre, r.apellido].filter(Boolean).join(" ") ||
-                                `Ciudadano #${r.ciudadanoId ?? r.personaId}`}
-                              <BadgeEstado entidad={ENTIDADES.REPRESENTACION} estado={r.estado} />
-                            </p>
-                            <p className="text-[length:var(--texto-dato)] text-apagado">
-                              Alcance {etiquetaDe(ALCANCES_REPRESENTACION, r.alcance).toLowerCase()} ·
-                              desde el {formatearFecha(r.desde)}
-                              {r.hasta ? ` hasta el ${formatearFecha(r.hasta)}` : " · sin vencimiento"}
-                            </p>
-                          </div>
-
-                          {puedeRepresentaciones && (
-                            <CambiarEstado
-                              entidad={ENTIDADES.REPRESENTACION}
-                              estadoActual={r.estado}
-                              nombreEntidad="esta representación"
-                              alConfirmar={async (nuevo) => {
-                                await cambiarEstadoRepresentacion(r.representacionId, nuevo);
-                                representaciones.recargar();
-                                organizacion.recargar();
-                              }}
-                              disparador={
-                                <Button variante="secundario" tamano="chico">
-                                  Estado
-                                </Button>
-                              }
-                            />
-                          )}
-                        </CardCuerpo>
-                      </Card>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </PanelPestania>
-
-            {/* --- Propiedades --- */}
-            <PanelPestania value="propiedades">
-              {puedeEditar && (
-                <div className="mb-u2 flex justify-end">
-                  <FormularioPropiedadOrganizacion
-                    organizacionId={o.organizacionId}
-                    alGuardar={() => {
-                      propiedades.recargar();
-                      organizacion.recargar();
-                    }}
-                    disparador={
-                      <Button>
-                        <Plus className="size-4 mr-1.5" aria-hidden="true" />
-                        Agregar propiedad
-                      </Button>
-                    }
-                  />
-                </div>
-              )}
-
-              {propiedades.cargando && <Cargando />}
-              {propiedades.error && (
-                <ErrorEnPantalla
-                  error={propiedades.error}
-                  alReintentar={propiedades.recargar}
-                />
-              )}
-
-              {propiedades.datos?.length === 0 && (
-                <EstadoVacio
-                  titulo="Sin propiedades registradas"
-                  descripcion="Esta organización no tiene domicilios o inmuebles registrados."
-                  accion={
-                    puedeEditar && (
-                      <FormularioPropiedadOrganizacion
-                        organizacionId={o.organizacionId}
-                        sinPropiedadesAun
-                        alGuardar={() => {
-                          propiedades.recargar();
-                          organizacion.recargar();
-                        }}
-                        disparador={<Button>Cargar primera propiedad</Button>}
-                      />
-                    )
-                  }
-                />
-              )}
-
-              {propiedades.datos?.length > 0 && (
-                <ul className="lista-escalonada flex flex-col gap-u2">
-                  {propiedades.datos.map((p) => {
-                    const vigente = !p.vigenteHasta;
-                    return (
-                      <li key={p.propiedadId}>
-                        <Card className={cn(!vigente && "opacity-75")}>
+                ) : (
+                  <ul className="lista-escalonada flex flex-col gap-u2">
+                    {o.duenos.map((d) => (
+                      <li key={d.ciudadanoId ?? d.personaId}>
+                        <Card>
                           <CardCuerpo className="flex flex-wrap items-center justify-between gap-u2">
                             <div className="min-w-0">
                               <p className="flex flex-wrap items-center gap-u2 font-medium">
@@ -452,60 +310,270 @@ export function DetalleOrganizacion({ zona = "admin" }) {
                                 Código: <strong className="font-mono text-tinta font-semibold">PROP-{p.propiedadId}</strong> · {etiquetaDe(TIPOS_PROPIEDAD, p.tipo)} · vigente desde{" "}
                                 {formatearFecha(p.vigenteDesde)}
                                 {p.vigenteHasta ? ` hasta el ${formatearFecha(p.vigenteHasta)}` : ""}
+                              <p className="font-medium">
+                                {zona === "admin" && puedeEditarTerceros ? (
+                                  <Link
+                                    to={`/admin/padron/${d.ciudadanoId ?? d.personaId}`}
+                                    className="text-expediente hover:underline"
+                                  >
+                                    {[d.nombre, d.apellido].filter(Boolean).join(" ")}
+                                  </Link>
+                                ) : (
+                                  [d.nombre, d.apellido].filter(Boolean).join(" ")
+                                )}
+                              </p>
+                              <p className="text-[length:var(--texto-dato)] text-apagado">
+                                DNI <Identificador valor={d.dni} tipo="dni" />
+                                {d.porcentajeTitularidad != null &&
+                                  ` · ${d.porcentajeTitularidad}% de titularidad`}
                               </p>
 
                             </div>
 
-                            {puedeEditar && vigente && (
-                              <div className="flex items-center gap-2">
-                                {!p.esPrincipal && (
-                                  <Button
-                                    type="button"
-                                    variante="secundario"
-                                    tamano="chico"
-                                    onClick={async () => {
-                                      await marcarPropiedadOrganizacionPrincipal(o.organizacionId, p.propiedadId);
-                                      propiedades.recargar();
-                                      organizacion.recargar();
-                                    }}
-                                  >
-                                    <Star className="size-4 mr-1 text-aviso" aria-hidden="true" />
-                                    Hacer principal
-                                  </Button>
-                                )}
-                                <ConfirmarAccion
-                                  titulo="¿Dar de baja esta propiedad?"
-                                  descripcion="El inmueble quedará en el historial de la organización con su fecha de cese."
-                                  textoBotonConfirmar="Dar de baja"
-                                  alConfirmar={async () => {
-                                    await darDeBajaPropiedadOrganizacion(o.organizacionId, p.propiedadId);
-                                    propiedades.recargar();
-                                    organizacion.recargar();
-                                  }}
-                                  disparador={
-                                    <Button
-                                      type="button"
-                                      variante="fantasma"
-                                      tamano="chico"
-                                      aria-label={`Dar de baja propiedad ${p.calle} ${p.numero}`}
-                                    >
-                                      <Trash2 className="size-4 text-sello" aria-hidden="true" />
-                                    </Button>
-                                  }
+                            {puedeEditar &&
+                              (o.duenos.length === 1 ? (
+                                <p className="max-w-[16rem] text-right text-sm text-apagado">
+                                  Es el único dueño. Agregá otro antes de quitarlo.
+                                </p>
+                              ) : (
+                                <QuitarDueno
+                                  organizacion={o}
+                                  dueno={d}
+                                  alGuardar={organizacion.recargar}
                                 />
-                              </div>
-                            )}
+                              ))}
                           </CardCuerpo>
                         </Card>
                       </li>
-                    );
-                  })}
-                </ul>
-              )}
-            </PanelPestania>
-          </Pestanias>
-        </>
-      )}
+                    ))}
+                  </ul>
+                )}
+              </PanelPestania>
+
+              {/* --- Representaciones --- */}
+              <PanelPestania value="representaciones">
+                {puedeRepresentaciones && (
+                  <div className="mb-u2 flex justify-end">
+                    <OtorgarRepresentacion
+                      organizacionId={o.organizacionId}
+                      alGuardar={() => {
+                        representaciones.recargar();
+                        organizacion.recargar();
+                      }}
+                    />
+                  </div>
+                )}
+
+                {representaciones.error && (
+                  <ErrorEnPantalla
+                    error={representaciones.error}
+                    alReintentar={representaciones.recargar}
+                  />
+                )}
+
+                <ConEsqueleto
+                  recurso={representaciones}
+                  clave={`representaciones-org:${id}`}
+                  ejemplo={[]}
+                  etiqueta="Cargando las representaciones…"
+                >
+                  {(lista) => (
+                    <>
+                      {lista.length === 0 && (
+                        <EstadoVacio
+                          titulo="Nadie tiene poder para actuar por esta organización"
+                          descripcion="Un representante puede hacer trámites en su nombre ante otras áreas del municipio."
+                        />
+                      )}
+
+                      {lista.length > 0 && (
+                        <ul className="lista-escalonada flex flex-col gap-u2">
+                          {lista.map((r) => (
+                            <li key={r.representacionId}>
+                              <Card className={cn(r.estado !== "VIGENTE" && "opacity-75")}>
+                                <CardCuerpo className="flex flex-wrap items-center justify-between gap-u2">
+                                  <div className="min-w-0">
+                                    <p className="flex flex-wrap items-center gap-u2 font-medium">
+                                      {[r.nombre, r.apellido].filter(Boolean).join(" ") ||
+                                        `Ciudadano #${r.ciudadanoId ?? r.personaId}`}
+                                      <BadgeEstado entidad={ENTIDADES.REPRESENTACION} estado={r.estado} />
+                                    </p>
+                                    <p className="text-[length:var(--texto-dato)] text-apagado">
+                                      Alcance {etiquetaDe(ALCANCES_REPRESENTACION, r.alcance).toLowerCase()} ·
+                                      desde el {formatearFecha(r.desde)}
+                                      {r.hasta ? ` hasta el ${formatearFecha(r.hasta)}` : " · sin vencimiento"}
+                                    </p>
+                                  </div>
+
+                                  {puedeRepresentaciones && (
+                                    <CambiarEstado
+                                      entidad={ENTIDADES.REPRESENTACION}
+                                      estadoActual={r.estado}
+                                      nombreEntidad="esta representación"
+                                      alConfirmar={async (nuevo) => {
+                                        await cambiarEstadoRepresentacion(r.representacionId, nuevo);
+                                        representaciones.recargar();
+                                        organizacion.recargar();
+                                      }}
+                                      disparador={
+                                        <Button variante="secundario" tamano="chico">
+                                          Estado
+                                        </Button>
+                                      }
+                                    />
+                                  )}
+                                </CardCuerpo>
+                              </Card>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </>
+                  )}
+                </ConEsqueleto>
+              </PanelPestania>
+
+              {/* --- Propiedades --- */}
+              <PanelPestania value="propiedades">
+                {puedeEditar && (
+                  <div className="mb-u2 flex justify-end">
+                    <FormularioPropiedadOrganizacion
+                      organizacionId={o.organizacionId}
+                      alGuardar={() => {
+                        propiedades.recargar();
+                        organizacion.recargar();
+                      }}
+                      disparador={
+                        <Button>
+                          <Plus className="size-4 mr-1.5" aria-hidden="true" />
+                          Agregar propiedad
+                        </Button>
+                      }
+                    />
+                  </div>
+                )}
+
+                {propiedades.error && (
+                  <ErrorEnPantalla
+                    error={propiedades.error}
+                    alReintentar={propiedades.recargar}
+                  />
+                )}
+
+                <ConEsqueleto
+                  recurso={propiedades}
+                  clave={`propiedades-org:${id}`}
+                  ejemplo={[]}
+                  etiqueta="Cargando las propiedades…"
+                >
+                  {(lista) => (
+                    <>
+                      {lista.length === 0 && (
+                        <EstadoVacio
+                          titulo="Sin propiedades registradas"
+                          descripcion="Esta organización no tiene domicilios o inmuebles registrados."
+                          accion={
+                            puedeEditar && (
+                              <FormularioPropiedadOrganizacion
+                                organizacionId={o.organizacionId}
+                                sinPropiedadesAun
+                                alGuardar={() => {
+                                  propiedades.recargar();
+                                  organizacion.recargar();
+                                }}
+                                disparador={<Button>Cargar primera propiedad</Button>}
+                              />
+                            )
+                          }
+                        />
+                      )}
+
+                      {lista.length > 0 && (
+                        <ul className="lista-escalonada flex flex-col gap-u2">
+                          {lista.map((p) => {
+                            const vigente = !p.vigenteHasta;
+                            return (
+                              <li key={p.propiedadId}>
+                                <Card className={cn(!vigente && "opacity-75")}>
+                                  <CardCuerpo className="flex flex-wrap items-center justify-between gap-u2">
+                                    <div className="min-w-0">
+                                      <p className="flex flex-wrap items-center gap-u2 font-medium">
+                                        <MapPin className="size-4 text-apagado" aria-hidden="true" />
+                                        {p.calle} {p.numero}
+                                        {p.altura ? `, ${p.altura}` : ""}
+                                        {p.esPrincipal && (
+                                          <span className="inline-flex items-center gap-1 rounded bg-expediente-suave px-2 py-0.5 text-xs font-semibold text-expediente">
+                                            <Star className="size-3 fill-current" aria-hidden="true" />
+                                            Principal
+                                          </span>
+                                        )}
+                                        {!vigente && (
+                                          <span className="inline-flex items-center rounded bg-apagado/15 px-2 py-0.5 text-xs font-medium text-apagado">
+                                            Baja
+                                          </span>
+                                        )}
+                                      </p>
+                                      <p className="text-[length:var(--texto-dato)] text-apagado">
+                                        {etiquetaDe(TIPOS_PROPIEDAD, p.tipo)} · vigente desde{" "}
+                                        {formatearFecha(p.vigenteDesde)}
+                                        {p.vigenteHasta ? ` hasta el ${formatearFecha(p.vigenteHasta)}` : ""}
+                                      </p>
+                                    </div>
+
+                                    {puedeEditar && vigente && (
+                                      <div className="flex items-center gap-2">
+                                        {!p.esPrincipal && (
+                                          <Button
+                                            type="button"
+                                            variante="secundario"
+                                            tamano="chico"
+                                            onClick={async () => {
+                                              await marcarPropiedadOrganizacionPrincipal(o.organizacionId, p.propiedadId);
+                                              propiedades.recargar();
+                                              organizacion.recargar();
+                                            }}
+                                          >
+                                            <Star className="size-4 mr-1 text-aviso" aria-hidden="true" />
+                                            Hacer principal
+                                          </Button>
+                                        )}
+                                        <ConfirmarAccion
+                                          titulo="¿Dar de baja esta propiedad?"
+                                          descripcion="El inmueble quedará en el historial de la organización con su fecha de cese."
+                                          textoBotonConfirmar="Dar de baja"
+                                          alConfirmar={async () => {
+                                            await darDeBajaPropiedadOrganizacion(o.organizacionId, p.propiedadId);
+                                            propiedades.recargar();
+                                            organizacion.recargar();
+                                          }}
+                                          disparador={
+                                            <Button
+                                              type="button"
+                                              variante="fantasma"
+                                              tamano="chico"
+                                              aria-label={`Dar de baja propiedad ${p.calle} ${p.numero}`}
+                                            >
+                                              <Trash2 className="size-4 text-sello" aria-hidden="true" />
+                                            </Button>
+                                          }
+                                        />
+                                      </div>
+                                    )}
+                                  </CardCuerpo>
+                                </Card>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      )}
+                    </>
+                  )}
+                </ConEsqueleto>
+              </PanelPestania>
+            </Pestanias>
+          </>
+        )}
+      </ConEsqueleto>
     </>
   );
 }

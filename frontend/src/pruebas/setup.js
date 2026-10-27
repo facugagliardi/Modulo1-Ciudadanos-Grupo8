@@ -1,6 +1,7 @@
 import "@testing-library/jest-dom/vitest";
 import { afterEach, beforeEach, vi } from "vitest";
 import { cleanup } from "@testing-library/react";
+import { olvidarUltimosDatos } from "@/componentes/Esqueleto";
 
 // El desplegable de Radix se reemplaza por un doble en todas las pruebas.
 // El porqué, largo y con la evidencia, está en el propio archivo del doble.
@@ -53,6 +54,11 @@ if (!URL.createObjectURL) {
   URL.revokeObjectURL = () => {};
 }
 
+// jsdom no pinta: `getContext` existe pero tira "Not implemented" en la consola
+// cada vez que se lo llama. El esqueleto de carga pregunta si hay canvas para
+// decidir si anima; con `null` sabe que no y queda sólo la forma.
+HTMLCanvasElement.prototype.getContext = () => null;
+
 if (!globalThis.ResizeObserver) {
   globalThis.ResizeObserver = class {
     observe() {}
@@ -63,6 +69,8 @@ if (!globalThis.ResizeObserver) {
 
 afterEach(() => {
   cleanup();
+  // Los moldes de carga recuerdan lo último que se vio, en memoria del módulo.
+  olvidarUltimosDatos();
   vi.restoreAllMocks();
   localStorage.clear();
 });

@@ -185,6 +185,88 @@ existen antes de escribir un `@keyframes` nuevo.**
 | `.sello-entra` | El sello de un estado terminal. **El único gesto con carácter del sistema**, reservado a lo que no vuelve atrás |
 | `.fondo-dialogo` / `.panel-dialogo` | Entrada y salida de diálogos. Entrar es más lento que salir: al abrir hay que orientar; al cerrar la persona ya decidió |
 
+### Los dos movimientos traídos de ZetaAccounting
+
+Se reemplazaron piezas de la UI por las de ZetaAccounting. Viven en
+`transiciones.css` y en `src/lib/movimiento/`:
+
+| Pieza | Trabajo que hace |
+|---|---|
+| `BarraDeGoma` (`componentes/BarraDeGoma.jsx`) | **Una sola barra** marca la pestaña activa —la fila del portal y toda `ListaPestanias`— y viaja de una a otra estirándose sobre las dos. Dice de dónde venís. Encuentra sola la activa por `aria-current="page"` o `aria-selected="true"` |
+| `deslizarSeccion` (`lib/movimiento/deslizarSeccion.js`) | Cambiar de sección empuja la pantalla hacia el lado de su lugar en el menú: de costado en el portal, que tiene las pestañas en fila, y para arriba o para abajo en el backoffice, que tiene el menú en columna. Si salta otras, la tira pasa por delante de sus maquetas (`layouts/fantasmasPortal.js` y `fantasmasAdmin.js`), desenfocada en proporción a la velocidad. La cabecera, la barra lateral y el pie del portal se quedan quietos; si el pie queda a otra altura en la pantalla nueva, se corre hasta ahí en vertical, al mismo ritmo. Es una View Transition: sin soporte, navega en seco |
+| `MenuMovil` (`componentes/MenuMovil.jsx`) | **La navegación en angosto**, la de la app de Zeta en el teléfono: debajo de `lg` en el portal (ahí deja de entrar la fila de pestañas, que pide unos 1000px) y debajo de `md` en el backoffice (donde se va la barra lateral). La barra queda con la marca y un botón "Menú"/"Cerrar"; el menú tapa la pantalla con una cortina en molinete —dos aspas que giran alrededor del centro—, los destinos —al tamaño del `h1`, con 44px de alto para el dedo— entran en cascada detrás de un recorte y ruedan letra por letra (`TextoRoll`), y la sección activa lleva una barrita. Los rótulos de grupo van alineados ópticamente con los destinos (los dos se corren 0,07em, lo que arrancan adentro de su caja los trazos rectos de Plex). El portal, en angosto, empuja en vertical como el backoffice: su menú pasa a ser una columna. Abajo, quién está y salir. Al cerrar, los destinos se hunden al revés y recién después vuelve la cortina; un cambio de sección lo cierra de golpe y se va con la foto vieja en el empujón |
+| `useEmpujon` (`lib/movimiento/useEmpujon.js`) | Decide cuándo empujar: engancha **cualquier enlace** del layout a otra sección —el menú, y también un "Ver expedientes" del tablero—, y le saca la `.entrada` a la pantalla que llega empujada |
+
+### El esqueleto de carga
+
+`CargaConEsqueleto` (`componentes/Esqueleto.jsx`) reemplaza al "Cargando…" donde
+se lo pone. **El esqueleto es la misma pantalla que va a aparecer**: se le pasa un
+molde —el mismo componente del contenido, con datos de ejemplo o con los últimos
+vistos— y el esqueleto lo monta invisible, encuentra sus piezas y les pone
+cuadraditos encima:
+
+- cada renglón de texto, del ancho de lo escrito;
+- botones, campos, íconos, imágenes, y toda pieza en línea con fondo propio
+  (un chip, un botón hecho con un enlace), enteras;
+- `Hueso`, para marcar a mano algo que no sea ninguna de esas.
+
+- los fondos —lo que tiene fondo o borde propio, como una tarjeta—: mientras
+  carga pierden el blanco y el borde, y su superficie se llena de cuadraditos
+  más chicos y tenues que los de las piezas.
+
+Por la grilla pasa una ola en diagonal, y cuando llegan los datos el esqueleto se
+va de un barrido de izquierda a derecha: detrás del frente aparece el contenido,
+con el borde y el blanco de sus tarjetas. Se ve por lo
+menos 650 ms, para que una respuesta instantánea no se lea como un parpadeo.
+
+**Nada salta cuando termina de cargar.** Si el contenido no mide lo mismo que el
+molde, la caja cambia de alto al ritmo del barrido y lo de abajo se corre suave
+hasta su lugar —en `Tabla`, la paginación va en un bloque aparte, debajo, para
+subir con la tabla cuando llegan menos filas—. Los contadores de las pestañas
+(`ContadorDePestania`) ocupan su lugar desde antes y aparecen con un fundido. Y el
+esqueleto se pinta en el momento en que se mide, sin esperar al primer cuadro: la
+pantalla que llega empujada ya entra con sus cuadraditos.
+
+Para sumarlo a una pantalla, el contenido va en un componente que sirve de
+contenido y de molde; `useUltimosDatos` recuerda —en memoria, por persona— lo
+último que se vio, así al volver a la pantalla el esqueleto tiene su forma exacta:
+
+```jsx
+const ultimos = useUltimosDatos(`domicilios:${id}`, domicilios.datos);
+
+<CargaConEsqueleto
+  cargando={domicilios.cargando}
+  molde={<ListaDeDomicilios lista={ultimos ?? []} />}
+>
+  {domicilios.datos && <ListaDeDomicilios lista={domicilios.datos} />}
+</CargaConEsqueleto>
+```
+
+Para lo que carga con `useRecurso` está la forma corta, `ConEsqueleto`: el
+contenido se escribe una sola vez como función de los datos y de ahí salen el
+contenido y el molde. `ejemplo` decide la primera carga: `[]` para una lista
+personal, un objeto con largos típicos para una ficha.
+
+```jsx
+<ConEsqueleto recurso={contactos} clave={`contactos:${id}`} ejemplo={[]}>
+  {(lista) => (lista.length === 0 ? <Vacio /> : <Lista items={lista} />)}
+</ConEsqueleto>
+```
+
+Está en todo lo que carga: las listas y fichas del portal, cada tarjeta del
+inicio entera, el legajo, el expediente y la organización con sus pestañas, el
+tablero, el visor de documentos y `Tabla` —que arma su molde sola, con sus
+encabezados y filas del alto de las reales—. El esqueleto se vuelve a medir
+cuando cambia el tamaño del contenedor, así que acompaña el layout responsive del
+molde. Lo recordado se borra cuando cambia la sesión.
+
+Son **excepciones deliberadas** a dos reglas de arriba: el empujón dura entre 520
+y 840 ms, y la barra tiene un rebote de 2 px al llegar. Lo que justifica el
+tiempo es que orienta: dice dónde queda la sección nueva respecto de la que
+dejás. Los números no están acá a propósito: salen de `planSalto.js`, igual que
+en Zeta. Las dos piezas respetan `prefers-reduced-motion` desde JavaScript (la
+regla global de CSS no alcanza a Web Animations ni a `motion`).
+
 Los botones además se hunden al presionarse (`active:scale-[0.98]`, 150 ms). Es
 la respuesta más barata que existe: confirma que el click llegó antes de que la
 red conteste nada.

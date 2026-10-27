@@ -1,0 +1,374 @@
+/*
+ * Los dos movimientos traídos de ZetaAccounting: la barra de goma de las
+ * pestañas y el empujón de sección —de costado en el portal, para arriba y para
+ * abajo en el backoffice—. Ver DISENO.md, "Movimiento".
+ */
+
+/* --- La barra de la pestaña activa -----------------------------------------
+   Mide 1px y se estira con `scale`: el largo final es el factor. El `transform`
+   lo escribe `useBarraDeGoma` (`componentes/BarraDeGoma.jsx`), por eso no lleva
+   transición: la pisaría. La lista que la contiene tiene que ser `relative`. */
+.barra-goma {
+  position: absolute;
+  left: 0;
+  top: 0;
+  border-radius: 2px;
+  background: var(--expediente);
+  pointer-events: none;
+  opacity: 0;
+}
+
+/* Sobre el borde de abajo de la fila, en el lugar del `border-b-2` de antes. */
+.barra-goma[data-eje="x"] {
+  top: auto;
+  bottom: 0;
+  width: 1px;
+  height: 2px;
+  transform-origin: left center;
+}
+
+.barra-goma[data-eje="y"] {
+  width: 2px;
+  height: 1px;
+  transform-origin: center top;
+}
+
+/* --- El cambio de sección -------------------------------------------------
+   El empujón: la pantalla vieja se va para un lado y la nueva entra por el
+   otro, pegadas —de costado en el portal, en vertical en el backoffice—; si el
+   salto cruza otras secciones, la tira pasa por delante de ellas desenfocada. El movimiento está en `deslizarSeccion.js` y
+   `planSalto.js` —se anima desde JS porque el recorrido cambia con cada salto—.
+   Acá va sólo lo que tiene que estar puesto antes de las fotos.
+
+   Todo cuelga de `data-seccion` en `<html>`, que sólo existe mientras dura. */
+
+/* La cabecera y la barra lateral del backoffice quedan afuera del empujón: son
+   el lugar de donde salió el click, y moverlas haría desaparecer el ítem que
+   acabás de tocar. */
+html[data-seccion] [data-cabecera] {
+  view-transition-name: cdn-cabecera;
+}
+
+html[data-seccion] [data-lateral] {
+  view-transition-name: cdn-lateral;
+}
+
+/* El pie del portal tampoco se va para los costados: no es de ninguna pantalla.
+   Si en la nueva queda a otra altura, `deslizarSeccion.js` lo lleva hasta ahí. */
+html[data-seccion] [data-pie] {
+  view-transition-name: cdn-pie;
+}
+
+/* Nada de lo de fábrica: ni el fundido cruzado de la raíz, ni el de entrada de
+   los fantasmas, ni el morph de la cabecera. Lo que se mueve, lo mueve JS. */
+html[data-seccion]::view-transition-group(*),
+html[data-seccion]::view-transition-old(*),
+html[data-seccion]::view-transition-new(*) {
+  animation: none;
+  /* El de fábrica suma las dos fotos para el fundido; acá no se pisan. */
+  mix-blend-mode: normal;
+}
+
+/* Sólo la cabecera y la barra vivas: el ítem activo cambia en el momento —y la
+   barra de goma viaja—, sin una foto vieja desvaneciéndose encima. */
+html[data-seccion]::view-transition-old(cdn-cabecera),
+html[data-seccion]::view-transition-old(cdn-lateral),
+html[data-seccion]::view-transition-old(cdn-pie) {
+  display: none;
+}
+
+/* Arriba de la tira, aunque algún fantasma se haya montado después. */
+html[data-seccion]::view-transition-group(cdn-cabecera),
+html[data-seccion]::view-transition-group(cdn-lateral),
+html[data-seccion]::view-transition-group(cdn-pie) {
+  z-index: 1;
+}
+
+/* Mientras viaja, un click pasa de largo a la página de verdad —que ya es la
+   nueva—: un segundo cambio de sección no tiene por qué esperar al primero. */
+html[data-seccion]::view-transition {
+  pointer-events: none;
+}
+
+/* --- Los fantasmas ----------------------------------------------------------
+   Una maqueta de cada sección (`layouts/fantasmasPortal.js` y
+   `fantasmasAdmin.js`). Existen sólo
+   entre las dos fotos: en la página real no se ven nunca —durante la transición
+   lo que se ve son las fotos— y se sacan al terminar. */
+.cdn-fantasma {
+  position: fixed;
+  inset: 0;
+  padding-top: var(--arriba, 0px);
+  padding-left: var(--izquierda, 0px);
+  overflow: hidden;
+  pointer-events: none;
+  background: var(--papel);
+  color: var(--tinta);
+}
+
+/* Las medidas del `<main>` del portal: max-w-5xl, px-u2 py-u4. */
+.cfa-hoja {
+  display: grid;
+  gap: var(--u3);
+  max-width: 64rem;
+  margin-inline: auto;
+  padding: var(--u4) var(--u2);
+}
+
+/* Las del `<main>` del backoffice: a todo el ancho, p-u3 md:p-u4. */
+.cfa-hoja--ancha {
+  max-width: none;
+  margin: 0;
+  padding: var(--u3);
+}
+
+@media (min-width: 768px) {
+  .cfa-hoja--ancha {
+    padding: var(--u4);
+  }
+}
+
+.cfa-cabecera {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--u2);
+}
+
+.cfa-boton {
+  flex-shrink: 0;
+  width: 8rem;
+  height: var(--alto-control);
+  border-radius: var(--radio);
+  background: var(--expediente-suave);
+}
+
+.cfa-controles {
+  display: flex;
+  gap: var(--u2);
+}
+
+.cfa-campo {
+  width: 12rem;
+  height: var(--alto-control);
+  border: 1px solid var(--borde-fuerte);
+  border-radius: var(--radio);
+  background: var(--superficie);
+}
+
+.cfa-campo--ancho {
+  flex: 1;
+}
+
+.cfa-tabla {
+  overflow: hidden;
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+  background: var(--superficie);
+}
+
+.cfa-fila {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 6rem;
+  gap: var(--u3);
+  align-items: center;
+  height: var(--alto-fila);
+  padding-inline: var(--u3);
+  border-bottom: 1px solid var(--borde);
+}
+
+.cfa-fila--cab {
+  border-bottom-color: var(--borde-fuerte);
+  background: var(--papel);
+}
+
+.cfa-indicadores {
+  display: grid;
+  gap: var(--u2);
+}
+
+@media (min-width: 640px) {
+  .cfa-indicadores {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1024px) {
+  .cfa-indicadores {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.cfa-pestanias {
+  display: flex;
+  gap: var(--u3);
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--borde);
+}
+
+.cfa-encabezado {
+  display: grid;
+  gap: 0.125rem;
+}
+
+.cfa-seccion {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--apagado);
+}
+
+.cfa-titulo {
+  font-size: 1.5rem;
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+}
+
+.cfa-bajada {
+  margin-top: 0.25rem;
+  max-width: 65ch;
+  color: var(--apagado);
+}
+
+.cfa-tarjeta {
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+  background: var(--superficie);
+}
+
+.cfa-tarjeta__cab {
+  border-bottom: 1px solid var(--borde);
+  padding: var(--u2) var(--u3);
+}
+
+.cfa-tarjeta__cuerpo {
+  display: grid;
+  gap: 0.75rem;
+  padding: var(--u3);
+}
+
+.cfa-columnas {
+  display: grid;
+  gap: var(--u3);
+}
+
+@media (min-width: 768px) {
+  .cfa-columnas {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.cfa-lista {
+  display: grid;
+  gap: var(--u2);
+}
+
+.cfa-renglon {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--u2);
+  padding: var(--u2) var(--u3);
+}
+
+.cfa-renglon__texto {
+  display: grid;
+  flex: 1;
+  gap: 0.5rem;
+}
+
+.cfa-ficha {
+  display: grid;
+  gap: var(--u2);
+  padding: var(--u3);
+}
+
+@media (min-width: 640px) {
+  .cfa-ficha {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.cfa-par {
+  display: grid;
+  gap: 0.375rem;
+}
+
+.cfa-linea {
+  display: block;
+  height: 0.625rem;
+  border-radius: 2px;
+  background: var(--borde);
+}
+
+.cfa-linea--fuerte {
+  height: 0.8125rem;
+  background: var(--borde-fuerte);
+}
+
+.cfa-linea--cifra {
+  height: 2rem;
+  background: var(--borde-fuerte);
+}
+
+.cfa-chip {
+  flex-shrink: 0;
+  width: 4.5rem;
+  height: 1.25rem;
+  border-radius: 999px;
+  background: var(--expediente-suave);
+}
+
+/* --- El esqueleto de cuadraditos -------------------------------------------
+   Los cuadraditos y su ola los pinta un canvas (`componentes/Esqueleto.jsx`).
+   Acá va el barrido de salida del DOM: el contenido aparece detrás del frente y
+   los marcos del esqueleto se van delante de él, con la misma franja de 48px,
+   así uno entra donde el otro sale. `--frente` lo escribe el componente en cada
+   cuadro: es hasta dónde ya no queda ningún cuadradito. */
+.esq-barriendo .esq-revelando {
+  -webkit-mask-image: linear-gradient(90deg, #000 calc(var(--frente, 0px) - 48px), transparent var(--frente, 0px));
+  mask-image: linear-gradient(90deg, #000 calc(var(--frente, 0px) - 48px), transparent var(--frente, 0px));
+}
+
+.esq-barriendo .esq-forma {
+  -webkit-mask-image: linear-gradient(90deg, transparent calc(var(--frente, 0px) - 48px), #000 var(--frente, 0px));
+  mask-image: linear-gradient(90deg, transparent calc(var(--frente, 0px) - 48px), #000 var(--frente, 0px));
+}
+
+/* El molde del esqueleto: la pantalla real con datos de ejemplo, que ocupa su
+   lugar pero no se ve. El texto queda transparente y las piezas sólidas
+   (`data-esq-pieza`, las marca `Esqueleto.jsx`) invisibles sin salir del layout:
+   encima van los cuadraditos. */
+.esq-molde,
+.esq-molde * {
+  color: transparent !important;
+  text-decoration-color: transparent !important;
+  animation: none !important;
+  transition: none !important;
+}
+
+.esq-molde ::placeholder {
+  color: transparent !important;
+}
+
+/* Lo que se dibuja con pseudo-elementos —el asterisco de un campo obligatorio—
+   no lo alcanza el `*` de arriba: ocupa su lugar, pero no se ve. */
+.esq-molde *::before,
+.esq-molde *::after {
+  visibility: hidden !important;
+}
+
+.esq-molde [data-esq-pieza] {
+  visibility: hidden;
+}
+
+/* Los marcos del molde —tarjetas, líneas de tiempo— sin su blanco ni su borde:
+   mientras carga, su superficie es de cuadraditos. Vuelven con el barrido, que
+   es cuando aparece el contenido de verdad detrás del frente. */
+.esq-molde [data-esq-fondo] {
+  background: transparent !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+}

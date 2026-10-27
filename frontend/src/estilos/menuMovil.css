@@ -1,0 +1,418 @@
+/*
+ * La navegación en angosto: el botón de la barra, el menú a pantalla completa y
+ * el texto que rueda. Traída de la `BarraMovil` de ZetaAccounting; el porqué de
+ * cada pieza está en `componentes/MenuMovil.jsx`.
+ *
+ * Desde qué ancho se ve lo decide cada layout con su clase (`lg:hidden` en el
+ * portal, `md:hidden` en el backoffice): es el ancho en el que deja de entrar su
+ * menú de escritorio.
+ */
+
+/* ---- El texto que rueda (`TextoRoll`) ------------------------------------
+   Dos copias del texto en una banda con `overflow: hidden`: la de arriba sale
+   hacia arriba y la de abajo entra desde abajo, con un retardo por letra. Una
+   letra tarda `--roll-dura` en cruzar, y entre la primera y la última hay
+   `--roll-barrido`: la palabra entera dura lo mismo tenga 3 letras o 14. */
+:root {
+  --roll-dura: 240ms;
+  --roll-barrido: 75ms;
+}
+
+.roll {
+  --roll-viaje: 100%;
+  position: relative;
+  display: block;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.roll__letras {
+  white-space: nowrap;
+}
+
+.roll__oculto {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.roll__capa--entra {
+  position: absolute;
+  inset: 0;
+}
+
+.roll__letra {
+  display: inline-block;
+  transform: translateY(var(--roll-y, 0px));
+  /* El retardo va en la transición y no en un `@keyframes`: así la vuelta
+     escalona igual que la ida. */
+  transition: transform var(--roll-dura) ease-in-out calc(var(--p, 0) * var(--roll-barrido));
+}
+
+.roll__capa--entra .roll__letra {
+  --roll-y: var(--roll-viaje);
+}
+
+/* El disparador es el que lleva `.rueda` —el enlace entero, el botón—, no la
+   banda: el toque vale en todo el padding. */
+.rueda:hover .roll__capa--sale .roll__letra,
+.rueda:focus-visible .roll__capa--sale .roll__letra {
+  --roll-y: calc(var(--roll-viaje) * -1);
+}
+
+.rueda:hover .roll__capa--entra .roll__letra,
+.rueda:focus-visible .roll__capa--entra .roll__letra {
+  --roll-y: 0px;
+}
+
+/* ---- El botón de la barra ------------------------------------------------
+   "Menú" y "Cerrar" en la misma celda de la grilla, cruzándose con opacidad y
+   6px de desplazamiento. En el rótulo chico del sistema: mayúsculas, semibold,
+   con tracking. */
+.cmm-boton {
+  position: relative;
+  display: grid;
+  justify-items: end;
+  padding: 0.5rem 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--tinta);
+}
+
+.cmm-boton__cara {
+  grid-area: 1 / 1;
+  transition:
+    opacity 220ms ease,
+    transform 220ms ease;
+}
+
+.cmm-boton__cara:last-child {
+  opacity: 0;
+  transform: translateY(6px);
+}
+
+.cmm-boton[aria-expanded="true"] .cmm-boton__cara:first-child {
+  opacity: 0;
+  transform: translateY(-6px);
+}
+
+.cmm-boton[aria-expanded="true"] .cmm-boton__cara:last-child {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* "Menú" lleva tilde y el roll la recortaba: aire para la banda, devuelto con
+   margen negativo, así el renglón no crece. */
+.cmm-boton .roll {
+  line-height: 1.3;
+  margin-block: -0.15em;
+}
+
+/* ---- El menú --------------------------------------------------------------
+   Queda montado siempre —la cortina necesita desde dónde arrancar— y lo saca de
+   circulación `visibility`. Va debajo de la cabecera (que lleva z-30): el botón
+   sigue a la vista y en su lugar. */
+.cmm-menu {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  visibility: hidden;
+}
+
+.cmm-menu[data-fase="abierto"],
+.cmm-menu[data-fase="cerrando"] {
+  visibility: visible;
+}
+
+/*
+ * El filo de la cortina, en grados alrededor del centro de la pantalla.
+ * Registrada porque una variable sin registrar no se interpola: el ángulo
+ * saltaría de una punta a la otra y no habría barrido. Donde `@property` no
+ * exista, el menú abre igual, de golpe.
+ */
+@property --cmm-filo {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 180deg;
+}
+
+/*
+ * EL MOLINETE: dos aspas opuestas que giran alrededor del centro.
+ *
+ * `repeating-conic-gradient` con período de 180° da una cuña y su opuesta con
+ * una sola declaración. Tapado es de `--cmm-filo` a 180°: en 180° no tapa nada,
+ * en 0° las dos aspas se juntan y tapan la pantalla entera. La capa está quieta;
+ * lo único que se anima es dónde arranca la máscara.
+ *
+ * El cierre no es el espejo de la apertura, y sale solo: al volver el filo de 0
+ * a 180, el destape arranca por el otro lado.
+ */
+.cmm-menu__cortina {
+  position: absolute;
+  inset: 0;
+  background: var(--superficie);
+  -webkit-mask-image: repeating-conic-gradient(
+    from 0deg at 50% 50%,
+    transparent 0deg,
+    transparent var(--cmm-filo),
+    #000 var(--cmm-filo),
+    #000 180deg
+  );
+  mask-image: repeating-conic-gradient(
+    from 0deg at 50% 50%,
+    transparent 0deg,
+    transparent var(--cmm-filo),
+    #000 var(--cmm-filo),
+    #000 180deg
+  );
+  transition: --cmm-filo 620ms cubic-bezier(0.65, 0, 0.35, 1);
+}
+
+.cmm-menu[data-fase="abierto"] .cmm-menu__cortina {
+  --cmm-filo: 0deg;
+}
+
+/* Al cerrar, la cortina espera a que los destinos se vayan: si barriera de una,
+   se llevaría puesta su salida. */
+.cmm-menu[data-fase="cerrando"] .cmm-menu__cortina {
+  --cmm-filo: 180deg;
+  transition-delay: 160ms;
+}
+
+/* Cerrado, al reposo sin transición: el próximo abierto arranca desde 180°. */
+.cmm-menu[data-fase="cerrado"] .cmm-menu__cortina {
+  transition: none;
+}
+
+/* ---- El contenido ---------------------------------------------------------
+   Capa aparte, encima de la cortina. Arriba deja libre la franja de la barra
+   (h-14). A los costados, aire para la barrita del activo, que cuelga 12px. */
+.cmm-menu__adentro {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 1.75rem;
+  padding: calc(3.5rem + var(--u3)) var(--u3) var(--u3);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.cmm-menu__grupos {
+  display: grid;
+  /* Una columna en un teléfono, dos en una tablet, sin un media query más. */
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+  gap: 1.75rem 1.25rem;
+  align-content: start;
+}
+
+.cmm-menu__grupo {
+  display: grid;
+  gap: 0.625rem;
+  align-content: start;
+}
+
+/*
+ * El título del grupo: el rótulo de sección del sistema —mayúsculas, semibold,
+ * con tracking—, a un tamaño que se lee al lado de los destinos.
+ *
+ * ALINEADO ÓPTICAMENTE, no por la caja. Medido en IBM Plex Sans 600: las letras
+ * de trazo recto (M, D, L, E, P) arrancan 0,07em adentro de su caja. En un
+ * destino de 24px eso son casi 2px, y en el título 1px: con las cajas
+ * alineadas, el título se ve corrido a la izquierda. Los dos se corren
+ * 0,07em —cada uno en su tamaño—, así los trazos rectos caen en la misma
+ * vertical. Las redondas (C, G, O) asoman apenas, que es como se compensan.
+ */
+.cmm-menu__titulo {
+  margin: 0 0 0 -0.07em;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--apagado);
+}
+
+.cmm-menu__lista {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* El tamaño de los destinos es el del `h1` del sistema (1,5rem): son los títulos
+   de las pantallas a las que llevan. Va en la fila y no en el enlace: la fila es
+   la que lleva el recorte de la cascada, y sus `em` —el empujón de 0,22em, la
+   holgura para las colas— tienen que ser los de la palabra. */
+.cmm-menu__lista > li {
+  font-size: 1.5rem;
+}
+
+/*
+ * LA ENTRADA ES UN RECORTE, NO UN FUNDIDO: la palabra asoma desde abajo detrás
+ * de una máscara que sube, con un empujón de 0,22em. Arranca cuando la cortina
+ * ya recorrió la mitad (260ms) y cada fila espera 42ms a la anterior.
+ */
+.cmm-menu[data-fase="abierto"] .cmm-menu__entra {
+  animation: cmm-recorte 300ms cubic-bezier(0.33, 1, 0.68, 1) both;
+  animation-delay: calc(260ms + var(--cmm-i, 0) * 42ms);
+}
+
+/* LA SALIDA ES LA ENTRADA AL REVÉS: se hunde por donde asomó, de abajo hacia
+   arriba, y más rápido —irse no se mira—. Otro `@keyframes` y no el mismo con
+   `reverse`: con el mismo nombre el navegador continúa la de entrada, que ya
+   terminó, y la salida nace terminada. */
+.cmm-menu[data-fase="cerrando"] .cmm-menu__entra {
+  animation: cmm-recorte-sale 220ms cubic-bezier(0.65, 0, 0.35, 1) both;
+  animation-delay: calc((var(--cmm-n, 1) - 1 - var(--cmm-i, 0)) * 18ms);
+}
+
+.cmm-menu__enlace {
+  display: block;
+  /* El otro lado de la alineación óptica: ver `.cmm-menu__titulo`. */
+  margin-left: -0.07em;
+  font-size: inherit;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+  font-weight: 600;
+  /* 30px de renglón más esto da los 44px de un control táctil. */
+  padding-block: 0.4375rem;
+  text-decoration: none;
+  color: var(--tinta);
+}
+
+/* Las colas y las tildes (la g de Organizaciones, la p de Lo que me piden) con
+   aire en la banda del roll, que recorta con `overflow: hidden`: se agranda la
+   banda y se le devuelve el aire con margen negativo —la mitad de (1,45 - 1,25)
+   por lado—, así el renglón no crece. */
+.cmm-menu__enlace .roll {
+  line-height: 1.45;
+  margin-block: -0.1em;
+}
+
+/* Dónde estás parado: la barrita del color de la pestaña activa, al costado. */
+.cmm-menu__enlace--activo {
+  position: relative;
+}
+
+.cmm-menu__enlace--activo::before {
+  content: "";
+  position: absolute;
+  left: -12px;
+  top: 50%;
+  width: 3px;
+  height: 0.72em;
+  border-radius: 0 2px 2px 0;
+  background: var(--expediente);
+  transform: translateY(-50%);
+}
+
+/* ---- El pie del menú ------------------------------------------------------
+   Quién está y salir: en angosto no están en ningún otro lado. Entra al final,
+   después de la última fila, y se va primero. */
+.cmm-menu__pie {
+  display: grid;
+  gap: var(--u2);
+  padding-top: var(--u2);
+  border-top: 1px solid var(--borde);
+  opacity: 0;
+  transition: opacity 260ms ease;
+}
+
+.cmm-menu[data-fase="abierto"] .cmm-menu__pie {
+  opacity: 1;
+  transition-delay: 480ms;
+}
+
+.cmm-menu[data-fase="cerrando"] .cmm-menu__pie {
+  opacity: 0;
+  transition-duration: 160ms;
+  transition-delay: 0s;
+}
+
+/*
+ * El recorte, holgado en horizontal (-100%): ajustado se comería la barrita del
+ * activo, que cuelga hacia afuera.
+ *
+ * Y holgado en vertical (-0,3em) donde termina: el renglón de los destinos es
+ * más bajo que la letra (1,07), así que un recorte justo a la caja —y queda
+ * puesto, por el `both`— cortaba las colas de la g y la p y las tildes de las
+ * mayúsculas. El borde de arriba arranca 0,3em más abajo que la caja, así el
+ * recorte empieza en alto cero: si no, al arrancar se vería la franja de abajo.
+ */
+@keyframes cmm-recorte {
+  from {
+    clip-path: inset(calc(100% + 0.3em) -100% -0.3em -100%);
+    transform: translateY(0.22em);
+  }
+  to {
+    clip-path: inset(-0.3em -100% -0.3em -100%);
+    transform: translateY(0);
+  }
+}
+
+@keyframes cmm-recorte-sale {
+  from {
+    clip-path: inset(-0.3em -100% -0.3em -100%);
+    transform: translateY(0);
+  }
+  to {
+    clip-path: inset(calc(100% + 0.3em) -100% -0.3em -100%);
+    transform: translateY(0.22em);
+  }
+}
+
+/*
+ * Con movimiento reducido no hay cortina, ni cascada, ni roll: el menú aparece
+ * y desaparece. La cortina se lleva al estado final a mano —con sólo sacar la
+ * transición quedaría con las aspas cerradas: el menú abierto sin fondo—.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .cmm-menu__cortina,
+  .cmm-menu__pie,
+  .cmm-boton__cara {
+    transition: none;
+  }
+
+  .cmm-menu__cortina {
+    -webkit-mask-image: none;
+    mask-image: none;
+  }
+
+  .cmm-menu[data-fase="abierto"] .cmm-menu__entra,
+  .cmm-menu[data-fase="cerrando"] .cmm-menu__entra {
+    animation: none;
+  }
+
+  .cmm-menu__pie {
+    opacity: 1;
+    transition-delay: 0s;
+  }
+
+  .roll__letra {
+    transform: none;
+    transition: none;
+  }
+
+  .roll__capa--entra {
+    display: none;
+  }
+
+  /* Sin roll no hay señal de hover: vuelve a marcarla el color. */
+  .cmm-menu__enlace:hover,
+  .cmm-menu__enlace:focus-visible {
+    color: var(--expediente);
+  }
+}

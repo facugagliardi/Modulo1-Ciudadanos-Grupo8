@@ -3,7 +3,8 @@ import { Link } from "react-router-dom";
 import { ArrowDown, ArrowUp, ArrowUpDown, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { comparar, normalizar } from "@/lib/texto";
-import { Cargando, ErrorEnPantalla, EstadoVacio, FilasFantasma, SinResultados } from "./Estados";
+import { ErrorEnPantalla, EstadoVacio, SinResultados } from "./Estados";
+import { CargaConEsqueleto, Hueso } from "./Esqueleto";
 import { Selector } from "./ui/campo";
 
 /**
@@ -152,175 +153,269 @@ export function Tabla({
         </div>
       )}
 
-      {/* --- Recuento -------------------------------------------------- */}
-      {!cargando && !error && (
-        <p className="text-sm text-apagado" role="status">
-          {total === 0
-            ? "Sin resultados"
-            : `${total.toLocaleString("es-AR")} ${total === 1 ? "resultado" : "resultados"}`}
-          {hayBusqueda && filas?.length ? ` de ${filas.length.toLocaleString("es-AR")}` : ""}
-          {resumen ? ` · ${resumen}` : ""}
-        </p>
-      )}
-
-      {/* --- Tabla ----------------------------------------------------- */}
-      <div className="overflow-x-auto rounded border border-borde bg-superficie">
-        <table className="w-full border-collapse text-[length:var(--texto-dato)]">
-          <thead>
-            <tr className="border-b border-borde-fuerte bg-papel text-left">
-              {columnas.map((c) => {
-                const activo = orden?.clave === c.clave;
-                return (
-                  <th
-                    key={c.clave}
-                    scope="col"
-                    className={cn(
-                      "px-u3 py-u2 text-xs font-semibold uppercase tracking-wide text-apagado",
-                      c.alineacion === "derecha" && "text-right",
-                      c.ancho,
-                    )}
-                    aria-sort={
-                      activo ? (orden.direccion === "asc" ? "ascending" : "descending") : "none"
-                    }
-                  >
-                    {c.ordenable === false ? (
-                      c.titulo
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => alternarOrden(c.clave)}
-                        className={cn(
-                          "inline-flex items-center gap-1 rounded hover:text-tinta",
-                          activo && "text-tinta",
-                        )}
-                      >
-                        {c.titulo}
-                        {activo ? (
-                          orden.direccion === "asc" ? (
-                            <ArrowUp className="size-3" aria-hidden="true" />
-                          ) : (
-                            <ArrowDown className="size-3" aria-hidden="true" />
-                          )
-                        ) : (
-                          <ArrowUpDown className="size-3 opacity-40" aria-hidden="true" />
-                        )}
-                        <span className="sr-only">
-                          {activo
-                            ? `, ordenado ${orden.direccion === "asc" ? "ascendente" : "descendente"}`
-                            : ", ordenar"}
-                        </span>
-                      </button>
-                    )}
-                  </th>
-                );
-              })}
-            </tr>
-          </thead>
-
-          <tbody>
-            {cargando && <FilasFantasma columnas={columnas.length} />}
-
-            {!cargando &&
-              visibles.map((fila) => {
-                const clave = claveFila(fila);
-                const href = enlaceFila?.(fila);
-                return (
-                  <tr
-                    key={clave}
-                    className={cn(
-                      "border-b border-borde last:border-0",
-                      href && "hover:bg-expediente-suave/60",
-                    )}
-                  >
-                    {columnas.map((c, i) => (
-                      <td
-                        key={c.clave}
-                        className={cn(
-                          "h-fila px-u3 align-middle",
-                          c.alineacion === "derecha" && "text-right",
-                        )}
-                      >
-                        {i === 0 && href ? (
-                          <Link
-                            to={href}
-                            className="font-medium text-expediente hover:underline"
-                          >
-                            {c.render ? c.render(fila) : fila[c.clave]}
-                          </Link>
-                        ) : c.render ? (
-                          c.render(fila)
-                        ) : (
-                          (fila[c.clave] ?? <span className="text-apagado">—</span>)
-                        )}
-                      </td>
-                    ))}
-                  </tr>
-                );
-              })}
-          </tbody>
-        </table>
-
-        {!cargando && error && (
-          <ErrorEnPantalla error={error} alReintentar={alReintentar} />
-        )}
-        {!cargando && !error && total === 0 && hayBusqueda && (
-          <SinResultados termino={termino} alLimpiar={limpiar} />
-        )}
-        {!cargando && !error && total === 0 && !hayBusqueda && (
-          <EstadoVacio
-            titulo={vacio?.titulo ?? "Todavía no hay nada acá"}
-            descripcion={vacio?.descripcion}
-            accion={vacio?.accion}
-          />
-        )}
-      </div>
-
-      {/* --- Paginación ------------------------------------------------ */}
-      {!cargando && !error && total > 0 && (
-        <nav
-          className="flex flex-wrap items-center justify-between gap-u2 text-sm"
-          aria-label="Paginación"
+      {/* --- Recuento, tabla y paginación ------------------------------- */}
+      {/* Mientras carga, las tres en cuadraditos: el recuento, la tabla con sus
+          encabezados de verdad y filas del alto de las reales, y la paginación.
+          La paginación va en un bloque aparte, debajo: si llegan menos filas que
+          las del molde, el de la tabla se achica con el barrido y la paginación
+          sube con él hasta su lugar, sin saltar. Su separación va adentro del
+          bloque, así una tabla sin paginación no deja un hueco. */}
+      <div>
+        <CargaConEsqueleto
+          cargando={cargando}
+          etiqueta="Cargando el listado…"
+          molde={
+            <div className="flex flex-col gap-u2">
+              <p className="text-sm">120 resultados</p>
+              <div className="overflow-x-auto rounded border border-borde bg-superficie">
+                <table className="w-full border-collapse text-[length:var(--texto-dato)]">
+                  <Encabezados columnas={columnas} />
+                  <tbody>
+                    <FilasDeMolde columnas={columnas} />
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          }
         >
-          <p className="text-apagado">
-            Mostrando {desde + 1}–{Math.min(desde + porPagina, total)} de {total}
-          </p>
+          <div className="flex flex-col gap-u2">
+            {!cargando && !error && (
+              <p className="text-sm text-apagado" role="status">
+                {total === 0
+                  ? "Sin resultados"
+                  : `${total.toLocaleString("es-AR")} ${total === 1 ? "resultado" : "resultados"}`}
+                {hayBusqueda && filas?.length ? ` de ${filas.length.toLocaleString("es-AR")}` : ""}
+                {resumen ? ` · ${resumen}` : ""}
+              </p>
+            )}
 
-          <div className="flex items-center gap-u2">
-            <label className="flex items-center gap-2 text-apagado">
-              Por página
-              <Selector
-                className="h-8 w-20"
-                opciones={POR_PAGINA.map((n) => ({ valor: String(n), etiqueta: String(n) }))}
-                value={String(porPagina)}
-                onChange={(e) => {
-                  setPorPagina(Number(e.target.value));
-                  setPagina(1);
-                }}
-              />
-            </label>
+            <div className="overflow-x-auto rounded border border-borde bg-superficie">
+              <table className="w-full border-collapse text-[length:var(--texto-dato)]">
+                <Encabezados columnas={columnas} orden={orden} alternarOrden={alternarOrden} />
 
-            <div className="flex items-center gap-1">
-              <BotonPagina
-                onClick={() => setPagina((p) => Math.max(1, p - 1))}
-                disabled={paginaSegura === 1}
-              >
-                Anterior
-              </BotonPagina>
-              <span className="px-2 text-apagado">
-                {paginaSegura} de {totalPaginas}
-              </span>
-              <BotonPagina
-                onClick={() => setPagina((p) => Math.min(totalPaginas, p + 1))}
-                disabled={paginaSegura === totalPaginas}
-              >
-                Siguiente
-              </BotonPagina>
+                <tbody>
+                  {!cargando &&
+                    visibles.map((fila) => {
+                      const clave = claveFila(fila);
+                      const href = enlaceFila?.(fila);
+                      return (
+                        <tr
+                          key={clave}
+                          className={cn(
+                            "border-b border-borde last:border-0",
+                            href && "hover:bg-expediente-suave/60",
+                          )}
+                        >
+                          {columnas.map((c, i) => (
+                            <td
+                              key={c.clave}
+                              className={cn(
+                                "h-fila px-u3 align-middle",
+                                c.alineacion === "derecha" && "text-right",
+                              )}
+                            >
+                              {i === 0 && href ? (
+                                <Link
+                                  to={href}
+                                  className="font-medium text-expediente hover:underline"
+                                >
+                                  {c.render ? c.render(fila) : fila[c.clave]}
+                                </Link>
+                              ) : c.render ? (
+                                c.render(fila)
+                              ) : (
+                                (fila[c.clave] ?? <span className="text-apagado">—</span>)
+                              )}
+                            </td>
+                          ))}
+                        </tr>
+                      );
+                    })}
+                </tbody>
+              </table>
+
+              {!cargando && error && (
+                <ErrorEnPantalla error={error} alReintentar={alReintentar} />
+              )}
+              {!cargando && !error && total === 0 && hayBusqueda && (
+                <SinResultados termino={termino} alLimpiar={limpiar} />
+              )}
+              {!cargando && !error && total === 0 && !hayBusqueda && (
+                <EstadoVacio
+                  titulo={vacio?.titulo ?? "Todavía no hay nada acá"}
+                  descripcion={vacio?.descripcion}
+                  accion={vacio?.accion}
+                />
+              )}
             </div>
           </div>
-        </nav>
-      )}
+        </CargaConEsqueleto>
+
+        <CargaConEsqueleto
+          cargando={cargando}
+          etiqueta={null}
+          molde={
+            <div className="pt-u2">
+              <Paginacion desde={0} porPagina={porPagina} total={120} pagina={1} totalPaginas={5} />
+            </div>
+          }
+        >
+          {!cargando && !error && total > 0 && (
+            <div className="pt-u2">
+              <Paginacion
+                desde={desde}
+                porPagina={porPagina}
+                total={total}
+                pagina={paginaSegura}
+                totalPaginas={totalPaginas}
+                alCambiarPorPagina={(n) => {
+                  setPorPagina(n);
+                  setPagina(1);
+                }}
+                alCambiarPagina={setPagina}
+              />
+            </div>
+          )}
+        </CargaConEsqueleto>
+      </div>
     </div>
   );
+}
+
+/**
+ * La paginación. Va aparte porque también la dibuja el molde del esqueleto, con
+ * números de ejemplo y sin a quién avisarle.
+ */
+function Paginacion({
+  desde,
+  porPagina,
+  total,
+  pagina,
+  totalPaginas,
+  alCambiarPorPagina = () => {},
+  alCambiarPagina = () => {},
+}) {
+  return (
+    <nav className="flex flex-wrap items-center justify-between gap-u2 text-sm" aria-label="Paginación">
+      <p className="text-apagado">
+        Mostrando {desde + 1}–{Math.min(desde + porPagina, total)} de {total}
+      </p>
+
+      <div className="flex items-center gap-u2">
+        <label className="flex items-center gap-2 text-apagado">
+          Por página
+          <Selector
+            className="h-8 w-20"
+            opciones={POR_PAGINA.map((n) => ({ valor: String(n), etiqueta: String(n) }))}
+            value={String(porPagina)}
+            onChange={(e) => alCambiarPorPagina(Number(e.target.value))}
+          />
+        </label>
+
+        <div className="flex items-center gap-1">
+          <BotonPagina onClick={() => alCambiarPagina(Math.max(1, pagina - 1))} disabled={pagina === 1}>
+            Anterior
+          </BotonPagina>
+          <span className="px-2 text-apagado">
+            {pagina} de {totalPaginas}
+          </span>
+          <BotonPagina
+            onClick={() => alCambiarPagina(Math.min(totalPaginas, pagina + 1))}
+            disabled={pagina === totalPaginas}
+          >
+            Siguiente
+          </BotonPagina>
+        </div>
+      </div>
+    </nav>
+  );
+}
+
+/**
+ * Los encabezados, ordenables. Van aparte porque también los usa el molde del
+ * esqueleto de carga, que sin `alternarOrden` los dibuja igual pero quietos.
+ */
+function Encabezados({ columnas, orden = null, alternarOrden = () => {} }) {
+  return (
+    <thead>
+      <tr className="border-b border-borde-fuerte bg-papel text-left">
+        {columnas.map((c) => {
+          const activo = orden?.clave === c.clave;
+          return (
+            <th
+              key={c.clave}
+              scope="col"
+              className={cn(
+                "px-u3 py-u2 text-xs font-semibold uppercase tracking-wide text-apagado",
+                c.alineacion === "derecha" && "text-right",
+                c.ancho,
+              )}
+              aria-sort={
+                activo ? (orden.direccion === "asc" ? "ascending" : "descending") : "none"
+              }
+            >
+              {c.ordenable === false ? (
+                c.titulo
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => alternarOrden(c.clave)}
+                  className={cn(
+                    "inline-flex items-center gap-1 rounded hover:text-tinta",
+                    activo && "text-tinta",
+                  )}
+                >
+                  {c.titulo}
+                  {activo ? (
+                    orden.direccion === "asc" ? (
+                      <ArrowUp className="size-3" aria-hidden="true" />
+                    ) : (
+                      <ArrowDown className="size-3" aria-hidden="true" />
+                    )
+                  ) : (
+                    <ArrowUpDown className="size-3 opacity-40" aria-hidden="true" />
+                  )}
+                  <span className="sr-only">
+                    {activo
+                      ? `, ordenado ${orden.direccion === "asc" ? "ascendente" : "descendente"}`
+                      : ", ordenar"}
+                  </span>
+                </button>
+              )}
+            </th>
+          );
+        })}
+      </tr>
+    </thead>
+  );
+}
+
+/** Los anchos de las celdas del molde, para que las filas no salgan parejas. */
+const ANCHOS_MOLDE = ["w-3/4", "w-1/2", "w-2/3", "w-2/5", "w-3/5"];
+
+/** Las filas del molde. Si llegan menos, el bloque se achica con el barrido. */
+const FILAS_MOLDE = 6;
+
+/**
+ * Las filas del molde: del alto de las reales, con el mismo margen, y cada celda
+ * con un renglón alineado como su columna.
+ */
+function FilasDeMolde({ columnas, filas = FILAS_MOLDE }) {
+  return Array.from({ length: filas }, (_, i) => (
+    <tr key={i} className="border-b border-borde last:border-0">
+      {columnas.map((c, j) => (
+        <td key={c.clave} className="h-fila px-u3 align-middle">
+          <Hueso
+            className={cn(
+              "h-3.5",
+              ANCHOS_MOLDE[(i + j * 2) % ANCHOS_MOLDE.length],
+              c.alineacion === "derecha" && "ml-auto",
+            )}
+          />
+        </td>
+      ))}
+    </tr>
+  ));
 }
 
 function BotonPagina({ className, ...props }) {
@@ -336,5 +431,3 @@ function BotonPagina({ className, ...props }) {
     />
   );
 }
-
-export { Cargando };

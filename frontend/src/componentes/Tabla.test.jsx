@@ -148,10 +148,12 @@ describe("paginación", () => {
 });
 
 describe("estados de carga y error", () => {
-  it("muestra filas fantasma mientras carga", () => {
+  it("mientras carga muestra la tabla en esqueleto, con sus encabezados", () => {
     tabla({ cargando: true });
+    expect(screen.getByRole("status")).toHaveTextContent("Cargando el listado…");
     expect(screen.queryByText("Pérez")).not.toBeInTheDocument();
-    expect(filasVisibles().length).toBeGreaterThan(0);
+    /* El molde (la tabla misma) se monta sólo con canvas: jsdom no tiene. Ver
+       `Esqueleto.test.jsx`. */
   });
 
   it("muestra el error con opción de reintentar", async () => {
