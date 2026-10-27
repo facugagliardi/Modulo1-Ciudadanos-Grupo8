@@ -30,13 +30,14 @@ class EventPublisherServiceTest {
 
     @Mock private EventoService eventoService;
     @Mock private RabbitTemplate rabbitTemplate;
+    @Mock private ar.edu.uade.ciudadanos.persona.repository.CiudadanoRepository ciudadanoRepository;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
     private EventPublisherService publisherService;
 
     @BeforeEach
     void setUp() {
-        publisherService = new EventPublisherService(eventoService, rabbitTemplate, objectMapper);
+        publisherService = new EventPublisherService(eventoService, rabbitTemplate, objectMapper, ciudadanoRepository);
         ReflectionTestUtils.setField(publisherService, "exchangeName", "modulo1.topic.exchange");
     }
 
@@ -115,5 +116,27 @@ class EventPublisherServiceTest {
             EventEnvelope<?> res = publisherService.publicarEjemplo(ej);
             assertThat(res).as("Ejemplo " + ej).isNotNull();
         }
+    }
+
+    @Test
+    @DisplayName("Cuando se publica un evento con ID numérico, debe resolver automáticamente al UUID canónico del ciudadano")
+    void resolverCitizenUuidAutomaticamenteAlPublicar() {
+        java.util.UUID uuidMock = java.util.UUID.fromString("b63f5a2e-4b71-46e7-8b01-381c85d88f62");
+        ar.edu.uade.ciudadanos.persona.entity.Ciudadano ciudadano = new ar.edu.uade.ciudadanos.persona.entity.Ciudadano();
+        ciudadano.setId(8452L);
+        ciudadano.setUuid(uuidMock);
+
+        when(ciudadanoRepository.findById(8452L)).thenReturn(java.util.Optional.of(ciudadano));
+        when(eventoService.registrarEmitido(any(), any(), any(), any())).thenReturn(new Evento());
+
+        EventEnvelope<CitizenUpdatedData> envelope = publisherService.publicarCitizenUpdated(
+                8452L,
+                "REGISTERED",
+                Map.of("name", "Marcos"),
+                UpdatedBy.selfService()
+        );
+
+        assertThat(envelope).isNotNull();
+        assertThat(envelope.data().citizenId()).isEqualTo(uuidMock.toString());
     }
 }

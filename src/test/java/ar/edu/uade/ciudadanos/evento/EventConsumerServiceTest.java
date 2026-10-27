@@ -109,4 +109,28 @@ class EventConsumerServiceTest {
         assertThat(resultado).isTrue();
         verify(eventoService).registrarRecibido(eq("EVT-EXTERNO-1"), eq("external"), eq("test/1"), eq("someExternalEvent"), eq("{\"foo\":\"bar\"}"));
     }
+
+    @Test
+    @DisplayName("procesarEventoGenericoRecibido con citizenId UUID o numérico procesa y persiste correctamente")
+    void procesarEventoConCitizenIdUuidONumerico() {
+        when(eventoService.estaProcesado("EVT-UUID-1")).thenReturn(false);
+
+        String payloadUuid = """
+            {
+              "eventId": "EVT-UUID-1",
+              "eventType": "casefileInitiated",
+              "data": {
+                "citizenId": "b63f5a2e-4b71-46e7-8b01-381c85d88f62",
+                "caratula": "Expediente prueba UUID"
+              }
+            }
+            """;
+
+        boolean resultado = consumerService.procesarEventoGenericoRecibido(
+                "EVT-UUID-1", "casefiles", "b63f5a2e-4b71-46e7-8b01-381c85d88f62", "casefileInitiated", payloadUuid
+        );
+
+        assertThat(resultado).isTrue();
+        verify(eventoService).registrarRecibido(eq("EVT-UUID-1"), eq("casefiles"), eq("b63f5a2e-4b71-46e7-8b01-381c85d88f62"), eq("casefileInitiated"), any());
+    }
 }
