@@ -25,6 +25,19 @@ class EventEnvelopeTest {
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Test
+    void leeAmbasGrafiasYPublicaSoloOccurredAt() throws Exception {
+        for (String campo : new String[]{"occurredAt", "occuredAt"}) {
+            String json = "{\"eventId\":\"11111111-1111-4111-8111-111111111111\",\"eventType\":\"ticketCreated\","
+                    + "\"sourceModule\":\"atencion-ciudadana\",\"" + campo + "\":\"2026-10-27T10:00:00-03:00\",\"data\":{}}";
+            EventEnvelope<?> recibido = objectMapper.readValue(json, EventEnvelope.class);
+            assertThat(recibido.occurredAt()).isEqualTo("2026-10-27T10:00:00-03:00");
+            JsonNode serializado = objectMapper.valueToTree(recibido);
+            assertThat(serializado.has("occurredAt")).isTrue();
+            assertThat(serializado.has("occuredAt")).isFalse();
+        }
+    }
+
+    @Test
     @DisplayName("citizenUpdated (REGISTERED) debe cumplir exactamente la plantilla estándar requerida por el módulo Core")
     void serializarCitizenUpdatedRegistered() throws Exception {
         Map<String, Object> address = Map.of(
@@ -57,10 +70,11 @@ class EventEnvelopeTest {
         String json = objectMapper.writeValueAsString(envelope);
         JsonNode root = objectMapper.readTree(json);
 
+        assertThat(root.has("occuredAt")).isFalse();
         assertThat(root.get("eventId").asText()).isEqualTo(eventId);
         assertThat(root.get("eventType").asText()).isEqualTo("citizenUpdated");
         assertThat(root.get("eventVersion").asText()).isEqualTo("1.0");
-        assertThat(root.get("occuredAt").asText()).isEqualTo("2026-08-20T11:45:00-03:00");
+        assertThat(root.get("occurredAt").asText()).isEqualTo("2026-08-20T11:45:00-03:00");
         assertThat(root.get("sourceModule").asText()).isEqualTo("ciudadanos");
         assertThat(root.get("data").get("citizenId").asLong()).isEqualTo(8452L);
         assertThat(root.get("data").get("updateType").asText()).isEqualTo("REGISTERED");
@@ -96,11 +110,12 @@ class EventEnvelopeTest {
         String json = objectMapper.writeValueAsString(envelope);
         JsonNode root = objectMapper.readTree(json);
 
+        assertThat(root.has("occuredAt")).isFalse();
         assertThat(root.get("eventId").asText()).isEqualTo(eventId);
         assertThat(root.get("eventType").asText()).isEqualTo("casefileResolved");
         assertThat(root.get("sourceModule").asText()).isEqualTo("ciudadanos");
         assertThat(root.get("eventVersion").asText()).isEqualTo("1.0");
-        assertThat(root.get("occuredAt").asText()).isEqualTo("2026-10-15T11:45:00-03:00");
+        assertThat(root.get("occurredAt").asText()).isEqualTo("2026-10-15T11:45:00-03:00");
         assertThat(root.get("data").get("caseFileNumber").asText()).isEqualTo("EXP-2026-001042");
         assertThat(root.get("data").get("state").asText()).isEqualTo("resolved");
         assertThat(root.get("data").get("initiatingArea").asText()).isEqualTo("Obras Públicas");
@@ -135,10 +150,11 @@ class EventEnvelopeTest {
         String json = objectMapper.writeValueAsString(envelope);
         JsonNode root = objectMapper.readTree(json);
 
+        assertThat(root.has("occuredAt")).isFalse();
         assertThat(root.get("eventId").asText()).isEqualTo(eventId);
         assertThat(root.get("sourceModule").asText()).isEqualTo("ciudadanos");
         assertThat(root.get("eventVersion").asText()).isEqualTo("1.0");
-        assertThat(root.get("occuredAt").asText()).isEqualTo("2026-08-22T09:00:00-03:00");
+        assertThat(root.get("occurredAt").asText()).isEqualTo("2026-08-22T09:00:00-03:00");
         assertThat(root.get("correlationId").asText()).isEqualTo(correlationId);
         assertThat(root.get("causationId").asText()).isEqualTo(causationId);
         assertThat(root.get("data").get("fullName").asText()).isEqualTo("Marcos Ferreyra");
@@ -168,7 +184,7 @@ class EventEnvelopeTest {
         String orgJson = objectMapper.writeValueAsString(orgEnvelope);
         assertThat(orgJson).contains("Panadería Del Sol S.R.L.").contains("ciudadanos");
         assertThat(orgJson).contains("\"organizationId\":3311").contains("\"cuit\":30712345678");
-        assertThat(orgJson).contains("\"eventVersion\":\"1.0\"").contains("\"occuredAt\":");
+        assertThat(orgJson).contains("\"eventVersion\":\"1.0\"").contains("\"occurredAt\":");
 
         RepresentationGrantedData repData = new RepresentationGrantedData(
                 990L, 8452L, 3311L, 30712345678L, "LEGAL_REPRESENTATIVE", "2026-08-21", "VALID"

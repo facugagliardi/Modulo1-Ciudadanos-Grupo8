@@ -5,7 +5,6 @@ import ar.edu.uade.ciudadanos.documentacion.entity.EstadoSolicitud;
 import ar.edu.uade.ciudadanos.documentacion.entity.OrigenSolicitud;
 import ar.edu.uade.ciudadanos.documentacion.entity.SolicitudDocumentacion;
 import ar.edu.uade.ciudadanos.documentacion.repository.SolicitudDocumentacionRepository;
-import ar.edu.uade.ciudadanos.evento.config.RabbitMQConfig;
 import ar.edu.uade.ciudadanos.evento.dto.EventEnvelope;
 import ar.edu.uade.ciudadanos.evento.dto.SocialDocumentationDeliveredData;
 import ar.edu.uade.ciudadanos.evento.dto.SocialDocumentationRequestedEvent;
@@ -25,7 +24,6 @@ import java.util.Optional;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -72,7 +70,6 @@ public class EventConsumerService {
      * Listener que consume mensajes de la cola de Ciudadanos ('q.ciudadanos') y M8 en RabbitMQ.
      * Solo procesa si auto-startup está habilitado.
      */
-    @RabbitListener(queues = {RabbitMQConfig.QUEUE_CIUDADANOS, RabbitMQConfig.QUEUE_M8_REQUESTS})
     public void onSocialDocumentationRequested(SocialDocumentationRequestedEvent evento) {
         log.info("Mensaje recibido desde cola RabbitMQ: eventId={}, eventType={}",
                 evento.eventId(), evento.eventType());

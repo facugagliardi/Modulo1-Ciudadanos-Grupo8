@@ -9,8 +9,8 @@ public record SocialDocumentationRequestedEvent(
         String eventId,
         String eventType,
         String eventVersion,
-        @JsonProperty("occuredAt")
-        @JsonAlias({"occurredAt", "occuredAt", "timestamp"})
+        @JsonProperty("occurredAt")
+        @JsonAlias({"occuredAt", "timestamp"})
         String occuredAt,
         String sourceModule,
         String correlationId,

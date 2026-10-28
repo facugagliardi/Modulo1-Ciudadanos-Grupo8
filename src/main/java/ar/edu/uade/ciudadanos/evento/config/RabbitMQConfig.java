@@ -1,10 +1,7 @@
 package ar.edu.uade.ciudadanos.evento.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.springframework.amqp.core.Binding;
-import org.springframework.amqp.core.BindingBuilder;
 import org.springframework.amqp.core.FanoutExchange;
-import org.springframework.amqp.core.Queue;
 import org.springframework.amqp.rabbit.connection.ConnectionFactory;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
@@ -20,40 +17,24 @@ import org.springframework.context.annotation.Configuration;
  *    Todos los módulos publican ahí. El Core se encarga del ruteo hacia las suscripciones.
  *
  * 2. Para recibir: Una cola por módulo 'q.ciudadanos'.
- *    Se declara durable de forma compatible con la creada por el Core.
+ *    Core la declara; el listener la consulta pasivamente.
  */
 @Configuration
 public class RabbitMQConfig {
 
     public static final String EXCHANGE_MUNI_INBOX = "muni.inbox";
     public static final String QUEUE_CIUDADANOS = "q.ciudadanos";
-    public static final String QUEUE_M8_REQUESTS = "modulo1.m8.documentation.requests";
 
     @Value("${app.events.exchange:muni.inbox}")
     private String exchangeName;
-
-    @Value("${app.events.queue:q.ciudadanos}")
-    private String queueName;
 
     @Bean
     public FanoutExchange exchange() {
         return new FanoutExchange(exchangeName, true, false);
     }
 
-    @Bean
-    public Queue queueCiudadanos() {
-        return new Queue(queueName, true, false, false);
-    }
-
-    @Bean
-    public Queue queueM8Requests() {
-        return new Queue(QUEUE_M8_REQUESTS, true, false, false);
-    }
-
-    @Bean
-    public Binding bindingCiudadanos(Queue queueCiudadanos, FanoutExchange exchange) {
-        return BindingBuilder.bind(queueCiudadanos).to(exchange);
-    }
+    // No declarar colas ni bindings: Core los administra al registrar suscripciones.
+    // El contenedor listener comprueba pasivamente la cola configurada al arrancar.
 
     @Bean
     public MessageConverter jsonMessageConverter(ObjectMapper objectMapper) {

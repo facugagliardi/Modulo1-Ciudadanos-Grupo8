@@ -162,7 +162,7 @@ public class AuthService {
         String rol = Rol.PERSONA.name();
         TipoSujeto tipoSujeto = TipoSujeto.CIUDADANO;
 
-        TokenEmitido tokens = emitir(new AuthPrincipal(ciudadano.getId(), tipoSujeto, rol));
+        TokenEmitido tokens = emitir(new AuthPrincipal(ciudadano.getId(), tipoSujeto, rol, ciudadano.getUuid()));
         return new Sesion<>(new LoginResponse(ciudadano.getId(), "CIUDADANO", rol, ciudadano.getUuid()), tokens);
     }
 
@@ -183,8 +183,8 @@ public class AuthService {
 
         // El rol del empleado va al claim "rol" del JWT via AuthPrincipal.
         String rol = Rol.deEmpleado(empleado.getRol()).name();
-        TokenEmitido tokens = emitir(new AuthPrincipal(empleado.getEmpleadoId(), TipoSujeto.EMPLEADO, rol));
-        return new Sesion<>(new EmpleadoLoginResponse(empleado.getEmpleadoId(), rol), tokens);
+        TokenEmitido tokens = emitir(new AuthPrincipal(empleado.getEmpleadoId(), TipoSujeto.EMPLEADO, rol, empleado.getUuid()));
+        return new Sesion<>(new EmpleadoLoginResponse(empleado.getEmpleadoId(), rol, empleado.getUuid()), tokens);
     }
 
     /**
@@ -207,20 +207,22 @@ public class AuthService {
             if (!emp.isActivo()) {
                 throw ApiException.prohibido("El empleado esta inactivo");
             }
-            AuthPrincipal principal = new AuthPrincipal(emp.getEmpleadoId(), TipoSujeto.EMPLEADO, emp.getRol().name());
+            AuthPrincipal principal = new AuthPrincipal(emp.getEmpleadoId(), TipoSujeto.EMPLEADO, emp.getRol().name(), emp.getUuid());
             TokenEmitido tokens = emitir(principal);
             List<ContactoResponse> contactos = List.of(
                     new ContactoResponse(null, TipoContacto.EMAIL, emp.getMail(), true)
             );
             UsuarioLoginResponse cuerpo = new UsuarioLoginResponse(
                     emp.getEmpleadoId(),
+                    emp.getUuid(),
                     0,
                     emp.getNombreEmpleado(),
                     emp.getApellidoEmpleado(),
                     null,
                     emp.getRol().name(),
                     true,
-                    contactos
+                    contactos,
+                    "EMPLEADO"
             );
             return new Sesion<>(cuerpo, tokens);
         }
@@ -242,7 +244,7 @@ public class AuthService {
                             dni = Integer.parseInt(c.getDocumentoId());
                         } catch (Exception ignored) {
                         }
-                        AuthPrincipal principal = new AuthPrincipal(c.getId(), TipoSujeto.CIUDADANO, "CIUDADANO");
+                        AuthPrincipal principal = new AuthPrincipal(c.getId(), TipoSujeto.CIUDADANO, Rol.PERSONA.name(), c.getUuid());
                         TokenEmitido tokens = emitir(principal);
                         List<ContactoResponse> contactos = contactoRepository.findByCiudadanoId(c.getId()).stream()
                                 .map(ContactoResponse::de)
@@ -269,11 +271,30 @@ public class AuthService {
 
     // ----------------------------------------------------------------- refresh
 
-    /** Rota el par completo: el refresh usado deja de servir cuando vence. */
+    /** Renueva desde la identidad persistida; tambien actualiza tokens anteriores sin UUID. */
+    @Transactional(readOnly = true)
     public TokenEmitido refrescar(String refreshToken) {
         AuthPrincipal principal = jwtService.validarRefreshToken(refreshToken);
         if (principal == null) {
             throw ApiException.noAutenticado("Refresh token vencido o invalido");
+        }
+        if (principal.tipoInfo() == TipoSujeto.CIUDADANO) {
+            Ciudadano ciudadano = ciudadanoRepository.findById(principal.id())
+                    .orElseThrow(() -> ApiException.noAutenticado("La cuenta ya no existe"));
+            if (ciudadano.getEstado() != EstadoCiudadano.ACTIVO) {
+                throw ApiException.prohibido("La cuenta esta " + ciudadano.getEstado());
+            }
+            principal = new AuthPrincipal(ciudadano.getId(), TipoSujeto.CIUDADANO, Rol.PERSONA.name(), ciudadano.getUuid());
+        } else if (principal.tipoInfo() == TipoSujeto.EMPLEADO) {
+            CuentaEmpleado empleado = cuentaEmpleadoRepository.findById(principal.id())
+                    .orElseThrow(() -> ApiException.noAutenticado("La cuenta ya no existe"));
+            if (!empleado.isActivo()) {
+                throw ApiException.prohibido("El empleado esta inactivo");
+            }
+            principal = new AuthPrincipal(empleado.getEmpleadoId(), TipoSujeto.EMPLEADO,
+                    Rol.deEmpleado(empleado.getRol()).name(), empleado.getUuid());
+        } else {
+            throw ApiException.noAutenticado("Tipo de cuenta no renovable");
         }
         return emitir(principal);
     }

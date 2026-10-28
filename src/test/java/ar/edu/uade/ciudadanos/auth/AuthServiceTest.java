@@ -208,6 +208,7 @@ class AuthServiceTest {
         credencial.setPassword(passwordEncoder.encode(claveEnClaro));
 
         when(ciudadanoRepository.findByCuit(CUIL)).thenReturn(Optional.of(ciudadano));
+        when(ciudadanoRepository.findById(1L)).thenReturn(Optional.of(ciudadano));
         when(credencialCiudadanoRepository.findByCiudadano_Cuit(CUIL)).thenReturn(Optional.of(credencial));
     }
 }

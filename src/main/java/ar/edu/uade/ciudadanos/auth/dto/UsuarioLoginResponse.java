@@ -25,8 +25,21 @@ public record UsuarioLoginResponse(
 
         boolean auth,
 
-        List<ContactoResponse> contactos
+        List<ContactoResponse> contactos,
+
+        String actorType
 ) {
+    public UsuarioLoginResponse(Long user_id, UUID uuid, Integer dni, String nombre, String apellido,
+                                Long cuit, String role, boolean auth, List<ContactoResponse> contactos) {
+        this(user_id, uuid, dni, nombre, apellido, cuit, role, auth, contactos, "CIUDADANO");
+    }
+
+    @JsonProperty("actorId")
+    public UUID actorId() { return uuid; }
+
+    @JsonProperty("citizenId")
+    public UUID citizenId() { return "CIUDADANO".equals(actorType) ? uuid : null; }
+
     public UsuarioLoginResponse(Long user_id, Integer dni, String role, boolean auth) {
         this(user_id, null, dni, null, null, null, role, auth, null);
     }

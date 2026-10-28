@@ -17,4 +17,6 @@ resources/
 archivos-documentos/
 
 .env
+.env.*
+!.env.example
 application-local.yml

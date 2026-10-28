@@ -70,7 +70,7 @@ public class EventPublisherService {
     public <T> EventEnvelope<T> publicar(EventEnvelope<T> envelope, String routingKey) {
         try {
             String payloadJson = objectMapper.writeValueAsString(envelope);
-            eventoService.registrarEmitido(envelope.eventId(), envelope.subject(), envelope.eventType(), payloadJson);
+            eventoService.registrarEmitido(envelope.eventId(), envelope.sourceModule(), envelope.subject(), envelope.eventType(), payloadJson);
             log.info("Evento persistido localmente: eventId={}, eventType={}", envelope.eventId(), envelope.eventType());
         } catch (Exception ex) {
             log.error("Error al serializar y persistir el evento en PostgreSQL: {}", ex.getMessage(), ex);

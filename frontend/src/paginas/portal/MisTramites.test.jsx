@@ -10,6 +10,11 @@ const listarDomicilios = vi.fn();
 const listarRepresentaciones = vi.fn();
 const listarSolicitudes = vi.fn();
 const listarExpedientes = vi.fn();
+const listarTramitesExternos = vi.fn();
+
+vi.mock("@/lib/api/endpoints/tramitesExternos", () => ({
+  listarTramitesExternos: (...a) => listarTramitesExternos(...a),
+}));
 
 vi.mock("@/lib/api/endpoints/ciudadanos", () => ({
   obtenerCiudadano: (...a) => obtenerCiudadano(...a),
@@ -44,6 +49,7 @@ beforeEach(() => {
   listarRepresentaciones.mockResolvedValue([]);
   listarSolicitudes.mockResolvedValue([]);
   listarExpedientes.mockResolvedValue([]);
+  listarTramitesExternos.mockReset().mockResolvedValue([]);
   conSesion({ id: 1, rol: "PERSONA", subType: "CIUDADANO" });
 });
 

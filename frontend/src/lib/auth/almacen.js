@@ -71,6 +71,9 @@ export function abrirSesion({ accessToken, refreshToken, cuerpo = {} }) {
     rol: claims.rol ?? cuerpo.rol ?? null,
     expira: claims.exp ?? null,
     cuerpo,
+    citizenId: claims.citizenId ?? cuerpo.citizenId ?? null,
+    actorId: claims.actorId ?? cuerpo.actorId ?? cuerpo.uuid ?? null,
+    actorType: claims.actorType ?? claims.sub_type ?? cuerpo.actorType ?? null,
   };
   guardarEnDisco(estado);
   avisar();
@@ -86,6 +89,10 @@ export function rotarTokens({ accessToken, refreshToken }) {
     accessToken,
     refreshToken: refreshToken ?? estado.refreshToken,
     expira: claims.exp ?? estado.expira,
+    rol: claims.rol ?? estado.rol,
+    citizenId: claims.citizenId ?? estado.citizenId ?? null,
+    actorId: claims.actorId ?? estado.actorId ?? null,
+    actorType: claims.actorType ?? estado.actorType ?? null,
   };
   guardarEnDisco(estado);
   avisar();

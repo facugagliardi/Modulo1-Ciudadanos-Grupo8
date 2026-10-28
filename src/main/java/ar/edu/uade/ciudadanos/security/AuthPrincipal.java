@@ -8,5 +8,9 @@ package ar.edu.uade.ciudadanos.security;
  * @param rol      nombre de un {@link Rol}: PERSONA para ciudadanos y juridicas,
  *                 el rol del empleado si es interno, o SERVICIO
  */
-public record AuthPrincipal(Long id, TipoSujeto tipoInfo, String rol) {
+public record AuthPrincipal(Long id, TipoSujeto tipoInfo, String rol, java.util.UUID actorId) {
+    /** Compatibilidad con tokens antiguos y sujetos tecnicos sin UUID personal. */
+    public AuthPrincipal(Long id, TipoSujeto tipoInfo, String rol) {
+        this(id, tipoInfo, rol, null);
+    }
 }

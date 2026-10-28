@@ -8,6 +8,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import java.util.UUID;
 
 /**
  * Cuenta de empleado municipal.
@@ -23,6 +24,13 @@ public class CuentaEmpleado {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "empleado_id")
     private Long empleadoId;
+
+    @Column(name = "uuid", nullable = false, unique = true, updatable = false)
+    private UUID uuid = UUID.randomUUID();
+
+    public UUID getUuid() { return uuid; }
+
+    public void setUuid(UUID uuid) { this.uuid = uuid; }
 
     @Column(name = "mail", nullable = false, unique = true, length = 200)
     private String mail;

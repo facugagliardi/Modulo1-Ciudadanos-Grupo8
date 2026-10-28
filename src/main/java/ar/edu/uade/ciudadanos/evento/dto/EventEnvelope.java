@@ -10,7 +10,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  * eventId: UUID nuevo por evento, clave de idempotencia.
  * eventType: String(&lt;=120), camelCase.
  * eventVersion: String(&lt;=20), default "1.0".
- * occuredAt: ISO-8601 con offset obligatorio.
+ * occurredAt: ISO-8601 con offset obligatorio; admite occuredAt al recibir por compatibilidad.
  * sourceModule: String(&lt;=60), identificador del módulo (ej: "ciudadanos").
  * correlationId: UUID opcional (hilo del trámite).
  * causationId: UUID opcional (eventId que disparó este evento).
@@ -24,8 +24,8 @@ public record EventEnvelope<T>(
 
         String eventVersion,
 
-        @JsonProperty("occuredAt")
-        @JsonAlias({"occurredAt", "occuredAt"})
+        @JsonProperty("occurredAt")
+        @JsonAlias("occuredAt")
         String occuredAt,
 
         String sourceModule,
@@ -45,6 +45,9 @@ public record EventEnvelope<T>(
         }
         if (sourceModule == null || sourceModule.isBlank()) {
             sourceModule = SOURCE_MODULE_CIUDADANOS;
+        }
+        if (correlationId == null || correlationId.isBlank()) {
+            correlationId = java.util.UUID.randomUUID().toString();
         }
     }
 

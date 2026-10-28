@@ -39,6 +39,11 @@ spring:
     port: ${RABBITMQ_PORT:5672}
     username: ${RABBITMQ_USER:guest}
     password: ${RABBITMQ_PASS:guest}
+    virtual-host: ${RABBITMQ_VHOST:/}
+    ssl:
+      enabled: ${RABBITMQ_SSL_ENABLED:false}
+      validate-server-certificate: true
+      verify-hostname: true
     listener:
       simple:
         auto-startup: ${RABBITMQ_AUTO_STARTUP:false}

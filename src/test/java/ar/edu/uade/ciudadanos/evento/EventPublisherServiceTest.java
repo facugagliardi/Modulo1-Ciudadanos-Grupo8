@@ -44,7 +44,7 @@ class EventPublisherServiceTest {
     @Test
     @DisplayName("publicarCitizenUpdated debe persistir en PostgreSQL como EMITIDO y enviar a RabbitMQ")
     void publicarCitizenUpdatedExito() {
-        when(eventoService.registrarEmitido(any(), any(), any(), any()))
+        when(eventoService.registrarEmitido(any(), any(), any(), any(), any()))
                 .thenReturn(new Evento("M1-EVT-TEST", "citizens", "100", "citizenUpdated", "{}", TipoEvento.EMITIDO));
 
         Map<String, Object> details = Map.of("dni", "12345678", "name", "Juan");
@@ -67,7 +67,8 @@ class EventPublisherServiceTest {
         ArgumentCaptor<String> typeCaptor = ArgumentCaptor.forClass(String.class);
         ArgumentCaptor<String> payloadCaptor = ArgumentCaptor.forClass(String.class);
 
-        verify(eventoService).registrarEmitido(eventIdCaptor.capture(), subjectCaptor.capture(), typeCaptor.capture(), payloadCaptor.capture());
+        verify(eventoService).registrarEmitido(eventIdCaptor.capture(), eq("ciudadanos"), subjectCaptor.capture(), typeCaptor.capture(), payloadCaptor.capture());
+        assertThat(eventIdCaptor.getValue()).isEqualTo(envelope.eventId());
         assertThat(subjectCaptor.getValue()).isEqualTo("ciudadanos");
         assertThat(typeCaptor.getValue()).isEqualTo("citizenUpdated");
         assertThat(payloadCaptor.getValue()).contains("REGISTERED").contains("Juan").contains("sourceModule");
@@ -79,7 +80,7 @@ class EventPublisherServiceTest {
     @Test
     @DisplayName("Si RabbitMQ falla por desconexión, el evento persiste en BD y no rompe el flujo")
     void rabbitMqDesconectadoToleraFallo() {
-        when(eventoService.registrarEmitido(any(), any(), any(), any()))
+        when(eventoService.registrarEmitido(any(), any(), any(), any(), any()))
                 .thenReturn(new Evento("M1-EVT-TEST", "citizens", "100", "citizenUpdated", "{}", TipoEvento.EMITIDO));
 
         doThrow(new AmqpException("Broker no disponible"))
@@ -89,13 +90,13 @@ class EventPublisherServiceTest {
         EventEnvelope<?> envelope = publisherService.publicarEjemplo("citizen-registered");
 
         assertThat(envelope).isNotNull();
-        verify(eventoService).registrarEmitido(any(), any(), any(), any());
+        verify(eventoService).registrarEmitido(any(), any(), any(), any(), any());
     }
 
     @Test
     @DisplayName("publicarEjemplo debe generar y publicar todos los ejemplos del catálogo oficial")
     void publicarEjemplosOficiales() {
-        when(eventoService.registrarEmitido(any(), any(), any(), any()))
+        when(eventoService.registrarEmitido(any(), any(), any(), any(), any()))
                 .thenReturn(new Evento());
 
         String[] ejemplos = {
@@ -127,7 +128,7 @@ class EventPublisherServiceTest {
         ciudadano.setUuid(uuidMock);
 
         when(ciudadanoRepository.findById(8452L)).thenReturn(java.util.Optional.of(ciudadano));
-        when(eventoService.registrarEmitido(any(), any(), any(), any())).thenReturn(new Evento());
+        when(eventoService.registrarEmitido(any(), any(), any(), any(), any())).thenReturn(new Evento());
 
         EventEnvelope<CitizenUpdatedData> envelope = publisherService.publicarCitizenUpdated(
                 8452L,

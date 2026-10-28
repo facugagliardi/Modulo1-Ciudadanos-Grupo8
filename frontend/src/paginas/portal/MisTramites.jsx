@@ -6,6 +6,8 @@ import { obtenerCiudadano } from "@/lib/api/endpoints/ciudadanos";
 import { listarDomicilios, listarRepresentaciones } from "@/lib/api/endpoints/ciudadanos";
 import { listarSolicitudes } from "@/lib/api/endpoints/documentacion";
 import { listarExpedientes } from "@/lib/api/endpoints/expedientes";
+import { listarTramitesExternos } from "@/lib/api/endpoints/tramitesExternos";
+import { SeguimientoExterno } from "@/componentes/SeguimientoExterno";
 import { useRecurso } from "@/lib/useRecurso";
 import { useSesion } from "@/lib/auth/SesionContext";
 import { diasHasta, formatearFecha, nombreCompleto } from "@/lib/dominio/formato";
@@ -39,6 +41,7 @@ export function MisTramites() {
   const solicitudes = useRecurso(useCallback((s) => listarSolicitudes(s), []));
   const expedientes = useRecurso(useCallback((s) => listarExpedientes(s), []));
   const representaciones = useRecurso(useCallback((s) => listarRepresentaciones(id, s), [id]));
+  const externos = useRecurso(useCallback((s) => esCiudadano ? listarTramitesExternos(id, s) : Promise.resolve([]), [id, esCiudadano]));
 
   const ultimosDomicilios = useUltimosDatos(`domicilios:${id}`, domicilios.datos);
   const ultimoCiudadano = useUltimosDatos(`ciudadano:${id}`, ciudadano.datos);
@@ -176,7 +179,10 @@ export function MisTramites() {
         </ConEsqueleto>
       </div>
 
-      {!algoCargando &&
+      {esCiudadano && <SeguimientoExterno recurso={externos} ciudadanoId={id} />}
+
+      {!algoCargando && !externos.cargando && !externos.error &&
+        (externos.datos ?? []).length === 0 &&
         pendientes.length === 0 &&
         pendientesDeCarga.length === 0 &&
         (expedientes.datos ?? []).length === 0 && (

@@ -9,6 +9,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Date;
+import java.util.UUID;
 import javax.crypto.SecretKey;
 import org.springframework.stereotype.Service;
 
@@ -71,6 +72,10 @@ public class JwtService {
                 .claim(CLAIM_TIPO_SUJETO, principal.tipoInfo().name())
                 .claim(CLAIM_ROL, principal.rol())
                 .claim(CLAIM_TIPO_TOKEN, tipoToken)
+                .claim("actorType", principal.tipoInfo().name())
+                .claim("actorId", principal.actorId() == null ? null : principal.actorId().toString())
+                .claim("citizenId", principal.tipoInfo() == TipoSujeto.CIUDADANO && principal.actorId() != null
+                        ? principal.actorId().toString() : null)
                 .issuedAt(Date.from(ahora))
                 .expiration(Date.from(ahora.plus(ttl)))
                 .signWith(key)
@@ -106,7 +111,9 @@ public class JwtService {
             return new AuthPrincipal(
                     Long.valueOf(claims.getSubject()),
                     TipoSujeto.valueOf(claims.get(CLAIM_TIPO_SUJETO, String.class)),
-                    claims.get(CLAIM_ROL, String.class));
+                    claims.get(CLAIM_ROL, String.class),
+                    claims.get("actorId", String.class) == null ? null
+                            : UUID.fromString(claims.get("actorId", String.class)));
         } catch (JwtException | IllegalArgumentException e) {
             return null;
         }
