@@ -56,6 +56,12 @@ publicaciones ni el indicador de salud de RabbitMQ. Para que el health check
 general pase, también debe funcionar la conexión al broker. Verificar los
 rangos de salida de la región elegida con Core.
 
+M1 utiliza los exchanges y las colas ya creados por Core; no los declara.
+Un error `ACCESS_REFUSED - configure access to exchange` indica un intento de
+administrar topologia, no una contraseña incorrecta. La version corregida no
+expone beans de exchanges, colas ni bindings para que RabbitAdmin los declare.
+No hace falta ampliar los permisos de la cuenta para esa declaracion.
+
 ## Verificación y pendientes
 
 Después de cargar las variables y preparar la base, usar **Manual Deploy >

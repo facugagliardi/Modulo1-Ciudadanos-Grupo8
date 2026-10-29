@@ -1,12 +1,10 @@
 package ar.edu.uade.ciudadanos.evento.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.springframework.amqp.core.FanoutExchange;
 import org.springframework.amqp.rabbit.connection.ConnectionFactory;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
 import org.springframework.amqp.support.converter.MessageConverter;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -18,6 +16,9 @@ import org.springframework.context.annotation.Configuration;
  *
  * 2. Para recibir: Una cola por módulo 'q.ciudadanos'.
  *    Core la declara; el listener la consulta pasivamente.
+ *
+ * Core administra exchanges, colas y bindings. M1 no declara ninguno de esos
+ * recursos: su usuario necesita permisos de publicacion/consumo, no configure.
  */
 @Configuration
 public class RabbitMQConfig {
@@ -25,15 +26,8 @@ public class RabbitMQConfig {
     public static final String EXCHANGE_MUNI_INBOX = "muni.inbox";
     public static final String QUEUE_CIUDADANOS = "q.ciudadanos";
 
-    @Value("${app.events.exchange:muni.inbox}")
-    private String exchangeName;
-
-    @Bean
-    public FanoutExchange exchange() {
-        return new FanoutExchange(exchangeName, true, false);
-    }
-
-    // No declarar colas ni bindings: Core los administra al registrar suscripciones.
+    // No exponer beans Exchange, Queue o Binding: RabbitAdmin los declararia
+    // al abrir una conexion, incluso si el listener esta desactivado.
     // El contenedor listener comprueba pasivamente la cola configurada al arrancar.
 
     @Bean

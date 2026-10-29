@@ -85,7 +85,7 @@ Campos de salida: `eventId`, `eventType`, `eventVersion`, `occurredAt`, `sourceM
 
 El único listener consume la cola configurada en `APP_EVENTS_QUEUE` (default `q.ciudadanos`) y despacha por `eventType`. El consumidor de M8 se invoca sólo para `socialDocumentationRequested` de `desarrollo-social`.
 
-No se crean bindings de nuestra cola directamente a `muni.inbox`. El Core administra las suscripciones y crea la cola/bindings; Spring la comprueba pasivamente. Los errores de consumo se rechazan sin requeue local para que Core administre sus reintentos/DLQ. Los tipos no relevantes se ignoran correctamente.
+M1 no declara exchanges, colas ni bindings. El Core administra esos recursos y las suscripciones; Spring comprueba la cola pasivamente. No se crean bindings de nuestra cola directamente a `muni.inbox`. El publicador usa el nombre configurado en `APP_EVENTS_EXCHANGE` sin intentar declarar el exchange ni exigir permiso `configure`. Esto tambien evita declaraciones durante el health check aunque el listener este desactivado. Los errores de consumo se rechazan sin requeue local para que Core administre sus reintentos/DLQ. Los tipos no relevantes se ignoran correctamente.
 
 **Si un despliegue anterior creó un binding directo `muni.inbox → q.ciudadanos`, quitar el bean de Java no lo borra del broker. Core debe revisar y retirar ese binding antiguo.** No se eliminó infraestructura remota desde esta rama.
 
