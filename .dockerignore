@@ -1,0 +1,15 @@
+# Only the backend build inputs belong in the Docker context.
+**
+!Dockerfile
+!pom.xml
+!src/
+!src/main/
+!src/main/**
+
+# Never package local configuration, credentials, or uploaded files.
+**/.env
+**/.env.*
+**/application-local.*
+**/application-*-local.*
+**/archivos-documentos/**
+**/*.log
