@@ -5,7 +5,7 @@
 --   psql -U ciudadanos_app -d ciudadanos_m1 -f 02_datos_iniciales.sql
 --
 -- Los hashes son BCrypt (mismo encoder que usa AuthService).
---   empleado  admin@municipio.gob.ar / password-test
+--   empleado  admin@municipio.gob.ar / [clave de fixture local; no usar en entornos compartidos]
 --   ciudadano CUIL 20345678901       / Ciudadano.2026
 -- =============================================================================
 
@@ -18,7 +18,7 @@ INSERT INTO cuenta_empleado (mail, nombre_empleado, apellido_empleado, rol, acti
     ('auditor@municipio.gob.ar',  'Carla', 'Molina',   'AUDITOR',          TRUE)
 ON CONFLICT (mail) DO NOTHING;
 
--- Misma clave para los tres: password-test
+-- Misma clave para los tres: [clave de fixture local; no usar en entornos compartidos]
 INSERT INTO credencial_empleado (empleado_id, password)
 SELECT empleado_id, '$2a$10$5wk7utMNVACoSK/ep2JKzOdPoYV0FVubY9tKwNmEPw8xyNu99RU6K'
 FROM cuenta_empleado

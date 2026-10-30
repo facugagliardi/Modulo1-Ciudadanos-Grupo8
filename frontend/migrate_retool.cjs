@@ -17,11 +17,16 @@ const { Client } = require('pg');
 const fs = require('fs');
 const path = require('path');
 
-const connectionString = 'postgresql://retool:PASSWORD_RETIRADA@ep-withered-thunder-arukfp1g-pooler.c-4.us-west-2.retooldb.com/retool?sslmode=require';
+const connectionString = process.env.POSTGRES_URL?.replace(/^jdbc:/, '');
+if (!connectionString || !process.env.POSTGRES_USER || !process.env.POSTGRES_PASSWORD) {
+  throw new Error('Definir POSTGRES_URL, POSTGRES_USER y POSTGRES_PASSWORD antes de migrar.');
+}
 
 async function migrate() {
   const client = new Client({
     connectionString,
+    user: process.env.POSTGRES_USER,
+    password: process.env.POSTGRES_PASSWORD,
     ssl: { rejectUnauthorized: false }
   });
 

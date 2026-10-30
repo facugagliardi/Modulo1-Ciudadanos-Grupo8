@@ -29,9 +29,10 @@ mongosh "mongodb://localhost:27017" --file db/mongodb_setup.txt
 ./mvnw test          # 51 tests, no necesitan las bases
 ```
 
-Todas las variables de entorno tienen default para local; las de producción están
-listadas en `INSTALACION.md`. La única que conviene definir siempre es
-`APP_JWT_SECRET` (mínimo 32 bytes, `openssl rand -base64 48`).
+Antes de arrancar, definir `POSTGRES_PASSWORD` y `APP_JWT_SECRET` (mínimo 32 bytes).
+Se admiten variables de entorno o `application-local.yml` privado e ignorado por Git.
+Ver [`SEGURIDAD_SECRETOS.md`](SEGURIDAD_SECRETOS.md) y `.env.example`.
+Las demas variables y la configuracion de produccion estan en `INSTALACION.md`.
 
 `spring.jpa.hibernate.ddl-auto=validate`: la app **no** crea tablas. Si una entidad y
 `db/01_schema.sql` se desincronizan, el arranque falla con el detalle, en vez de romper
@@ -250,7 +251,7 @@ curl -i -X POST localhost:8080/auth/login \
 
 Con `db/02_datos_iniciales.sql` cargado hay un empleado por rol:
 `admin@municipio.gob.ar` (RESPONSABLE_AREA), `mesa@municipio.gob.ar` (MESA_ENTRADAS) y
-`auditor@municipio.gob.ar` (AUDITOR), todos con clave `password-test`; y el ciudadano
+`auditor@municipio.gob.ar` (AUDITOR), todos con clave `{{empleadoPassword}}`; y el ciudadano
 CUIL `20345678901` / `Ciudadano.2026`.
 
 ---

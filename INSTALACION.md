@@ -174,9 +174,9 @@ son obligatorias.
 |---|---|---|
 | `POSTGRES_URL` | `jdbc:postgresql://localhost:5432/ciudadanos_m1` | conexión JDBC |
 | `POSTGRES_USER` | `ciudadanos_app` | usuario de la base |
-| `POSTGRES_PASSWORD` | `cambiar_en_local` | contraseña |
+| `POSTGRES_PASSWORD` | sin valor por defecto | contraseña |
 | `MONGO_URI` | `mongodb://localhost:27017/ciudadanos_m1_eventos` | conexión Mongo |
-| `APP_JWT_SECRET` | clave de desarrollo | firma HS256 — **mínimo 32 bytes** |
+| `APP_JWT_SECRET` | sin valor por defecto | firma HS256 — **mínimo 32 bytes** |
 | `ALMACENAMIENTO_DIR` | `./archivos-documentos` | dónde se guardan los archivos subidos |
 | `SERVER_PORT` | `8080` | puerto HTTP |
 

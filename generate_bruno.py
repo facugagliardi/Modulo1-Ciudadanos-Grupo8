@@ -112,7 +112,7 @@ endpoints = [
     {
         "folder": "01_Auth", "name": "04_Login_Empleado_Admin_Success",
         "method": "POST", "path": "/auth/empleados/login",
-        "body": {"mail": "admin@municipio.gob.ar", "password": "password-test"},
+        "body": {"mail": "admin@municipio.gob.ar", "password": "{{empleadoPassword}}"},
         "auth": "none", "status": 200,
         "post_script": "  const headers = res.getHeaders();\n  if (headers['authorization']) {\n    bru.setEnvVar('jwt_empleado', headers['authorization'].replace('Bearer ', ''));\n  }"
     },

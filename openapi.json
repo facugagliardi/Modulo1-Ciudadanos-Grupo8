@@ -80,7 +80,7 @@
             "application/json": {
               "example": {
                 "mail": "admin@municipio.gob.ar",
-                "password": "password-test"
+                "password": "{{empleadoPassword}}"
               }
             }
           }

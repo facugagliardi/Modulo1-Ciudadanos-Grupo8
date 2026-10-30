@@ -1304,7 +1304,7 @@ Health check: `GET http://localhost:8080/actuator/health` (público).
 
 ### Empleados semilla
 
-Los tres con contraseña **`password-test`**, vía `POST /auth/empleados/login`:
+Los tres con contraseña **`{{empleadoPassword}}`**, vía `POST /auth/empleados/login`:
 
 | mail | nombre | rol |
 |---|---|---|
@@ -1330,7 +1330,7 @@ Vía `POST /auth/login`:
 # 1. Login de empleado — mirá los HEADERS de la respuesta
 curl -i -X POST localhost:8080/auth/empleados/login \
   -H 'Content-Type: application/json' \
-  -d '{"mail":"admin@municipio.gob.ar","password":"password-test"}'
+  -d '{"mail":"admin@municipio.gob.ar","password":"{{empleadoPassword}}"}'
 
 # 2. Padrón completo (necesita LISTAR_PADRON → el token de arriba sirve)
 curl -s localhost:8080/ciudadanos -H "Authorization: Bearer <TOKEN>"

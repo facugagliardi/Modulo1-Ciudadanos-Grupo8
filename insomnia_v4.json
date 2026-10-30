@@ -94,7 +94,7 @@
       "headers": [],
       "body": {
         "mimeType": "application/json",
-        "text": "{\n  \"mail\": \"admin@municipio.gob.ar\",\n  \"password\": \"password-test\"\n}"
+        "text": "{\n  \"mail\": \"admin@municipio.gob.ar\",\n  \"password\": \"{{empleadoPassword}}\"\n}"
       },
       "parameters": [],
       "authentication": {},

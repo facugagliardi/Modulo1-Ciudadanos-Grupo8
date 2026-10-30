@@ -1,0 +1,15 @@
+title = "Ciudadanos M1: reglas estandar y credenciales de configuracion"
+
+[extend]
+useDefault = true
+
+[[rules]]
+id = "postgres-provider-password"
+description = "Password PostgreSQL del proveedor (Neon/Retool)"
+regex = '''\bnpg_[A-Za-z0-9_-]{10,}\b'''
+
+[[rules]]
+id = "jwt-secret-fallback"
+description = "Clave JWT embebida como valor por defecto en Spring"
+regex = '''\$\{APP_JWT_SECRET:([^}\s]{20,})\}'''
+secretGroup = 1

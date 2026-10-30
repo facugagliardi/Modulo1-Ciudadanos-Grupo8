@@ -322,7 +322,7 @@ COMMIT;
 BEGIN;
 
 -- Empleados de prueba
--- Contraseña para todos: password-test
+-- Contraseña para todos: [clave de fixture local; no usar en entornos compartidos]
 INSERT INTO cuenta_empleado (mail, nombre_empleado, apellido_empleado, rol, activo) VALUES
     ('admin@municipio.gob.ar',    'Ana',   'Suarez',   'RESPONSABLE_AREA', TRUE),
     ('mesa@municipio.gob.ar',     'Bruno', 'Ferrari',  'MESA_ENTRADAS',    TRUE),

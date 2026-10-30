@@ -43,9 +43,9 @@ Con `db/02_datos_iniciales.sql` cargado en el backend:
 
 | Quién | Ingreso | Clave |
 |---|---|---|
-| Responsable de área | `admin@municipio.gob.ar` | `password-test` |
-| Mesa de entradas | `mesa@municipio.gob.ar` | `password-test` |
-| Auditor | `auditor@municipio.gob.ar` | `password-test` |
+| Responsable de área | `admin@municipio.gob.ar` | `{{empleadoPassword}}` |
+| Mesa de entradas | `mesa@municipio.gob.ar` | `{{empleadoPassword}}` |
+| Auditor | `auditor@municipio.gob.ar` | `{{empleadoPassword}}` |
 | Vecino | CUIL `20345678901` | `Ciudadano.2026` |
 
 **No hay usuario semilla con rol `ADMINISTRATIVO`.** Es el único que puede
@@ -56,7 +56,7 @@ Para probar ese escalón hay que insertarlo a mano:
 INSERT INTO cuenta_empleado (mail, nombre_empleado, apellido_empleado, rol, activo)
 VALUES ('admin.staff@municipio.gob.ar', 'Elena', 'Ruiz', 'ADMINISTRATIVO', TRUE);
 
--- El mismo hash BCrypt de "password-test" que usan los otros tres.
+-- El mismo hash BCrypt de "{{empleadoPassword}}" que usan los otros tres.
 INSERT INTO credencial_empleado (empleado_id, password)
 SELECT empleado_id, (SELECT password FROM credencial_empleado LIMIT 1)
 FROM cuenta_empleado WHERE mail = 'admin.staff@municipio.gob.ar';
