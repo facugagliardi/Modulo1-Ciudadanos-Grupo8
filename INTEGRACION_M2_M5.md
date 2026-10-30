@@ -8,6 +8,14 @@ Fuentes: contrato de M2 v1.78 (confirmado definitivo por M2), documento de event
 
 No cambia el `sub` numérico del JWT ni se eliminan campos anteriores del login. Los tokens siguen llegando en headers.
 
+La emision de access y refresh queda fijada en **HS256**, sin depender de la
+longitud de la clave. Se conserva `APP_JWT_SECRET`: cuando esta en Base64, los
+modulos verificadores deben decodificarla y usar los bytes resultantes como clave
+HMAC, no el texto Base64. El ambiente de integracion actual utiliza Base64.
+M1 conserva la lectura de tokens anteriores HS384/HS512 firmados con la misma
+clave hasta su vencimiento; las nuevas emisiones usan HS256. La confirmacion
+a los pares debe hacerse despues de desplegar este cambio y comprobar un login.
+
 | Sujeto | Campos nuevos del cuerpo y claims del access/refresh |
 |---|---|
 | Ciudadano | `citizenId` = UUID almacenado en `ciudadano.uuid`; `actorId` = mismo UUID; `actorType` = `CIUDADANO` |
@@ -160,7 +168,7 @@ Si se cambia de red o se despliega en un servidor hay que confirmar nuevamente l
 ## Pendientes que deben responder los equipos
 
 1. Core: nombres/suscripciones pendientes de Rentas y confirmación de M8. Acceso desde esta PC, credenciales y consumo registrado de updateTicketStatus ya verificados. Revalidar red si cambia el equipo de ejecución.
-2. M2: despliegue, cuentas de prueba y algoritmo JWT fijado y comunicado por privado. La aceptación de actorId para empleados y el contrato v3.1 ya fueron confirmados por M2.
+2. M2: desplegar y verificar el ajuste HS256, acordar cuentas de prueba y compartir por privado la clave Base64 y su interpretacion. La aceptación de actorId para empleados y el contrato v3.1 ya fueron confirmados por M2. El backend ya esta alojado en Render; falta confirmar a los pares el despliegue del algoritmo fijado.
 3. M5: confirmar los nombres exactos `updateExemptionStatus` y `updatePaymentPlanStatus` contra su publicación real en Core, y fixtures con UUID canónico real de ciudadano; el documento adjunto aún contiene IDs de ejemplo `c-00123`. No es necesario convertir los `requestId` legacy en UUID para correlacionarlos: son claves externas de M5.
 4. Acordar y ejecutar una prueba de punta a punta por Core después de migración y despliegue. Las pruebas locales no acreditan entrega del broker compartido.
 

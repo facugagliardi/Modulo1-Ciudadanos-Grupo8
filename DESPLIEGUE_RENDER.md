@@ -83,8 +83,11 @@ los datos en el proveedor elegido; los documentos persistentes requieren un
 almacenamiento externo. Un health check exitoso no acredita la integración de
 negocio ni el procesamiento de eventos de punta a punta.
 
-El algoritmo JWT fijado y la prueba con M2/M5 siguen siendo pendientes separados
-de esta preparación de Docker.
+Access y refresh se emiten con HS256 fijado en codigo. Conservar APP_JWT_SECRET
+al desplegar: el ambiente actual utiliza Base64 y los pares deben verificar con
+los bytes decodificados. Despues de desplegar este ajuste, volver a hacer login
+y verificar `alg=HS256` antes de confirmar el contrato operativo con M2/M5. M1
+sigue aceptando tokens anteriores firmados con la misma clave hasta que vencen.
 
 Referencias: https://render.com/docs/docker,
 https://render.com/docs/web-services y https://render.com/docs/free.

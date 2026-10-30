@@ -78,7 +78,8 @@ public class JwtService {
                         ? principal.actorId().toString() : null)
                 .issuedAt(Date.from(ahora))
                 .expiration(Date.from(ahora.plus(ttl)))
-                .signWith(key)
+                // Contrato intermodulo: el algoritmo no depende del largo de APP_JWT_SECRET.
+                .signWith(key, Jwts.SIG.HS256)
                 .compact();
     }
 

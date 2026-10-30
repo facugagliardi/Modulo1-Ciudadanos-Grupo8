@@ -5,6 +5,12 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
+import java.util.Arrays;
+import java.util.Base64;
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
 
 class JwtServiceTest {
 
@@ -91,5 +97,47 @@ class JwtServiceTest {
         assertThatThrownBy(() -> new JwtService(debiles))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("256 bits");
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = {32, 48, 64, 96})
+    void accessYRefreshSiempreUsanHs256ConLosBytesDecodificados(int bytesDeClave) throws Exception {
+        byte[] bytes = new byte[bytesDeClave];
+        Arrays.fill(bytes, (byte) 42);
+        JwtProperties props = propiedades(600, 3600);
+        props.setSecret(Base64.getEncoder().encodeToString(bytes));
+        JwtService service = new JwtService(props);
+
+        for (String token : new String[]{service.generarAccessToken(CIUDADANO), service.generarRefreshToken(CIUDADANO)}) {
+            String[] partes = token.split("\\.");
+            var header = new com.fasterxml.jackson.databind.ObjectMapper()
+                    .readTree(Base64.getUrlDecoder().decode(partes[0]));
+            assertThat(header.path("alg").asText()).isEqualTo("HS256");
+
+            // Verificador externo a JJWT: los pares deben usar la clave Base64 decodificada.
+            Mac mac = Mac.getInstance("HmacSHA256");
+            mac.init(new SecretKeySpec(bytes, "HmacSHA256"));
+            byte[] firmaEsperada = mac.doFinal((partes[0] + "." + partes[1])
+                    .getBytes(java.nio.charset.StandardCharsets.US_ASCII));
+            assertThat(Base64.getUrlDecoder().decode(partes[2])).isEqualTo(firmaEsperada);
+        }
+        assertThat(service.validarAccessToken(service.generarAccessToken(CIUDADANO))).isEqualTo(CIUDADANO);
+        assertThat(service.validarRefreshToken(service.generarRefreshToken(CIUDADANO))).isEqualTo(CIUDADANO);
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = {48, 64})
+    void conservaRefreshAnterioresConLaMismaClaveHastaSuVencimiento(int bytesDeClave) {
+        byte[] bytes = new byte[bytesDeClave];
+        Arrays.fill(bytes, (byte) 42);
+        JwtProperties props = propiedades(600, 3600);
+        props.setSecret(Base64.getEncoder().encodeToString(bytes));
+        String anterior = io.jsonwebtoken.Jwts.builder()
+                .issuer(props.getIssuer()).subject("7")
+                .claim("sub_type", "CIUDADANO").claim("rol", "PERSONA").claim("typ", "refresh")
+                .expiration(java.util.Date.from(java.time.Instant.now().plusSeconds(600)))
+                .signWith(io.jsonwebtoken.security.Keys.hmacShaKeyFor(bytes)).compact();
+
+        assertThat(new JwtService(props).validarRefreshToken(anterior)).isEqualTo(CIUDADANO);
     }
 }
