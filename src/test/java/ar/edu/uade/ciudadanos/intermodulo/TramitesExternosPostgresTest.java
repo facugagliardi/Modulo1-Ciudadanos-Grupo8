@@ -38,10 +38,12 @@ class TramitesExternosPostgresTest {
     @BeforeAll
     void baseAislada() {
         String url = System.getenv("M1_TEST_POSTGRES_URL");
-        var root = new DriverManagerDataSource(url, "postgres", "");
+        String user = System.getenv().getOrDefault("M1_TEST_POSTGRES_USER", "postgres");
+        String password = System.getenv().getOrDefault("M1_TEST_POSTGRES_PASSWORD", "");
+        var root = new DriverManagerDataSource(url, user, password);
         base = new JdbcTemplate(root);
         base.execute("CREATE SCHEMA " + schema);
-        datasource = new DriverManagerDataSource(url + (url.contains("?") ? "&" : "?") + "currentSchema=" + schema, "postgres", "");
+        datasource = new DriverManagerDataSource(url + (url.contains("?") ? "&" : "?") + "currentSchema=" + schema, user, password);
         jdbc = new JdbcTemplate(datasource);
         jdbc.execute("CREATE TABLE ciudadano(ciudadano_id BIGINT PRIMARY KEY)");
         jdbc.execute("CREATE TABLE cuenta_empleado(empleado_id BIGINT PRIMARY KEY)");

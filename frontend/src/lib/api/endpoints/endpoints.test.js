@@ -72,6 +72,15 @@ beforeEach(() => {
 });
 
 describe("listados", () => {
+  it("crea el contacto del titular sin aceptar campos de otro usuario ni verificacion impuesta", async () => {
+    cliente.post.mockResolvedValue({ contactoId: 20, valor: "nuevo@testing.invalid", verificado: false });
+    await expect(crearContacto(5, {
+      tipo: "EMAIL", valor: "nuevo@testing.invalid", ciudadanoId: 99, verificado: true,
+    })).resolves.toEqual({ contactoId: 20, valor: "nuevo@testing.invalid", verificado: false });
+    expect(cliente.post).toHaveBeenCalledWith('/ciudadanos/5/contactos', {
+      tipo: "EMAIL", valor: "nuevo@testing.invalid",
+    });
+  });
   it("desenvuelven el {items:[…]} que usa todo el backend", async () => {
     cliente.get.mockResolvedValue({ items: [{ id: 1 }] });
     await expect(listarCiudadanos()).resolves.toEqual([{ id: 1 }]);

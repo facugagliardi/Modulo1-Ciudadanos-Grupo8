@@ -17,7 +17,6 @@ import { ErrorEnPantalla, EstadoVacio } from "@/componentes/Estados";
 import { ConEsqueleto } from "@/componentes/Esqueleto";
 import { Encabezado } from "@/componentes/Encabezado";
 import { ConfirmarAccion } from "@/componentes/ConfirmarAccion";
-import { Identificador } from "@/componentes/Identificador";
 import { Button } from "@/componentes/ui/button";
 import { Campo, Selector } from "@/componentes/ui/campo";
 import { Card, CardCuerpo } from "@/componentes/ui/card";

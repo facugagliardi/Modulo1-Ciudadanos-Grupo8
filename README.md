@@ -14,6 +14,10 @@ Consultar las cuentas con `docker compose run --rm credenciales` y verificar el
 arranque con `docker compose run --rm verificar`.
 Ver [guia de testing local](TESTING_LOCAL.md) para persistencia, broker y alcance.
 
+El workflow **Testing G3** compila, ejecuta tests y analisis estatico, prueba Compose
+y escanea secretos. Ver [CI y condiciones de aprobacion](CI_TESTING.md).
+[Ver ejecuciones de GitHub Actions](https://github.com/facugagliardi/Modulo1-Ciudadanos-Grupo8/actions/workflows/testing.yml).
+
 
 **Integración M2/M5 (27/10/2026):** ver [contrato y puesta en marcha](INTEGRACION_M2_M5.md) para identidad UUID en login/JWT, los siete eventos entrantes, migración y registro de suscripciones en Core. Este complemento aclara diferencias con los ejemplos históricos de este README y del catálogo Word v3.0.
 
@@ -41,7 +45,7 @@ mongosh "mongodb://localhost:27017" --file db/mongodb_setup.txt
 
 # 2. API (no hace falta tener Maven: el repo trae ./mvnw)
 ./mvnw spring-boot:run
-./mvnw test          # 51 tests, no necesitan las bases
+./mvnw test          # integracion PostgreSQL opt-in: ver CI_TESTING.md
 ```
 
 Antes de arrancar, definir `POSTGRES_PASSWORD` y `APP_JWT_SECRET` (mínimo 32 bytes).

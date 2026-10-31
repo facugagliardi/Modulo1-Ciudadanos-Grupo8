@@ -21,7 +21,7 @@ export default defineConfig({
     testTimeout: 20000,
     coverage: {
       provider: "v8",
-      reporter: ["text", "html"],
+      reporter: ["text", "html", "lcov", "json-summary"],
       // La catedra exige 85% en el frontend. El umbral esta puesto para que
       // `npm run test:coverage` falle si bajamos de ahi, no como aspiracion.
       thresholds: { lines: 85, functions: 85, branches: 85, statements: 85 },

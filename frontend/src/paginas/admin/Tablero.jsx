@@ -10,7 +10,6 @@ import { diasHasta } from "@/lib/dominio/formato";
 import { ENTIDADES, etiquetaEstado } from "@/lib/dominio/estados";
 import { etiquetaDe, TIPOS_ORGANIZACION } from "@/lib/dominio/listasBlancas";
 import { BadgeEstado } from "@/componentes/BadgeEstado";
-import { ErrorEnPantalla } from "@/componentes/Estados";
 import { CargaConEsqueleto, useUltimosDatos } from "@/componentes/Esqueleto";
 import { Encabezado } from "@/componentes/Encabezado";
 import { GraficoBarras, Indicador } from "@/componentes/tablero/GraficoBarras";

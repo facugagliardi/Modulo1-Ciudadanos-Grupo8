@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { CheckCircle2, FileText, Mail, ShieldAlert, Upload } from "lucide-react";
+import { CheckCircle2, FileText, Mail, Upload } from "lucide-react";
 import { registrarYEntrar } from "@/lib/api/endpoints/auth";
 import { subirDocumento } from "@/lib/api/endpoints/documentacion";
 import { crearContacto } from "@/lib/api/endpoints/contactos";

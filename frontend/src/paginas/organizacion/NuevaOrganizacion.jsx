@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { ArrowLeft, Building2, ShieldCheck, Clock, UserPlus, Trash2 } from "lucide-react";
+import { ArrowLeft, Clock, UserPlus, Trash2 } from "lucide-react";
 import { buscarPorCuit, crearOrganizacion } from "@/lib/api/endpoints/organizaciones";
 import { mensajeAmable } from "@/lib/api/cliente";
 import { soloDigitos } from "@/lib/dominio/formato";

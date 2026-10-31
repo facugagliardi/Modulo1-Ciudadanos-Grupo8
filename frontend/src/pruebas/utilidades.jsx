@@ -15,7 +15,6 @@ async function esperarA(buscar, { intentos = 50, espera = 10 } = {}) {
   for (let i = 0; i < intentos; i += 1) {
     const encontrado = buscar();
     if (encontrado) return encontrado;
-    // eslint-disable-next-line no-await-in-loop
     await act(async () => {
       await new Promise((r) => setTimeout(r, espera));
     });

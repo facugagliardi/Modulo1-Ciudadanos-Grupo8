@@ -2,7 +2,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { screen } from "@testing-library/react";
 import { MisTramites } from "./MisTramites";
 import { Perfil } from "./Perfil";
-import { conSesion, renderizar } from "@/pruebas/utilidades";
+import { ErrorApi } from "@/lib/api/cliente";
+import { conSesion, escribirFecha, renderizar } from "@/pruebas/utilidades";
 
 const obtenerCiudadano = vi.fn();
 const actualizarCiudadano = vi.fn();
@@ -124,6 +125,62 @@ describe("Mis trámites", () => {
 });
 
 describe("Perfil", () => {
+  it.each([
+    ["", /ingresá tu fecha de nacimiento/i],
+    ["2099-01-01", /la fecha tiene que ser anterior a hoy/i],
+  ])("rechaza fecha de nacimiento vacia o futura (%s)", async (value, message) => {
+    const { default: userEvent } = await import("@testing-library/user-event");
+    renderizar(<Perfil />);
+    await screen.findByLabelText("Nombre");
+    await escribirFecha("Fecha de nacimiento", value);
+    await userEvent.click(screen.getByRole("button", { name: /guardar cambios/i }));
+    expect(await screen.findByText(message)).toBeInTheDocument();
+    expect(actualizarCiudadano).not.toHaveBeenCalled();
+  });
+
+  it("muestra el rechazo de campo del servidor sin confirmar ni perder el formulario", async () => {
+    const { default: userEvent } = await import("@testing-library/user-event");
+    actualizarCiudadano.mockRejectedValue(new ErrorApi({ status: 400, message: "Datos invalidos", errores: { dni: "El DNI no coincide con el documento." } }));
+    renderizar(<Perfil />);
+    await screen.findByLabelText("Nombre");
+    await userEvent.click(screen.getByRole("button", { name: /guardar cambios/i }));
+    expect(await screen.findByText("El DNI no coincide con el documento.")).toBeInTheDocument();
+    expect(screen.queryByText(/datos actualizados/i)).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Nombre")).toHaveValue("Diego");
+    expect(screen.getByRole("button", { name: /guardar cambios/i })).toBeEnabled();
+  });
+
+  it("permite editar los cinco datos personales y envia los valores nuevos", async () => {
+    const { default: userEvent } = await import("@testing-library/user-event");
+    renderizar(<Perfil />);
+    await screen.findByLabelText("Nombre");
+    for (const [label, value] of [["Nombre", "Ana"], ["Apellido", "Gomez"], ["DNI", "30111222"], ["CUIL", "20301112223"]]) {
+      await userEvent.clear(screen.getByLabelText(label));
+      await userEvent.type(screen.getByLabelText(label), value);
+    }
+    await escribirFecha("Fecha de nacimiento", "1980-02-03");
+    await userEvent.click(screen.getByRole("button", { name: /guardar cambios/i }));
+    await vi.waitFor(() => expect(actualizarCiudadano).toHaveBeenCalledWith(1, {
+      nombre: "Ana", apellido: "Gomez", dni: "30111222", cuil: "20301112223", fechaNacimiento: "1980-02-03",
+    }));
+    expect(await screen.findByText(/datos actualizados/i)).toBeInTheDocument();
+  });
+
+  it.each([
+    ["Apellido", "", /ingresá tu apellido/i],
+    ["DNI", "123", /el dni tiene entre 7 y 9 dígitos/i],
+    ["CUIL", "123", /el cuil tiene 11 dígitos/i],
+  ])("rechaza %s invalido sin enviar la actualizacion", async (label, value, message) => {
+    const { default: userEvent } = await import("@testing-library/user-event");
+    renderizar(<Perfil />);
+    await screen.findByLabelText("Nombre");
+    await userEvent.clear(screen.getByLabelText(label));
+    if (value) await userEvent.type(screen.getByLabelText(label), value);
+    await userEvent.click(screen.getByRole("button", { name: /guardar cambios/i }));
+    expect(await screen.findByText(message)).toBeInTheDocument();
+    expect(actualizarCiudadano).not.toHaveBeenCalled();
+  });
+
   it("precarga los datos del vecino", async () => {
     renderizar(<Perfil />);
     expect(await screen.findByLabelText("Nombre")).toHaveValue("Diego");
