@@ -1,5 +1,20 @@
 # M1 — Ciudadanos, Organizaciones y Expedientes Digitales
 
+## Testing: sistema completo con un comando (G1)
+
+Con Docker Desktop/Compose funcionando, desde la raiz del repositorio:
+
+```sh
+docker compose up --build -d --wait --wait-timeout 900
+```
+
+Abrir **http://localhost:8090**. Las bases, claves y cuentas sinteticas se preparan
+solas, sin configurar IntelliJ ni depender de Retool o del Core compartido.
+Consultar las cuentas con `docker compose run --rm credenciales` y verificar el
+arranque con `docker compose run --rm verificar`.
+Ver [guia de testing local](TESTING_LOCAL.md) para persistencia, broker y alcance.
+
+
 **Integración M2/M5 (27/10/2026):** ver [contrato y puesta en marcha](INTEGRACION_M2_M5.md) para identidad UUID en login/JWT, los siete eventos entrantes, migración y registro de suscripciones en Core. Este complemento aclara diferencias con los ejemplos históricos de este README y del catálogo Word v3.0.
 
 Backend del Módulo 1. Estructura base: capa de persistencia completa del modelo de

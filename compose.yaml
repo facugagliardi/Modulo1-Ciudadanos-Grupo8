@@ -1,0 +1,123 @@
+name: ciudadanos-testing
+
+services:
+  configuracion:
+    image: node:22-alpine@sha256:fe4f6d74e20370acb04ad889077d14d0f64a9c8ea6a42bc60cddf1e844699914
+    command: [node, /init/generar-config.cjs]
+    volumes:
+      - configuracion:/state
+      - ./docker/testing/generar-config.cjs:/init/generar-config.cjs:ro
+    restart: "no"
+
+  postgres:
+    image: postgres:16-alpine@sha256:0cefaabd882e42bcb2a2f3dc56d3ce4770560ba62fd7f197f1a2e008fd5731ab
+    environment:
+      POSTGRES_DB: ciudadanos_m1
+      POSTGRES_USER: ciudadanos_app
+      POSTGRES_PASSWORD_FILE: /run/config/database/password
+    depends_on:
+      configuracion:
+        condition: service_completed_successfully
+    volumes:
+      - configuracion:/run/config:ro
+      - postgres:/var/lib/postgresql/data
+      - ./db/01_schema.sql:/init/01_schema.sql:ro
+      - ./db/03_integracion_m2_m5.sql:/init/03_integracion_m2_m5.sql:ro
+      - ./docker/testing/seed.sql:/init/seed.sql:ro
+      - ./docker/testing/iniciar-db.sh:/docker-entrypoint-initdb.d/01-iniciar.sh:ro
+    healthcheck:
+      test: [CMD-SHELL, "pg_isready -h 127.0.0.1 -U ciudadanos_app -d ciudadanos_m1"]
+      interval: 3s
+      timeout: 3s
+      retries: 40
+
+  rabbitmq:
+    image: rabbitmq:4.3-management@sha256:1cc652597e8d31d2bb4afc3be60f84961fe17aa4edc5bf067cbf9834afcc441b
+    hostname: rabbitmq-testing
+    environment:
+      RABBITMQ_CONFIG_FILE: /run/config/rabbit/rabbitmq
+    depends_on:
+      configuracion:
+        condition: service_completed_successfully
+    volumes:
+      - configuracion:/run/config:ro
+      - rabbitmq:/var/lib/rabbitmq
+    ports:
+      - "127.0.0.1:${TESTING_RABBIT_UI_PORT:-15673}:15672"
+    healthcheck:
+      test: [CMD, rabbitmq-diagnostics, -q, check_running]
+      interval: 5s
+      timeout: 10s
+      retries: 30
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      PORT: "8080"
+      SPRING_CONFIG_IMPORT: configtree:/run/config/backend/
+      POSTGRES_URL: jdbc:postgresql://postgres:5432/ciudadanos_m1
+      POSTGRES_USER: ciudadanos_app
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: "5672"
+      RABBITMQ_USER: ciudadanos
+      RABBITMQ_VHOST: core
+      RABBITMQ_SSL_ENABLED: "false"
+      RABBITMQ_AUTO_STARTUP: "true"
+      ALMACENAMIENTO_DIR: /app/archivos-documentos
+      LOGGING_LEVEL_AR_EDU_UADE_CIUDADANOS: INFO
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    volumes:
+      - configuracion:/run/config:ro
+      - documentos:/app/archivos-documentos
+    healthcheck:
+      test: [CMD, bash, -c, "exec 3<>/dev/tcp/127.0.0.1/8080; printf 'GET /actuator/health HTTP/1.0\r\nHost: localhost\r\n\r\n' >&3; grep -q '\"status\":\"UP\"' <&3"]
+      interval: 5s
+      timeout: 5s
+      start_period: 30s
+      retries: 30
+
+  frontend:
+    build:
+      context: ./frontend
+    ports:
+      - "127.0.0.1:${TESTING_WEB_PORT:-8090}:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: [CMD-SHELL, "wget -q -O /dev/null http://127.0.0.1/ && wget -q -O /dev/null http://127.0.0.1/api/actuator/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 15
+
+  credenciales:
+    image: node:22-alpine@sha256:fe4f6d74e20370acb04ad889077d14d0f64a9c8ea6a42bc60cddf1e844699914
+    profiles: [herramientas]
+    command: [node, -e, "process.stdout.write(require('fs').readFileSync('/run/config/fixtures/cuentas.json','utf8'))"]
+    volumes:
+      - configuracion:/run/config:ro
+
+  verificar:
+    image: node:22-alpine@sha256:fe4f6d74e20370acb04ad889077d14d0f64a9c8ea6a42bc60cddf1e844699914
+    profiles: [herramientas]
+    command: [node, /checks/verificar.cjs]
+    environment:
+      EXIGIR_PERSISTENCIA: ${EXIGIR_PERSISTENCIA:-false}
+    depends_on:
+      frontend:
+        condition: service_healthy
+    volumes:
+      - configuracion:/run/config
+      - ./docker/testing/verificar.cjs:/checks/verificar.cjs:ro
+
+volumes:
+  configuracion:
+  postgres:
+  rabbitmq:
+  documentos:
