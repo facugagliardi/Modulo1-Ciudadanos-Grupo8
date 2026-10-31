@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { autenticar, ErrorApi, get, mensajeAmable, pedir } from "./cliente";
+import { autenticar, ErrorApi, get, getBlob, mensajeAmable, pedir, pedirConTokens } from "./cliente";
 import { abrirSesion, cerrarSesion, obtenerAccessToken, obtenerSesion } from "../auth/almacen";
 import { jwtFalso, respuestaDeLogin } from "@/pruebas/jwt";
 
@@ -65,6 +65,36 @@ describe("autenticación", () => {
 });
 
 describe("renovación del token", () => {
+  it("sin refresh disponible cierra la sesión sin otro pedido", async () => {
+    abrirSesion({ accessToken: jwtFalso({ sub: "3" }), cuerpo: {} });
+    const fetchMock = vi.fn().mockResolvedValue(respuesta(null, { status: 401 }));
+    vi.stubGlobal("fetch", fetchMock);
+    await expect(get("/ciudadanos")).rejects.toMatchObject({ status: 401 });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(obtenerSesion()).toBeNull();
+  });
+
+  it.each(["sin token", "sin red"])("no conserva una sesión si el refresh termina %s", async (fallo) => {
+    abrirSesion({ accessToken: jwtFalso({ sub: "3" }), refreshToken: "r", cuerpo: {} });
+    const fetchMock = vi.fn().mockResolvedValueOnce(respuesta(null, { status: 401 }));
+    if (fallo === "sin token") fetchMock.mockResolvedValueOnce(new Response(null, { status: 204 }));
+    else fetchMock.mockRejectedValueOnce(new TypeError("Failed to fetch"));
+    vi.stubGlobal("fetch", fetchMock);
+    await expect(get("/ciudadanos")).rejects.toMatchObject({ status: 401 });
+    expect(obtenerSesion()).toBeNull();
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("no entra en un bucle si el pedido sigue devolviendo 401 tras renovar", async () => {
+    abrirSesion({ accessToken: jwtFalso({ sub: "3" }), refreshToken: "r", cuerpo: {} });
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(respuesta(null, { status: 401 }))
+      .mockResolvedValueOnce(new Response(null, { status: 204, headers: { Authorization: `Bearer ${jwtFalso({ sub: "3", iat: 2 })}` } }))
+      .mockResolvedValueOnce(respuesta({ message: "Acceso rechazado" }, { status: 401 }));
+    vi.stubGlobal("fetch", fetchMock);
+    await expect(get("/ciudadanos")).rejects.toMatchObject({ status: 401, message: "Acceso rechazado" });
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
   it("ante un 401 refresca una vez y repite el pedido original", async () => {
     abrirSesion({ accessToken: jwtFalso({ sub: "3" }), refreshToken: "refresh-viejo", cuerpo: {} });
     const nuevoAccess = jwtFalso({ sub: "3", iat: 2 });
@@ -154,6 +184,36 @@ describe("renovación del token", () => {
 });
 
 describe("respuestas y errores", () => {
+  it("acepta respuestas de texto y respuestas vacías sin exigir JSON", async () => {
+    vi.stubGlobal("fetch", vi.fn()
+      .mockResolvedValueOnce(new Response("Servicio disponible"))
+      .mockResolvedValueOnce(new Response("")));
+    await expect(get("/estado")).resolves.toBe("Servicio disponible");
+    await expect(get("/estado")).resolves.toBeNull();
+  });
+
+  it("descarga binarios sin parsearlos como JSON", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("%PDF-1.4", { headers: { "Content-Type": "application/pdf" } })));
+    const archivo = await getBlob("/documentos/1/archivo");
+    expect(archivo.type).toBe("application/pdf");
+    expect(archivo.size).toBe(8);
+  });
+
+  it.each(["Servicio en mantenimiento", null])("normaliza un error HTTP sin cuerpo JSON: %s", async (cuerpo) => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(cuerpo, { status: 503 })));
+    await expect(get("/estado")).rejects.toMatchObject({ status: 503, message: cuerpo ?? "Error inesperado", tieneErroresDeCampo: false });
+  });
+
+  it("propaga la cancelación sin mostrarla como una caída de red", async () => {
+    const cancelacion = new DOMException("Cancelado", "AbortError");
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(cancelacion));
+    await expect(get("/ciudadanos")).rejects.toBe(cancelacion);
+  });
+
+  it("informa un fallo de red también en el ingreso", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new TypeError("Failed to fetch")));
+    await expect(pedirConTokens("/auth/login")).rejects.toMatchObject({ status: 0 });
+  });
   it("un 204 devuelve null en vez de reventar al parsear", async () => {
     abrirSesion({ accessToken: jwtFalso({}), refreshToken: "r", cuerpo: {} });
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(null, { status: 204 })));
@@ -205,6 +265,23 @@ describe("respuestas y errores", () => {
 });
 
 describe("mensajeAmable", () => {
+  it.each([
+    [401, "detalle", /sesión venció/i],
+    [404, "Vecino inexistente", /Vecino inexistente/],
+    [500, "SQL interno", /servidor tuvo un problema/i],
+    [0, "Revisá tu conexión", /conexión/],
+    [409, "El contacto ya existe", /contacto ya existe/],
+  ])("traduce el estado %s sin exponer detalles internos", (status, message, esperado) => {
+    expect(mensajeAmable(new ErrorApi({ status, message }))).toMatch(esperado);
+  });
+
+  it.each([
+    [403, /permiso/], [404, /encontramos/], [409, /completar la operación/],
+  ])("usa un mensaje útil si el estado %s llegó sin descripción", (status, esperado) => {
+    const error = new ErrorApi({ status });
+    error.message = "";
+    expect(mensajeAmable(error)).toMatch(esperado);
+  });
   it("esconde los errores de contrato, que son bugs nuestros", () => {
     // "Campo no permitido" significa que el front mandó de más: no es culpa
     // del usuario y no tiene sentido mostrárselo.

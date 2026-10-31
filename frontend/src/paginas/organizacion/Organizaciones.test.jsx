@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { screen, waitFor } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { DetalleOrganizacion } from "./DetalleOrganizacion";
 import { NuevaOrganizacion } from "./NuevaOrganizacion";
@@ -35,6 +35,7 @@ const crearRepresentacion = vi.fn();
 const cambiarEstadoRepresentacion = vi.fn();
 const listarRepresentaciones = vi.fn();
 const buscarPorDni = vi.fn();
+const obtenerDomicilio = vi.fn();
 
 vi.mock("@/lib/api/endpoints/organizaciones", () => ({
   listarOrganizaciones: (...a) => listarOrganizaciones(...a),
@@ -62,6 +63,7 @@ vi.mock("@/lib/api/endpoints/representaciones", () => ({
 vi.mock("@/lib/api/endpoints/ciudadanos", () => ({
   listarRepresentaciones: (...a) => listarRepresentaciones(...a),
   buscarPorDni: (...a) => buscarPorDni(...a),
+  obtenerDomicilio: (...a) => obtenerDomicilio(...a),
 }));
 
 const ORG = {
@@ -96,7 +98,7 @@ beforeEach(() => {
    listarPropiedadesDeOrganizacion, crearPropiedadOrganizacion,
    marcarPropiedadOrganizacionPrincipal, darDeBajaPropiedadOrganizacion,
    listarRepresentacionesDeOrganizacion, crearRepresentacion, cambiarEstadoRepresentacion,
-   listarRepresentaciones, buscarPorDni].forEach((m) => m.mockReset());
+   listarRepresentaciones, buscarPorDni, obtenerDomicilio].forEach((m) => m.mockReset());
 
   listarOrganizaciones.mockResolvedValue([ORG]);
   obtenerOrganizacion.mockResolvedValue(ORG);
@@ -674,6 +676,111 @@ describe("portal: mis organizaciones", () => {
   });
 
   describe("propiedades de la organización", () => {
+    const PROPIEDAD = { propiedadId: 101, tipo: "LOCAL", calle: "Av. Corrientes", numero: "1234", vigenteDesde: "2026-01-01", vigenteHasta: null, esPrincipal: false };
+
+    async function abrirFormulario() {
+      detalle();
+      await userEvent.click(await screen.findByRole("tab", { name: /propiedades/i }));
+      await userEvent.click(screen.getByRole("button", { name: /^agregar propiedad$/i }));
+      return screen.findByRole("dialog");
+    }
+
+    it("distingue un inmueble vigente del historial y no ofrece editar una baja", async () => {
+      listarPropiedadesDeOrganizacion.mockResolvedValue([
+        { ...PROPIEDAD, altura: "2 B" },
+        { ...PROPIEDAD, propiedadId: 102, calle: "Rivadavia", vigenteHasta: "2026-06-01" },
+      ]);
+      detalle();
+      await userEvent.click(await screen.findByRole("tab", { name: /propiedades/i }));
+      expect(await screen.findByText(/Av. Corrientes 1234, 2 B/)).toBeInTheDocument();
+      expect(screen.getByText("Baja")).toBeInTheDocument();
+      expect(screen.getByText(/hasta el 01\/06\/2026/)).toBeInTheDocument();
+      expect(screen.getAllByRole("button", { name: /hacer principal/i })).toHaveLength(1);
+      expect(screen.queryByRole("button", { name: /dar de baja propiedad Rivadavia/i })).not.toBeInTheDocument();
+    });
+
+    it("permite cambiar la sede principal y dar de baja un inmueble vigente", async () => {
+      listarPropiedadesDeOrganizacion.mockResolvedValue([PROPIEDAD]);
+      detalle();
+      await userEvent.click(await screen.findByRole("tab", { name: /propiedades/i }));
+      await userEvent.click(await screen.findByRole("button", { name: /hacer principal/i }));
+      await waitFor(() => expect(marcarPropiedadOrganizacionPrincipal).toHaveBeenCalledWith(1, 101));
+      await userEvent.click(screen.getByRole("button", { name: /dar de baja propiedad Av./i }));
+      await userEvent.click(screen.getByRole("button", { name: /^dar de baja$/i }));
+      await waitFor(() => expect(darDeBajaPropiedadOrganizacion).toHaveBeenCalledWith(1, 101));
+    });
+
+    it.each(["", "PROP-abc"])("rechaza el ID inválido '%s' antes de asignar", async (codigo) => {
+      const dialogo = within(await abrirFormulario());
+      if (codigo) await userEvent.type(dialogo.getByLabelText(/id o código/i), codigo);
+      await userEvent.click(dialogo.getByRole("button", { name: /asignar propiedad/i }));
+      expect(dialogo.getByText(codigo ? /número de ID válido/i : /Ingresá el ID o código/i)).toBeInTheDocument();
+      expect(crearPropiedadOrganizacion).not.toHaveBeenCalled();
+    });
+
+    it("no consulta una propiedad cuyo código no es numérico", async () => {
+      const dialogo = within(await abrirFormulario());
+      await userEvent.type(dialogo.getByLabelText(/id o código/i), "PROP-abc");
+      await userEvent.click(dialogo.getByRole("button", { name: /verificar/i }));
+      expect(dialogo.getByText(/número de ID válido/i)).toBeInTheDocument();
+      expect(obtenerDomicilio).not.toHaveBeenCalled();
+    });
+
+    it.each([undefined, "3 A"])("verifica el inmueble y muestra su dirección, con piso %s", async (piso) => {
+      obtenerDomicilio.mockResolvedValue({ ...PROPIEDAD, piso });
+      const dialogo = within(await abrirFormulario());
+      await userEvent.type(dialogo.getByLabelText(/id o código/i), "PROP-101");
+      await userEvent.click(dialogo.getByRole("button", { name: /verificar/i }));
+      expect(await dialogo.findByText(/inmueble encontrado/i)).toBeInTheDocument();
+      expect(dialogo.getByText(piso ? /Av. Corrientes 1234, 3 A/ : /Av. Corrientes 1234/)).toBeInTheDocument();
+      expect(obtenerDomicilio).toHaveBeenCalledWith(101);
+    });
+
+    it("explica una búsqueda fallida y permite corregir el código", async () => {
+      obtenerDomicilio.mockRejectedValue(new ErrorApi({ status: 404 }));
+      const dialogo = within(await abrirFormulario());
+      await userEvent.type(dialogo.getByLabelText(/id o código/i), "999");
+      await userEvent.click(dialogo.getByRole("button", { name: /verificar/i }));
+      expect(await dialogo.findByText(/No se encontró ningún inmueble/i)).toBeInTheDocument();
+      expect(crearPropiedadOrganizacion).not.toHaveBeenCalled();
+    });
+
+    it("valida calle y número del inmueble nuevo antes de enviarlo", async () => {
+      const dialogo = within(await abrirFormulario());
+      await userEvent.click(dialogo.getByRole("button", { name: /registrar nuevo inmueble/i }));
+      await userEvent.click(dialogo.getByRole("button", { name: /^agregar propiedad$/i }));
+      expect(dialogo.getByText("Ingresá la calle.")).toBeInTheDocument();
+      expect(dialogo.getByText("Ingresá la altura.")).toBeInTheDocument();
+      expect(crearPropiedadOrganizacion).not.toHaveBeenCalled();
+    });
+
+    it("registra un inmueble nuevo y permite elegirlo como sede", async () => {
+      const dialogo = within(await abrirFormulario());
+      await userEvent.click(dialogo.getByRole("button", { name: /registrar nuevo inmueble/i }));
+      await userEvent.type(dialogo.getByLabelText(/^calle/i), "San Martín");
+      await userEvent.type(dialogo.getByLabelText(/^número/i), "300");
+      await userEvent.type(dialogo.getByLabelText(/piso y depto/i), "2 A");
+      await userEvent.click(dialogo.getByRole("checkbox"));
+      await userEvent.click(dialogo.getByRole("button", { name: /^agregar propiedad$/i }));
+      await waitFor(() => expect(crearPropiedadOrganizacion).toHaveBeenCalledWith(1, expect.objectContaining({ calle: "San Martín", numero: "300", piso: "2 A", esPrincipal: true })));
+    });
+
+    it("envía un inmueble adicional sin reemplazar la sede si no se solicita", async () => {
+      const dialogo = within(await abrirFormulario());
+      await userEvent.type(dialogo.getByLabelText(/id o código/i), "101");
+      await userEvent.click(dialogo.getByRole("button", { name: /asignar propiedad/i }));
+      await waitFor(() => expect(crearPropiedadOrganizacion).toHaveBeenCalledWith(1, { propiedadId: 101, esPrincipal: false }));
+    });
+
+    it("conserva el formulario y muestra validaciones devueltas por el backend", async () => {
+      crearPropiedadOrganizacion.mockRejectedValue(new ErrorApi({ status: 400, message: "Error de validación", errores: { codigoOId: "Propiedad no disponible" } }));
+      const dialogo = within(await abrirFormulario());
+      await userEvent.type(dialogo.getByLabelText(/id o código/i), "101");
+      await userEvent.click(dialogo.getByRole("button", { name: /asignar propiedad/i }));
+      expect(await dialogo.findByText("Propiedad no disponible")).toBeInTheDocument();
+      expect(dialogo.getByLabelText(/id o código/i)).toHaveValue("101");
+    });
+
     it("muestra las propiedades y permite agregar una", async () => {
       listarPropiedadesDeOrganizacion.mockResolvedValue([
         {

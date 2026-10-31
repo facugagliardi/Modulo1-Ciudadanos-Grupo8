@@ -511,7 +511,7 @@ export function DetalleOrganizacion({ zona = "admin" }) {
                                         <ConfirmarAccion
                                           titulo="¿Dar de baja esta propiedad?"
                                           descripcion="El inmueble quedará en el historial de la organización con su fecha de cese."
-                                          textoBotonConfirmar="Dar de baja"
+                                          textoConfirmar="Dar de baja"
                                           alConfirmar={async () => {
                                             await darDeBajaPropiedadOrganizacion(o.organizacionId, p.propiedadId);
                                             propiedades.recargar();

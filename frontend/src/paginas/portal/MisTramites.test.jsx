@@ -125,6 +125,53 @@ describe("Mis trámites", () => {
 });
 
 describe("Perfil", () => {
+  it("permite completar un legajo que todavía no tiene datos personales", async () => {
+    const { default: userEvent } = await import("@testing-library/user-event");
+    obtenerCiudadano.mockResolvedValue({ id: 1, estado: "ACTIVO" });
+    renderizar(<Perfil />);
+    expect(await screen.findByLabelText("Nombre")).toHaveValue("");
+    expect(screen.getByLabelText("Apellido")).toHaveValue("");
+    expect(screen.getByLabelText("DNI")).toHaveValue("");
+    expect(screen.getByLabelText("CUIL")).toHaveValue("");
+    await userEvent.click(screen.getByRole("button", { name: /guardar cambios/i }));
+    expect(await screen.findByText("Ingresá tu DNI.")).toBeInTheDocument();
+    expect(actualizarCiudadano).not.toHaveBeenCalled();
+  });
+
+  it("acepta dejar vacío el CUIL opcional", async () => {
+    const { default: userEvent } = await import("@testing-library/user-event");
+    renderizar(<Perfil />);
+    await userEvent.clear(await screen.findByLabelText("CUIL"));
+    await userEvent.click(screen.getByRole("button", { name: /guardar cambios/i }));
+    await vi.waitFor(() => expect(actualizarCiudadano).toHaveBeenCalledWith(1, expect.objectContaining({ cuil: "" })));
+    expect(await screen.findByText(/datos actualizados/i)).toBeInTheDocument();
+  });
+
+  it("rechaza un DNI que supera los nueve dígitos", async () => {
+    const { default: userEvent } = await import("@testing-library/user-event");
+    renderizar(<Perfil />);
+    await userEvent.clear(await screen.findByLabelText("DNI"));
+    await userEvent.type(screen.getByLabelText("DNI"), "1234567890");
+    await userEvent.click(screen.getByRole("button", { name: /guardar cambios/i }));
+    expect(await screen.findByText(/el dni tiene entre 7 y 9 dígitos/i)).toBeInTheDocument();
+    expect(actualizarCiudadano).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    [409, /otra ciudadano registrada con ese DNI o CUIL/i],
+    [500, /servidor tuvo un problema/i],
+  ])("conserva los datos y permite reintentar si el servidor devuelve %s", async (status, mensaje) => {
+    const { default: userEvent } = await import("@testing-library/user-event");
+    actualizarCiudadano.mockRejectedValue(new ErrorApi({ status }));
+    renderizar(<Perfil />);
+    await screen.findByLabelText("Nombre");
+    await userEvent.click(screen.getByRole("button", { name: /guardar cambios/i }));
+    expect(await screen.findByRole("alert")).toHaveTextContent(mensaje);
+    expect(screen.getByLabelText("DNI")).toHaveValue(VECINO.dni);
+    expect(screen.getByRole("button", { name: /guardar cambios/i })).toBeEnabled();
+    expect(screen.queryByText(/datos actualizados/i)).not.toBeInTheDocument();
+  });
+
   it.each([
     ["", /ingresá tu fecha de nacimiento/i],
     ["2099-01-01", /la fecha tiene que ser anterior a hoy/i],

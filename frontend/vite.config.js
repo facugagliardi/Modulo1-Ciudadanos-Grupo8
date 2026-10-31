@@ -12,6 +12,9 @@ export default defineConfig({
   },
   test: {
     env: { TZ: "America/Argentina/Buenos_Aires" },
+    // El historial de mocks no debe filtrarse entre casos (Vitest 4 separa
+    // restoreAllMocks de la limpieza de llamadas a vi.fn).
+    clearMocks: true,
     globals: true,
     environment: "jsdom",
     setupFiles: ["./src/pruebas/setup.js"],

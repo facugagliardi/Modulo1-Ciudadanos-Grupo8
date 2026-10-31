@@ -6,6 +6,7 @@ import {
   formatearCuit,
   formatearDni,
   formatearFecha,
+  formatearFechaHora,
   nombreCompleto,
   soloDigitos,
 } from "./formato";
@@ -33,9 +34,34 @@ describe("identificadores", () => {
     expect(soloDigitos("20-34567890-1")).toBe("20345678901");
     expect(soloDigitos("  20 3456 7890 1 ")).toBe("20345678901");
   });
+
+  it("tolera identificadores ausentes o todavía sin normalizar", () => {
+    expect(soloDigitos(undefined)).toBe("");
+    expect(formatearDni("sin documento")).toBe("sin documento");
+  });
 });
 
 describe("fechas", () => {
+  it("muestra hora local y conserva entradas inválidas sin romper la pantalla", () => {
+    expect(formatearFechaHora("2026-03-01T14:05:00-03:00")).toBe("01/03/2026 14:05");
+    expect(formatearFechaHora(null)).toBe("");
+    expect(formatearFechaHora("fecha inválida")).toBe("fecha inválida");
+  });
+
+  it("cumple años el día exacto y no muestra edades de fechas futuras o ausentes", () => {
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(new Date(2026, 2, 12));
+      expect(edad("1989-03-12")).toBe(37);
+      expect(edad("1989-03-13")).toBe(36);
+      expect(edad("2027-01-01")).toBeNull();
+      expect(edad(undefined)).toBeNull();
+      expect(edad("inválida")).toBeNull();
+      expect(diasHasta("inválida")).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
   it("da vuelta la fecha ISO sin pasar por Date", () => {
     // Construir un Date con "1989-04-12" lo interpreta en UTC y en Argentina
     // puede mostrar el día anterior. Por eso se parte el string.
@@ -67,6 +93,11 @@ describe("fechas", () => {
 });
 
 describe("traza de auditoría", () => {
+  it("muestra trazas antiguas sin rol y conserva textos sin identificador", () => {
+    expect(formatearAutor("EMPLEADO:42")).toBe("Empleado #42");
+    expect(formatearAutor("EMPLEADO:42:")).toBe("Empleado #42");
+    expect(formatearAutor("sistema")).toBe("sistema");
+  });
   it("traduce el formato interno del backend", () => {
     // El backend guarda "EMPLEADO:42:RESPONSABLE_AREA"; mostrarlo crudo no le
     // dice nada a nadie.

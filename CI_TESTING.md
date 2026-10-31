@@ -11,7 +11,7 @@ Permiso del token: solo lectura del contenido del repositorio.
 | Etapa | Que ejecuta | Que hace fallar el job |
 |---|---|---|
 | Java | JDK 21, PostgreSQL real efimero, Maven verify, JaCoCo, PMD | Build, test fallido/omitido o violacion de reglas PMD |
-| React | Node 22, npm ci, ESLint 10, Vitest con cobertura, Vite build | Error de lint/build, test fallido/omitido o umbral de cobertura incumplido |
+| React | Node 22, npm ci, ESLint 10, Vitest con cobertura, npm audit, Vite build | Error de lint/build, test fallido/omitido, umbral de cobertura incumplido o alerta alta/critica en npm audit |
 | Compose | Sistema completo con base y broker reales, verificacion HTTP y recreacion sin borrar volumenes | Arranque, login, permisos, proxy, consumidor RabbitMQ o persistencia incorrectos |
 | Secretos | Gitleaks 8.30.1, archivos actuales e historial disponible, incluidos Bruno | Hallazgo o fallo interno del escaneo |
 | Resultado G3 | Resume y exige las cuatro etapas | Cualquier etapa fallida, cancelada u omitida |
@@ -77,8 +77,10 @@ Un run verde en aedelstein es una verificacion previa; no reemplaza el run del t
   acreditan por si solos toda la resiliencia exigida por la catedra.
 - El escaneo de Git revisa las referencias disponibles en el checkout. La purga
   de las referencias PR antiguas de GitHub sigue su tramite de Support por G6.
-- Las alertas de dependencias de npm se registran para el informe de seguridad;
-  esta etapa no incluye aun un gate SCA ni declara cero CVE. No usar el verde
-  del workflow como aprobacion de seguridad de las dependencias.
+- npm audit incluye dependencias de desarrollo y falla con severidad alta o
+  critica. Su JSON queda en el artifact frontend-reportes. Las moderadas siguen
+  registradas para tratamiento; el gate no declara cero CVE ni reemplaza el SCA
+  de Java y de imagenes. No usar el verde como aprobacion completa del eje D.
+  Ver DEPENDENCIAS_TESTING.md para versiones corregidas y moderadas pendientes.
 - G1 sigue pendiente de la medicion en una maquina sin cache. Los aproximadamente
   siete minutos informados por el equipo podrian incluir dos imagenes previas.

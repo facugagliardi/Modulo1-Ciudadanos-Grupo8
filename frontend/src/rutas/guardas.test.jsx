@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
-import { RequierePermiso, RutaDeZona, RutaProtegida } from "./guardas";
+import { RequierePermiso, RutaDeZona, RutaProtegida, SoloCiudadano } from "./guardas";
 import { ProveedorDeSesion } from "@/lib/auth/SesionContext";
 import { PERMISOS } from "@/lib/auth/permisos";
 import { conSesion, sinSesion } from "@/pruebas/utilidades";
@@ -24,7 +24,17 @@ function app(ruta) {
           <Route path="/portal" element={<p>Portal del vecino</p>} />
 
           <Route element={<RutaProtegida />}>
+            <Route element={<RutaDeZona zona="portal" />}>
+              <Route path="/portal/inicio" element={<p>Inicio privado del vecino</p>} />
+              <Route element={<SoloCiudadano />}>
+                <Route path="/portal/familia" element={<p>Mi grupo familiar</p>} />
+              </Route>
+              <Route path="/portal/perfil" element={<SoloCiudadano><p>Mi perfil físico</p></SoloCiudadano>} />
+            </Route>
             <Route element={<RutaDeZona zona="admin" />}>
+              <Route element={<RequierePermiso permiso={PERMISOS.EDITAR_TERCEROS} />}>
+                <Route path="/admin/edicion" element={<p>Edición autorizada</p>} />
+              </Route>
               <Route path="/admin" element={<p>Backoffice</p>} />
               {/* EDITAR_TERCEROS lo tienen los tres roles de carga pero no
                   el auditor: sirve para probar los dos caminos con roles reales. */}
@@ -59,6 +69,17 @@ describe("RutaProtegida", () => {
 });
 
 describe("RutaDeZona", () => {
+  it("redirige al empleado que entra en el portal a su backoffice", () => {
+    conSesion({ rol: "MESA_ENTRADAS", subType: "EMPLEADO" });
+    app("/portal/inicio");
+    expect(screen.getByText("Backoffice")).toBeInTheDocument();
+  });
+
+  it("deja al ciudadano entrar a su portal", () => {
+    conSesion({ rol: "PERSONA", subType: "CIUDADANO" });
+    app("/portal/inicio");
+    expect(screen.getByText("Inicio privado del vecino")).toBeInTheDocument();
+  });
   it("un vecino que entra al backoffice va a su portal", () => {
     conSesion({ rol: "PERSONA", subType: "CIUDADANO" });
     app("/admin");
@@ -73,6 +94,11 @@ describe("RutaDeZona", () => {
 });
 
 describe("RequierePermiso", () => {
+  it("protege también las rutas anidadas sin contenido directo", () => {
+    conSesion({ rol: "MESA_ENTRADAS", subType: "EMPLEADO" });
+    app("/admin/edicion");
+    expect(screen.getByText("Edición autorizada")).toBeInTheDocument();
+  });
   it("deja pasar a quien tiene el permiso", () => {
     conSesion({ rol: "MESA_ENTRADAS", subType: "EMPLEADO" });
     app("/admin/padron/nuevo");
@@ -88,5 +114,23 @@ describe("RequierePermiso", () => {
     expect(screen.getByText(/no tenés acceso a esta sección/i)).toBeInTheDocument();
     expect(screen.getByText("EDITAR_TERCEROS")).toBeInTheDocument();
     expect(screen.getByText("Auditor")).toBeInTheDocument();
+  });
+});
+
+describe("SoloCiudadano", () => {
+  it.each([
+    ["/portal/familia", "Mi grupo familiar"],
+    ["/portal/perfil", "Mi perfil físico"],
+  ])("permite al ciudadano físico abrir %s", (ruta, contenido) => {
+    conSesion({ rol: "PERSONA", subType: "CIUDADANO" });
+    app(ruta);
+    expect(screen.getByText(contenido)).toBeInTheDocument();
+  });
+
+  it("evita abrir el grupo familiar de una persona jurídica", () => {
+    conSesion({ rol: "ORGANIZACION", subType: "ORGANIZACION" });
+    app("/portal/familia");
+    expect(screen.getByText("Portal del vecino")).toBeInTheDocument();
+    expect(screen.queryByText("Mi grupo familiar")).not.toBeInTheDocument();
   });
 });

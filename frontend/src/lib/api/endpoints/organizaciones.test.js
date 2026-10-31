@@ -19,6 +19,9 @@ const {
   listarDuenos,
   listarOrganizaciones,
   listarOrganizacionesPendientes,
+  listarOrganizacionesDeDueno,
+  listarPropiedadesDeOrganizacion,
+  actualizarDueno,
   obtenerOrganizacion,
   quitarDueno,
   rechazarOrganizacion,
@@ -40,6 +43,40 @@ beforeEach(() => {
 });
 
 describe("listados", () => {
+  it("consulta las organizaciones del dueño con cancelación y conserva los porcentajes", async () => {
+    const senal = new AbortController().signal;
+    const items = [{ organizacionId: 7, porcentajeTitularidad: 30 }];
+    cliente.get.mockResolvedValue({ items });
+    await expect(listarOrganizacionesDeDueno(3, senal)).resolves.toEqual(items);
+    expect(cliente.get).toHaveBeenCalledWith("/ciudadanos/3/organizaciones", senal);
+  });
+
+  it("usa la ruta anterior de personas únicamente cuando ciudadanos devuelve 404", async () => {
+    cliente.get.mockRejectedValueOnce({ status: 404 }).mockResolvedValueOnce({ items: [{ organizacionId: 7 }] });
+    await expect(listarOrganizacionesDeDueno(3)).resolves.toEqual([{ organizacionId: 7 }]);
+    expect(cliente.get).toHaveBeenNthCalledWith(2, "/personas/3/organizaciones", undefined);
+  });
+
+  it("propaga los fallos de permisos sin probar una ruta alternativa", async () => {
+    const error = { status: 403 };
+    cliente.get.mockRejectedValue(error);
+    await expect(listarOrganizacionesDeDueno(3)).rejects.toBe(error);
+    expect(cliente.get).toHaveBeenCalledTimes(1);
+  });
+
+  it("tolera listados vacíos en pendientes, dominios y la ruta anterior", async () => {
+    cliente.get.mockResolvedValue(null);
+    await expect(listarOrganizacionesPendientes()).resolves.toEqual([]);
+    await expect(listarOrganizacionesDeDueno(3)).resolves.toEqual([]);
+    await expect(listarPropiedadesDeOrganizacion(7)).resolves.toEqual([]);
+    cliente.get.mockRejectedValueOnce({ status: 404 }).mockResolvedValueOnce(null);
+    await expect(listarOrganizacionesDeDueno(3)).resolves.toEqual([]);
+  });
+
+  it("actualiza la titularidad sin enviar datos del ciudadano", async () => {
+    await actualizarDueno(7, 3, 30);
+    expect(cliente.put).toHaveBeenCalledWith("/organizaciones/7/duenos/3", { porcentajeTitularidad: 30 });
+  });
   it("desenvuelven {items:[…]}", async () => {
     cliente.get.mockResolvedValue({ items: [{ organizacionId: 1 }] });
     await expect(listarOrganizaciones()).resolves.toEqual([{ organizacionId: 1 }]);
