@@ -128,7 +128,7 @@ describe("SoloCiudadano", () => {
   });
 
   it("evita abrir el grupo familiar de una persona jurídica", () => {
-    conSesion({ rol: "ORGANIZACION", subType: "ORGANIZACION" });
+    conSesion({ rol: "PERSONA", subType: "JURIDICA" });
     app("/portal/familia");
     expect(screen.getByText("Portal del vecino")).toBeInTheDocument();
     expect(screen.queryByText("Mi grupo familiar")).not.toBeInTheDocument();
