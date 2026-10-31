@@ -11,6 +11,7 @@ export default defineConfig({
     port: 5173,
   },
   test: {
+    env: { TZ: "America/Argentina/Buenos_Aires" },
     globals: true,
     environment: "jsdom",
     setupFiles: ["./src/pruebas/setup.js"],

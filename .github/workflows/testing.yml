@@ -75,6 +75,8 @@ jobs:
     name: React - lint, tests, cobertura y build
     runs-on: ubuntu-24.04
     timeout-minutes: 14
+    env:
+      TZ: America/Argentina/Buenos_Aires
     defaults:
       run:
         working-directory: frontend

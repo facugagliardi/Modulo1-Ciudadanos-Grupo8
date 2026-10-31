@@ -30,6 +30,9 @@ PMD aplica las reglas de defectos declaradas en `config/pmd.xml` a fuentes y tes
 ESLint aplica las reglas recomendadas de JavaScript, con soporte JSX nativo y
 globales de Vitest solamente en los tests. Se eliminan imports sin uso en vez
 de desactivar la regla.
+El entorno de tests usa `America/Argentina/Buenos_Aires`: las aserciones de
+fechas del portal verifican esa zona, independientemente del sistema del runner.
+Esto no modifica la zona horaria del navegador ni la del backend de produccion.
 
 ## Repetir los controles localmente
 
