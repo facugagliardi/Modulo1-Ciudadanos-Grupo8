@@ -221,7 +221,7 @@ export function SubirDocumento({ ciudadanoId, documento, alGuardar, children }) 
             onChange={elegir}
             ayuda={`Se aceptan ${ARCHIVOS_PERMITIDOS.extensiones.join(", ")}. Máximo 10 MB.`}
             error={errorArchivo}
-            className="[&_input]:h-auto [&_input]:py-2 [&_input]:file:mr-3 [&_input]:file:rounded [&_input]:file:border-0 [&_input]:file:bg-papel [&_input]:file:px-3 [&_input]:file:py-1 [&_input]:file:text-tinta"
+            className="[&_input]:h-auto [&_input]:py-2 [&_input::file-selector-button]:mr-3 [&_input::file-selector-button]:rounded [&_input::file-selector-button]:border-0 [&_input::file-selector-button]:bg-papel [&_input::file-selector-button]:px-3 [&_input::file-selector-button]:py-1 [&_input::file-selector-button]:text-tinta"
           />
 
           {errorGeneral && (

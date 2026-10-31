@@ -10,15 +10,17 @@ Permiso del token: solo lectura del contenido del repositorio.
 
 | Etapa | Que ejecuta | Que hace fallar el job |
 |---|---|---|
-| Java | JDK 21, PostgreSQL real efimero, Maven verify, JaCoCo, PMD | Build, test fallido/omitido o violacion de reglas PMD |
+| Java | JDK 21, PostgreSQL real efimero, Maven verify, JaCoCo, PMD, BOM y Trivy | Build, test fallido/omitido, PMD o alerta SCA alta/critica sin tratamiento |
 | React | Node 22, npm ci, ESLint 10, Vitest con cobertura, npm audit, Vite build | Error de lint/build, test fallido/omitido, umbral de cobertura incumplido o alerta alta/critica en npm audit |
-| Compose | Sistema completo con base y broker reales, verificacion HTTP y recreacion sin borrar volumenes | Arranque, login, permisos, proxy, consumidor RabbitMQ o persistencia incorrectos |
+| Compose | Sistema completo, verificacion HTTP, persistencia y Trivy sobre siete imagenes | Arranque, login, permisos, proxy, consumidor, persistencia o alerta SCA alta/critica sin tratamiento |
 | Secretos | Gitleaks 8.30.1, archivos actuales e historial disponible, incluidos Bruno | Hallazgo o fallo interno del escaneo |
 | Resultado G3 | Resume y exige las cuatro etapas | Cualquier etapa fallida, cancelada u omitida |
 
 Los jobs corren en paralelo y tienen limites de tiempo. No hay continue-on-error
-ni una baseline que oculte hallazgos. Los reportes se conservan 14 dias como
-artifacts del run: JUnit, cobertura, PMD, logs de Compose y escaneo redactado.
+ni una baseline que oculte hallazgos. La revision acotada de dos CVE de Spring
+conserva las alertas en el JSON y exige controles de arquitectura; tiene version,
+ambito y vencimiento explicitos. Los reportes se conservan 14 dias como artifacts
+del run: JUnit, cobertura, PMD, BOM, SCA, logs de Compose y escaneo redactado.
 No se publican cuentas de prueba, volumenes privados ni variables de despliegue.
 
 Las 11 pruebas de `TramitesExternosPostgresTest` se habilitan expresamente con
@@ -79,8 +81,10 @@ Un run verde en aedelstein es una verificacion previa; no reemplaza el run del t
   de las referencias PR antiguas de GitHub sigue su tramite de Support por G6.
 - npm audit incluye dependencias de desarrollo y falla con severidad alta o
   critica. Su JSON queda en el artifact frontend-reportes. Las moderadas siguen
-  registradas para tratamiento; el gate no declara cero CVE ni reemplaza el SCA
-  de Java y de imagenes. No usar el verde como aprobacion completa del eje D.
+  registradas para tratamiento. Java y siete imagenes tienen un SCA adicional
+  con Trivy y reportes completos; ver SCA_JAVA_DOCKER.md. Dos alertas de Spring
+  tienen revision de aplicabilidad acotada y controles de arquitectura. El gate
+  no declara cero CVE ni aprobacion completa del eje D.
   Ver DEPENDENCIAS_TESTING.md para versiones corregidas y moderadas pendientes.
-- G1 sigue pendiente de la medicion en una maquina sin cache. Los aproximadamente
-  siete minutos informados por el equipo podrian incluir dos imagenes previas.
+- G1 fue confirmado completo por el equipo el 31/10, tras la prueba del companero.
+  Las verificaciones de Compose/persistencia continuan en cada pipeline.

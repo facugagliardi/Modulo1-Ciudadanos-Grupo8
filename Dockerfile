@@ -1,9 +1,15 @@
 FROM maven:3.10.0-eclipse-temurin-21-noble@sha256:bde9fcc1d6849a2a627fffd4b2ff0824c855f060923c8a8bf7d010d2e263840d AS build
 
+# Maven 3.10.0 bundles Guava 33.7.1; replace it with the compatible security patch.
+RUN curl -fsSL --retry 3 https://repo.maven.apache.org/maven2/com/google/guava/guava/33.7.2-jre/guava-33.7.2-jre.jar -o /tmp/guava.jar \
+    && echo 'b530942257fb935f8b2cfaa5f8eb5bd59c555fd8e8d01b8ce98912e077ea606c  /tmp/guava.jar' | sha256sum -c - \
+    && rm /usr/share/maven/lib/guava-33.7.1-jre.jar \
+    && mv /tmp/guava.jar /usr/share/maven/lib/guava-33.7.2-jre.jar
+
 WORKDIR /build
 COPY pom.xml ./
 COPY src/main ./src/main
-RUN mvn -B -ntp -Dmaven.test.skip=true package
+RUN mvn -B -ntp -Dmaven.test.skip=true package && rm -rf /root/.m2/repository
 
 FROM eclipse-temurin:21-jre-jammy@sha256:1eac8b8fee11ca7d6725a48bc5d41992ed1561504ebae25490d2d062847e8269 AS runtime
 

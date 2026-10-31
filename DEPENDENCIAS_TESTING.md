@@ -7,7 +7,8 @@ desarrollo, instalado desde frontend/package-lock.json.
 
 | Paquete | Antes | Despues |
 | --- | --- | --- |
-| Vite | 6.4.3 | 6.4.5 |
+| Vite | 6.4.3 | 8.3.5 |
+| @vitejs/plugin-react | 4.7.0 | 6.1.2 |
 | Vitest y coverage-v8 | 2.1.9 | 4.1.12 |
 | brace-expansion | 5.0.9 | 5.0.12 |
 | source-map-js | 1.2.1 | 1.2.2 |
@@ -15,6 +16,11 @@ desarrollo, instalado desde frontend/package-lock.json.
 La actualizacion de Vitest retira tinypool 1.1.1 del arbol instalado. El lockfile
 incluye las resoluciones transitivas actualizadas. No se aplico audit fix --force
 ni se impusieron versiones mayores de transitivas mediante overrides.
+
+La revision posterior de imagenes llevo Vite a 8.3.5 y plugin-react a 6.1.2 para
+retirar el esbuild con Go vulnerable de la etapa de compilacion. El nuevo
+minificador detecto dos selectores de botones de archivo invalidos: se corrigio
+su sintaxis manteniendo los estilos previstos. Ver SCA_JAVA_DOCKER.md.
 
 Con Vitest 4 se limpia el historial de mocks entre casos. Su calculo de cobertura
 detecta mas caminos que la version anterior: se agregaron casos de permisos,
@@ -49,8 +55,8 @@ no se ocultan ni se declaran resueltas.
   Mantener las alertas abiertas hasta completar el analisis de aplicabilidad y
   la correccion; este documento no las considera mitigadas.
 
-El escaneo de Maven y el de imagenes Docker siguen pendientes. Este resultado no
-acredita por si solo la totalidad del eje de seguridad ni cierra G6.
+El escaneo de Maven y de imagenes Docker se documenta en SCA_JAVA_DOCKER.md.
+Estos resultados no acreditan por si solos todo el eje de seguridad ni cierran G6.
 
 ## Reproducir
 

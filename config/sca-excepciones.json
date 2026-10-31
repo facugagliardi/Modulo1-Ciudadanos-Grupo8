@@ -1,0 +1,26 @@
+{
+  "revision": "2026-10-31",
+  "vence": "2026-11-30",
+  "excepciones": [
+    {
+      "id": "CVE-2026-47884",
+      "paquete": "org.springframework:spring-webmvc",
+      "version": "6.2.19",
+      "ambitos": ["java", "backend", "maven-build"],
+      "estado": "no_afectado_por_funcionalidad_no_utilizada",
+      "justificacion": "Requiere XsltView y una ruta /** que renderice vistas sin nombre explicito. La aplicacion expone RestControllers y React se sirve desde nginx. No hay configuracion XSLT ni dependencias de vistas en el codigo de la aplicacion.",
+      "fuente": "https://spring.io/security/cve-2026-47884/",
+      "control": "ArquitecturaRestSeguraTest: controllers REST y ausencia de dependencias de vistas/resolvers. Revisar antes de agregar renderizado de vistas."
+    },
+    {
+      "id": "CVE-2026-47890",
+      "paquete": "org.springframework:spring-webmvc",
+      "version": "6.2.19",
+      "ambitos": ["java", "backend", "maven-build"],
+      "estado": "no_afectado_por_funcionalidad_no_utilizada",
+      "justificacion": "Requiere enviar fragmentos de vistas mediante SSE con datos controlados por otro usuario. La API no utiliza SSE ni fragmentos; sus controllers devuelven cuerpos REST.",
+      "fuente": "https://spring.io/security/cve-2026-47890/",
+      "control": "ArquitecturaRestSeguraTest: ausencia de emisores SSE y dependencias de renderizado. Revisar antes de agregar streaming SSE."
+    }
+  ]
+}

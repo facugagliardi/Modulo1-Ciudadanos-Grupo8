@@ -2,7 +2,10 @@ name: ciudadanos-testing
 
 services:
   configuracion:
-    image: node:22-alpine@sha256:fe4f6d74e20370acb04ad889077d14d0f64a9c8ea6a42bc60cddf1e844699914
+    image: ciudadanos-testing-node
+    build:
+      context: ./docker/testing
+      dockerfile: node.Dockerfile
     command: [node, /init/generar-config.cjs]
     volumes:
       - configuracion:/state
@@ -10,7 +13,9 @@ services:
     restart: "no"
 
   postgres:
-    image: postgres:16-alpine@sha256:0cefaabd882e42bcb2a2f3dc56d3ce4770560ba62fd7f197f1a2e008fd5731ab
+    build:
+      context: ./docker/testing
+      dockerfile: postgres.Dockerfile
     environment:
       POSTGRES_DB: ciudadanos_m1
       POSTGRES_USER: ciudadanos_app
@@ -97,14 +102,14 @@ services:
       retries: 15
 
   credenciales:
-    image: node:22-alpine@sha256:fe4f6d74e20370acb04ad889077d14d0f64a9c8ea6a42bc60cddf1e844699914
+    image: ciudadanos-testing-node
     profiles: [herramientas]
     command: [node, -e, "process.stdout.write(require('fs').readFileSync('/run/config/fixtures/cuentas.json','utf8'))"]
     volumes:
       - configuracion:/run/config:ro
 
   verificar:
-    image: node:22-alpine@sha256:fe4f6d74e20370acb04ad889077d14d0f64a9c8ea6a42bc60cddf1e844699914
+    image: ciudadanos-testing-node
     profiles: [herramientas]
     command: [node, /checks/verificar.cjs]
     environment:

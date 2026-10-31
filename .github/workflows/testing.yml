@@ -37,10 +37,11 @@ jobs:
           echo "M1_TEST_POSTGRES_PASSWORD=$db_password" >> "$GITHUB_ENV"
           echo 'M1_TEST_POSTGRES_USER=postgres' >> "$GITHUB_ENV"
           echo 'M1_TEST_POSTGRES_URL=jdbc:postgresql://127.0.0.1:55440/postgres' >> "$GITHUB_ENV"
+          docker build -f docker/testing/postgres.Dockerfile -t ciudadanos-postgres-ci docker/testing
           docker run -d --name ci-postgres -e POSTGRES_PASSWORD="$db_password" \
             -p 127.0.0.1:55440:5432 \
             --health-cmd='pg_isready -U postgres -h 127.0.0.1' --health-interval=2s --health-retries=30 \
-            postgres:16-alpine@sha256:0cefaabd882e42bcb2a2f3dc56d3ce4770560ba62fd7f197f1a2e008fd5731ab
+            ciudadanos-postgres-ci
           for attempt in $(seq 1 60); do
             if [ "$(docker inspect --format '{{.State.Health.Status}}' ci-postgres)" = healthy ]; then exit 0; fi
             sleep 2
@@ -60,6 +61,12 @@ jobs:
           print(counts)
           assert counts['tests'] > 0 and not any(counts[k] for k in ('failures', 'errors', 'skipped')), counts
           PY
+      - name: Inventario Java resuelto, incluidos tests
+        run: bash ./mvnw -B -ntp org.cyclonedx:cyclonedx-maven-plugin:2.9.3:makeBom -DincludeTestScope=true -DoutputFormat=json -DoutputName=bom-sca
+      - name: Instalar scanner verificado
+        run: bash scripts/instalar-trivy.sh
+      - name: SCA Java y revision acotada de aplicabilidad
+        run: python3 scripts/auditar-dependencias.py --sbom target/bom-sca.json --report-dir target/sca
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
@@ -69,6 +76,8 @@ jobs:
             target/site/jacoco/
             target/pmd.xml
             target/site/pmd.html
+            target/bom-sca.json
+            target/sca/
           retention-days: 14
 
   frontend:
@@ -130,6 +139,22 @@ jobs:
           docker compose down
           docker compose up -d --wait --wait-timeout 180
           docker compose run --rm -T -e EXIGIR_PERSISTENCIA=true verificar
+      - name: Construir etapas de compilacion para auditarlas
+        run: |
+          docker build --target build -t ciudadanos-testing-backend-build .
+          docker build --target build -t ciudadanos-testing-frontend-build ./frontend
+      - name: Instalar scanner verificado
+        run: bash scripts/instalar-trivy.sh
+      - name: SCA de imagenes de ejecucion y compilacion
+        run: |
+          python3 scripts/auditar-dependencias.py --report-dir reportes/sca \
+            --imagen backend=ciudadanos-testing-backend:latest \
+            --imagen frontend=ciudadanos-testing-frontend:latest \
+            --imagen node=ciudadanos-testing-node:latest \
+            --imagen postgres=ciudadanos-testing-postgres:latest \
+            --imagen rabbitmq=rabbitmq:4.3-management@sha256:1cc652597e8d31d2bb4afc3be60f84961fe17aa4edc5bf067cbf9834afcc441b \
+            --imagen maven-build=ciudadanos-testing-backend-build:latest \
+            --imagen node-build=ciudadanos-testing-frontend-build:latest
       - name: Guardar evidencia tecnica
         if: always()
         run: |
