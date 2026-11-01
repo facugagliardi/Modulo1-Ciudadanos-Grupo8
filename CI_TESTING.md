@@ -88,3 +88,10 @@ Un run verde en aedelstein es una verificacion previa; no reemplaza el run del t
   Ver DEPENDENCIAS_TESTING.md para versiones corregidas y moderadas pendientes.
 - G1 fue confirmado completo por el equipo el 31/10, tras la prueba del companero.
   Las verificaciones de Compose/persistencia continuan en cada pipeline.
+
+## Avance de calidad Java del 01/11/2026
+
+Ver [CALIDAD_JAVA_TESTING.md](CALIDAD_JAVA_TESTING.md) para el alcance de negocio,
+los comandos de reproduccion, PIT, JaCoCo y la preparacion de Sonar. Hay workflows
+manuales separados para medir esos gates; todavia no reemplazan los cinco jobs
+automaticos ni acreditan aprobacion de los minimos o del tag final.

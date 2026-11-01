@@ -27,6 +27,9 @@
         <postgresql.version>42.7.14</postgresql.version>
         <log4j2.version>2.25.5</log4j2.version>
         <netty.version>4.1.138.Final</netty.version>
+        <dominio.pit>ar.edu.uade.ciudadanos.contacto.*Service,ar.edu.uade.ciudadanos.documentacion.*Service,ar.edu.uade.ciudadanos.domicilio.*Service,ar.edu.uade.ciudadanos.persona.*Service,ar.edu.uade.ciudadanos.organizacion.*Service,ar.edu.uade.ciudadanos.expediente.*Service,ar.edu.uade.ciudadanos.intermodulo.*Service,ar.edu.uade.ciudadanos.common.TransicionesEstado,ar.edu.uade.ciudadanos.common.ListasBlancas,ar.edu.uade.ciudadanos.security.AutorizacionService</dominio.pit>
+        <sonar.coverage.jacoco.xmlReportPaths>${project.basedir}/target/site/jacoco/jacoco.xml</sonar.coverage.jacoco.xmlReportPaths>
+        <sonar.qualitygate.wait>true</sonar.qualitygate.wait>
     </properties>
 
     <dependencies>
@@ -103,6 +106,26 @@
     <build>
         <plugins>
             <plugin>
+                <groupId>org.pitest</groupId>
+                <artifactId>pitest-maven</artifactId>
+                <version>1.30.1</version>
+                <dependencies>
+                    <dependency><groupId>org.pitest</groupId><artifactId>pitest-junit5-plugin</artifactId><version>1.2.3</version></dependency>
+                </dependencies>
+                <configuration>
+                    <targetClasses>${dominio.pit}</targetClasses>
+                    <threads>4</threads>
+                    <mutationThreshold>60</mutationThreshold>
+                    <outputFormats><param>HTML</param><param>XML</param></outputFormats>
+                    <timestampedReports>false</timestampedReports>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.sonarsource.scanner.maven</groupId>
+                <artifactId>sonar-maven-plugin</artifactId>
+                <version>5.8.0.7211</version>
+            </plugin>
+            <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
             </plugin>
@@ -111,7 +134,7 @@
                 <artifactId>jacoco-maven-plugin</artifactId>
                 <version>0.8.16</version>
                 <executions>
-                    <execution><goals><goal>prepare-agent</goal></goals></execution>
+                    <execution><goals><goal>prepare-agent</goal></goals><configuration><append>false</append></configuration></execution>
                     <execution><id>coverage-report</id><phase>verify</phase><goals><goal>report</goal></goals></execution>
                 </executions>
             </plugin>
@@ -131,4 +154,33 @@
             </plugin>
         </plugins>
     </build>
+    <profiles>
+        <profile>
+            <id>calidad-dominio</id>
+            <build><plugins><plugin>
+                <groupId>org.jacoco</groupId><artifactId>jacoco-maven-plugin</artifactId>
+                <executions><execution>
+                    <id>minimos-dominio</id><phase>verify</phase><goals><goal>check</goal></goals>
+                    <configuration>
+                        <includes>
+                            <include>ar/edu/uade/ciudadanos/contacto/*Service.class</include>
+                            <include>ar/edu/uade/ciudadanos/documentacion/*Service.class</include>
+                            <include>ar/edu/uade/ciudadanos/domicilio/*Service.class</include>
+                            <include>ar/edu/uade/ciudadanos/persona/*Service.class</include>
+                            <include>ar/edu/uade/ciudadanos/organizacion/*Service.class</include>
+                            <include>ar/edu/uade/ciudadanos/expediente/*Service.class</include>
+                            <include>ar/edu/uade/ciudadanos/intermodulo/*Service.class</include>
+                            <include>ar/edu/uade/ciudadanos/common/TransicionesEstado.class</include>
+                            <include>ar/edu/uade/ciudadanos/common/ListasBlancas.class</include>
+                            <include>ar/edu/uade/ciudadanos/security/AutorizacionService.class</include>
+                        </includes>
+                        <rules><rule><element>BUNDLE</element><limits>
+                            <limit><counter>LINE</counter><value>COVEREDRATIO</value><minimum>0.80</minimum></limit>
+                            <limit><counter>BRANCH</counter><value>COVEREDRATIO</value><minimum>0.70</minimum></limit>
+                        </limits></rule></rules>
+                    </configuration>
+                </execution></executions>
+            </plugin></plugins></build>
+        </profile>
+    </profiles>
 </project>

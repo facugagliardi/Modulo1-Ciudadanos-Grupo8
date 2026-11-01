@@ -1,0 +1,84 @@
+name: Sonar - Quality Gate Java
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  sonar:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 14
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+      - name: Validar configuracion requerida
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ vars.SONAR_HOST_URL }}
+          SONAR_PROJECT_KEY: ${{ vars.SONAR_PROJECT_KEY }}
+          SONAR_ORGANIZATION: ${{ vars.SONAR_ORGANIZATION }}
+        run: |
+          test -n "$SONAR_TOKEN" || { echo 'Falta secret SONAR_TOKEN'; exit 1; }
+          test -n "$SONAR_HOST_URL" || { echo 'Falta variable SONAR_HOST_URL'; exit 1; }
+          test -n "$SONAR_PROJECT_KEY" || { echo 'Falta variable SONAR_PROJECT_KEY'; exit 1; }
+          test -n "$SONAR_ORGANIZATION" || { echo 'Falta variable SONAR_ORGANIZATION'; exit 1; }
+      - name: PostgreSQL temporal
+        run: |
+          set -euo pipefail
+          password="$(openssl rand -hex 32)"
+          echo "::add-mask::$password"
+          echo "M1_TEST_POSTGRES_PASSWORD=$password" >> "$GITHUB_ENV"
+          echo 'M1_TEST_POSTGRES_USER=postgres' >> "$GITHUB_ENV"
+          echo 'M1_TEST_POSTGRES_URL=jdbc:postgresql://127.0.0.1:55440/postgres' >> "$GITHUB_ENV"
+          docker build -f docker/testing/postgres.Dockerfile -t ciudadanos-postgres-sonar docker/testing
+          docker run -d --name sonar-postgres -e POSTGRES_PASSWORD="$password" -p 127.0.0.1:55440:5432 \
+            --health-cmd='pg_isready -U postgres -h 127.0.0.1' --health-interval=2s --health-retries=30 ciudadanos-postgres-sonar
+          for attempt in $(seq 1 60); do
+            if [ "$(docker inspect --format '{{.State.Health.Status}}' sonar-postgres)" = healthy ]; then exit 0; fi
+            sleep 2
+          done
+          exit 1
+      - name: Suite completa sin omisiones
+        run: |
+          bash ./mvnw -B -ntp verify
+          python3 - <<'PY'
+          from pathlib import Path
+          import xml.etree.ElementTree as ET
+          reports = list(Path('target/surefire-reports').glob('TEST-*.xml'))
+          assert reports
+          counts = {key: sum(int(ET.parse(p).getroot().get(key, 0)) for p in reports)
+                    for key in ('tests', 'failures', 'errors', 'skipped')}
+          print(counts)
+          assert counts['tests'] > 0 and not any(counts[k] for k in ('failures', 'errors', 'skipped'))
+          PY
+      - name: Analisis y Quality Gate
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ vars.SONAR_HOST_URL }}
+          SONAR_PROJECT_KEY: ${{ vars.SONAR_PROJECT_KEY }}
+          SONAR_ORGANIZATION: ${{ vars.SONAR_ORGANIZATION }}
+        run: >-
+          bash ./mvnw -B -ntp sonar:sonar
+          -Dsonar.host.url="$SONAR_HOST_URL"
+          -Dsonar.projectKey="$SONAR_PROJECT_KEY"
+          -Dsonar.organization="$SONAR_ORGANIZATION"
+          -Dsonar.qualitygate.wait=true
+          -Dsonar.qualitygate.timeout=300
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        if: always()
+        with:
+          name: sonar-java-reportes
+          path: |
+            target/surefire-reports/
+            target/site/jacoco/
+            target/sonar/report-task.txt
+          retention-days: 14
