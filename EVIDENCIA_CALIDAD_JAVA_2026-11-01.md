@@ -4,6 +4,8 @@ Este archivo conserva las corridas intermedias anteriores a la ampliacion de
 Organizaciones, Representacion y Directorio. Para el estado posterior y el
 Sonar ejecutado consultar CALIDAD_JAVA_TESTING.md y REVISION_SONAR_JAVA.md.
 Los porcentajes y pendientes de abajo son historicos, no el ultimo resultado.
+El cierre con los tres gates cumplidos esta en
+[CIERRE_CALIDAD_JAVA_2026-11-01.md](CIERRE_CALIDAD_JAVA_2026-11-01.md).
 
 Referencia de inicio: b128191, rama aedelstein, arbol inicialmente limpio salvo
 DocumentoServiceTest iniciado en el turno anterior. Se consulto origin sin

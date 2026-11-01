@@ -1,7 +1,7 @@
 # Calidad Java: alcance y reproduccion
 
 Actualizado el 01/11/2026. Meta interna 03/11; testing oficial 10/11 antes de 13:30.
-Ver EVIDENCIA_CALIDAD_JAVA_2026-11-01.md y REVISION_SONAR_JAVA.md. Esto no cierra todos los G ni sustituye las HU de Trello.
+El resultado final esta en [CIERRE_CALIDAD_JAVA_2026-11-01.md](CIERRE_CALIDAD_JAVA_2026-11-01.md); EVIDENCIA_CALIDAD_JAVA_2026-11-01.md conserva antecedentes. Ver tambien REVISION_SONAR_JAVA.md. Esto no cierra todos los G ni sustituye las HU de Trello.
 
 ## Alcance y gates
 
