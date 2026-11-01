@@ -8,13 +8,9 @@ permissions:
 
 jobs:
   dominio:
-    name: Dominio - ${{ matrix.control }}
+    name: Dominio - cobertura y mutacion
     runs-on: ubuntu-24.04
     timeout-minutes: 14
-    strategy:
-      fail-fast: false
-      matrix:
-        control: [cobertura, mutacion]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
@@ -54,18 +50,10 @@ jobs:
           print(counts)
           assert counts['tests'] > 0 and not any(counts[k] for k in ('failures', 'errors', 'skipped'))
           PY
-      - name: Gate 80% lineas y 70% ramas
-        if: matrix.control == 'cobertura'
-        run: |
-          python3 scripts/medir-dominio.py --exigir
-          bash ./mvnw -B -ntp -Pcalidad-dominio jacoco:check@minimos-dominio
-      - name: Gate PIT 60%
-        if: matrix.control == 'mutacion'
-        run: bash ./mvnw -B -ntp org.pitest:pitest-maven:mutationCoverage
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         if: always()
         with:
-          name: dominio-${{ matrix.control }}
+          name: dominio-calidad
           path: |
             target/surefire-reports/
             target/site/jacoco/

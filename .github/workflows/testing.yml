@@ -16,7 +16,7 @@ concurrency:
 
 jobs:
   backend:
-    name: Java - build, tests y PMD
+    name: Java - tests, cobertura, PIT y PMD
     runs-on: ubuntu-24.04
     timeout-minutes: 14
     steps:
@@ -47,8 +47,10 @@ jobs:
             sleep 2
           done
           exit 1
-      - name: Compilar, ejecutar todos los tests, cobertura y analisis Java
+      - name: Compilar, ejecutar tests y gates de cobertura, PIT y PMD
         run: bash ./mvnw -B -ntp verify
+      - name: Verificar alcance no vacio y minimos del dominio
+        run: python3 scripts/medir-dominio.py --exigir
       - name: Comprobar que no se omitieron tests
         run: |
           python3 - <<'PY'
@@ -76,6 +78,8 @@ jobs:
             target/site/jacoco/
             target/pmd.xml
             target/site/pmd.html
+            target/pit-reports/
+            target/dominio-cobertura.json
             target/bom-sca.json
             target/sca/
           retention-days: 14

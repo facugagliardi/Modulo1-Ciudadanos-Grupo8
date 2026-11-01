@@ -92,6 +92,9 @@ Un run verde en aedelstein es una verificacion previa; no reemplaza el run del t
 ## Avance de calidad Java del 01/11/2026
 
 Ver [CALIDAD_JAVA_TESTING.md](CALIDAD_JAVA_TESTING.md) para el alcance de negocio,
-los comandos de reproduccion, PIT, JaCoCo y la preparacion de Sonar. Hay workflows
-manuales separados para medir esos gates; todavia no reemplazan los cinco jobs
-automaticos ni acreditan aprobacion de los minimos o del tag final.
+los comandos de reproduccion, JaCoCo, PIT y SonarQube local. Los gates de negocio
+80% lineas / 70% ramas y mutacion 60% ahora se ejecutan en verify por defecto y
+en el job Java automatico. Se guardan tambien los reportes PIT. El workflow
+manual de dominio reproduce ese control; Sonar remoto sigue requiriendo la
+configuracion de cuenta/variables. Un resultado local o de rama no acredita el
+tag final ni el cierre de los demas requisitos del TP.

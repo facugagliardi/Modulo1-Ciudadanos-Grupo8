@@ -233,16 +233,13 @@ public class DomicilioService {
                 .filter(v -> !v.getId().getIdPropiedad().equals(propiedadId))
                 .max(Comparator.comparing(CiudadanoPropiedad::getVigenteDesde));
 
-        if (vinculo.isEsPrincipal() && reemplazo.isEmpty()) {
-            throw ApiException.conflicto(
-                    "Es el unico domicilio principal vigente: cargue otro domicilio antes de darlo de baja");
-        }
+        CiudadanoPropiedad sucesor = vinculo.isEsPrincipal() ? reemplazo.orElseThrow(() -> ApiException.conflicto(
+                "Es el unico domicilio principal vigente: cargue otro domicilio antes de darlo de baja")) : null;
 
         vinculo.setVigenteHasta(LocalDate.now());
         Long nuevoPrincipal = null;
-        if (vinculo.isEsPrincipal()) {
+        if (sucesor != null) {
             vinculo.setEsPrincipal(false);
-            CiudadanoPropiedad sucesor = reemplazo.get();
             sucesor.setEsPrincipal(true);
             nuevoPrincipal = sucesor.getId().getIdPropiedad();
         }

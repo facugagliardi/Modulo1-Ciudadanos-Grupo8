@@ -1,93 +1,75 @@
 # Calidad Java: alcance y reproduccion
 
-Actualizado el 01/11/2026. Meta interna: 03/11; testing oficial: 10/11 antes de 13:30.
-Este documento no acredita el cierre de G3/G4 ni reemplaza las HU de Trello.
+Actualizado el 01/11/2026. Meta interna 03/11; testing oficial 10/11 antes de 13:30.
+Ver EVIDENCIA_CALIDAD_JAVA_2026-11-01.md y REVISION_SONAR_JAVA.md. Esto no cierra todos los G ni sustituye las HU de Trello.
 
-## Alcance de negocio
+## Alcance y gates
 
-Se miden las 14 clases superiores de servicios de contacto, documentacion,
-domicilio, persona (incluido CiudadanoDirectorioService), organizacion,
-expediente e intermodulo, mas TransicionesEstado, ListasBlancas y
-AutorizacionService. Incluye servicios con baja cobertura. No existe un paquete
-unico de dominio. Se excluyen de esta metrica DTO/entidades sin reglas,
-repositorios, controllers, almacenamiento y adaptadores de eventos, autenticacion
-y JWT. Estos siguen en la suite y reporte global, pero necesitan tambien sus
-propias pruebas de seguridad/integracion. No se usa cobertura global como dominio.
+Se conservan las 14 clases superiores de servicios de contacto, documentacion, domicilio, persona (incluido Directorio), organizacion, expediente e intermodulo, mas TransicionesEstado, ListasBlancas y AutorizacionService. No se retiraron clases poco cubiertas.
+DTO/entidades sin reglas, repositorios, controllers, archivos, eventos, autenticacion y JWT siguen en la suite y el analisis global, pero no en ese porcentaje de negocio. Sus requisitos propios de seguridad/resiliencia siguen vigentes.
 
-`pom.xml` declara las selecciones JaCoCo/PIT y los minimos: 80% lineas, 70% ramas,
-60% mutacion. `scripts/medir-dominio.py` verifica que ambos alcances coincidan y
-que seleccionen clases, genera `target/dominio-cobertura.json` y con `--exigir`
-falla si no se alcanzan los porcentajes. Los umbrales no se redujeron.
+JaCoCo 80% lineas / 70% ramas, PMD y PIT 60% se ejecutan en **verify por defecto**, tambien en Testing G3. scripts/medir-dominio.py comprueba que los alcances JaCoCo/PIT coincidan, no esten vacios y cumplan los minimos. No se bajaron umbrales ni operadores de mutacion.
 
-## Ejecucion local (PowerShell 7, Java 21, Docker)
-
-Preparar una vez la imagen aislada si falta:
+## Java local (PowerShell 7, Java 21, Docker)
 
 ```powershell
 docker build -f docker/testing/postgres.Dockerfile -t ciudadanos-testing-postgres docker/testing
-```
-
-El helper versionado crea un contenedor con puerto y password temporales y lo
-elimina al terminar, incluso ante fallo. No borra volumenes de la demo ni usa
-Retool/Render/Core. Respeta JAVA_HOME si esta definido.
-
-```powershell
 ./scripts/probar-java-local.ps1
 python scripts/medir-dominio.py --exigir
-./mvnw.cmd -B -ntp -Pcalidad-dominio jacoco:check@minimos-dominio
+```
+
+El helper crea PostgreSQL con puerto/password temporales, ejecuta verify incluidos los gates, comprueba cero omisiones, elimina solo su contenedor temporal y restaura variables del proceso. Respeta JAVA_HOME. No usa Retool/Render/Core ni borra volumenes de la demo.
+Log: target/maven-testing.log. Reportes: target/surefire-reports, target/site/jacoco, target/dominio-cobertura.json y target/pit-reports. Copiarlos antes de otra corrida.
+
+Para diagnosticar solo PIT:
+
+```powershell
 ./scripts/probar-java-local.ps1 -MavenArguments @('test-compile','org.pitest:pitest-maven:mutationCoverage')
 ```
 
-El helper comprueba cero omisiones despues de `verify`. Si PIT queda por debajo
-del 60%, Maven falla y los reportes permanecen en `target/pit-reports`. Su log
-esta en `target/maven-testing.log`; copiarlo antes de otra corrida.
-No usar una corrida PIT sin variables PostgreSQL como medicion completa: las
-pruebas reales de TramitesExternos aportan cobertura y deteccion de mutantes.
+No acreditar una medicion completa sin PostgreSQL: sus tests detectan mutantes de TramitesExternos. Los timeouts se informan separados de KILLED.
 
-## CI y Sonar
+## SonarQube local reproducible
 
-`Testing G3` conserva su flujo automatico. El nuevo workflow manual
-`Calidad de dominio Java` ejecuta dos controles independientes (cobertura/PIT),
-con PostgreSQL y timeout de 14 minutos por job; conserva artefactos aunque fallen.
-No son todavia controles obligatorios de merge/tag. Sus resultados esperados
-actuales son rojos hasta cerrar la deuda, sin `continue-on-error`.
-El tiempo medido localmente no acredita la duracion en runners de GitHub.
+No necesita cuenta externa. compose.sonar.yaml usa imagen oficial 26.10.0.133078 fijada por digest, puerto 29000 solo en localhost y volumenes propios. H2 sirve para evaluacion local, no produccion. No usar down -v.
 
-El workflow manual `Sonar - Quality Gate Java` prepara PostgreSQL, ejecuta
-verify y analisis Maven, importa JaCoCo y espera hasta 300 s al Quality Gate.
-Requiere configurar en GitHub Settings > Secrets and variables > Actions:
+```powershell
+docker compose -f compose.sonar.yaml up -d
+# Esperar a que http://127.0.0.1:29000/api/system/status informe UP.
+./scripts/probar-java-local.ps1
+./scripts/probar-sonar-local.ps1
+```
 
-- Secret `SONAR_TOKEN` con permiso de analisis del proyecto (no pegarlo en chats).
-- Variables `SONAR_HOST_URL`, `SONAR_PROJECT_KEY`, `SONAR_ORGANIZATION` de SonarCloud.
-- Importar/crear el proyecto en la organizacion correcta y habilitar analisis CI
-  segun la configuracion de esa cuenta. Revisar el Quality Gate asignado.
+El helper rota la clave inicial del administrador y guarda la credencial cifrada con DPAPI de Windows en target/sonar-auth/admin.clixml, fuera de git y los artefactos. Genera un token de scanner y lo revoca al terminar; no imprime claves. Conservar el archivo cifrado mientras se conserve la instancia: mvn clean lo elimina y la clave ya no sera la inicial. No se usa clean en este flujo. Solo permite administrar localhost/127.0.0.1.
 
-No se creo una cuenta ni se envio codigo a Sonar. No se pudo consultar la
-configuracion remota con `gh` porque ese comando no esta instalado. Por tanto,
-no se afirma que falten los secretos ni que ya existan. Gestion puntual pendiente:
-comprobar esos cuatro valores en el repo/proyecto y ejecutar el workflow; luego
-revisar hallazgos y asociar los controles al cierre final. Este analisis solo
-cubre Java; no acredita analisis Sonar del frontend.
+Una instancia nueva puede fallar en el primer analisis por S4502. Leer REVISION_SONAR_JAVA.md y revisar el contrato de autenticacion y las pruebas antes de ejecutar esta accion explicita:
 
-Fuentes de configuracion:
-[PIT Maven](https://pitest.org/quickstart/maven/) y
-[SonarScanner Maven](https://docs.sonarsource.com/sonarqube-cloud/analyzing-source-code/scanners/sonarscanner-for-maven/).
+```powershell
+./scripts/probar-sonar-local.ps1 -RevisarCsrf
+./scripts/probar-sonar-local.ps1
+./scripts/probar-sonar-local.ps1 -Consultar
+```
 
-## Limites funcionales observados
+La revision solo afecta S4502 de SecurityConfig en la instancia local, exige las dos pruebas SeguridadHttpTest aprobadas sin omisiones y posteriores al codigo. No desactiva reglas ni acepta otros hallazgos. Si se agrega autenticacion por cookie, sesion o Basic, reabrir la revision.
 
-- ContactoService.verificar no comprueba el codigo recibido contra uno emitido.
-  Los tests del cambio de estado no acreditan verificacion real de email/SMS.
-- La expresion de telefono y su mensaje de longitud no representan exactamente
-  la misma restriccion; revisar criterios antes de fijar limites funcionales.
-- SolicitudDocumentacionService captura errores de publicacion y puede completar
-  la solicitud igualmente. Hay una prueba de caracterizacion de ese camino:
-  no acredita entrega del evento, outbox atomico ni reproceso. El publicador
-  tiene persistencia propia, pero no se demostro atomicidad extremo a extremo.
-- Las transiciones invalidas actuales producen 400, mientras continuidad exige
-  probar 409. No se cambio esa regla para conseguir tests verdes.
-- ExpedienteService genera numero contando filas; no se acredita numeracion
-  concurrente segura ni respuesta 409 para toda colision de persistencia.
+El helper copia Sonar way y agrega condiciones de **codigo completo**: bugs=0, vulnerabilidades abiertas=0, Blocker=0, Critical=0 y duplicacion<=3%. Conserva 80% de cobertura nueva y 3% de duplicacion nueva; desactiva la excepcion automatica para cambios pequenos. No se acepta el verde inicial con conditions vacias. Espera al gate y falla si no aprueba. JSON y scanner.log quedan en target/sonar-local-evidencia. La cobertura global Sonar no equivale a la de dominio.
 
-Estas observaciones deben contrastarse con HU/contratos, registrarse en el tablero
-y resolverse antes de afirmar aceptacion funcional. La IA genero tests y
-configuracion; la revision humana y defensa individual siguen pendientes.
+## CI y Sonar remoto
+
+Testing G3 ejecuta ahora JaCoCo/PIT automaticamente y conserva reportes. Cada job mantiene el limite de 14 minutos. Calidad de dominio Java permite una ejecucion manual equivalente. No inferir tiempos de GitHub a partir del entorno local.
+
+El workflow manual Sonar - Quality Gate Java queda preparado para SonarCloud: PostgreSQL, verify, JaCoCo y espera de gate de 300 s. Requiere secret SONAR_TOKEN y variables SONAR_HOST_URL, SONAR_PROJECT_KEY, SONAR_ORGANIZATION en GitHub Actions, proyecto con analisis CI habilitado y gate equivalente asignado. No pegar tokens en el chat. Revisar CSRF en ese proyecto con evidencia, sin copiar resoluciones a ciegas.
+No se creo ni modifico una cuenta SonarCloud ni se acredita su ejecucion remota. El Sonar ejecutado es local y cubre Java, no frontend.
+
+Fuentes: [PIT Maven](https://pitest.org/quickstart/maven/), [SonarScanner Maven](https://docs.sonarsource.com/sonarqube-cloud/analyzing-source-code/scanners/sonarscanner-for-maven/) y [Docker oficial SonarSource](https://github.com/SonarSource/docker-sonarqube/blob/master/examples.md).
+
+## Limites funcionales pendientes
+
+- ContactoService.verificar no compara el codigo con uno emitido; no se acredita verificacion real email/SMS.
+- El patron de telefono y su mensaje de longitud no expresan exactamente la misma regla.
+- Solicitudes puede cumplir estado aunque falle la publicacion; no se acredita outbox atomico o entrega garantizada.
+- Transiciones invalidas devuelven 400; continuidad exige acreditar 409.
+- Expedientes numera contando filas; no acredita numeracion concurrente segura.
+- CORS exige origen exacto: frontend en otro origen requiere APP_CORS_ALLOWED_ORIGINS. No se desplego produccion.
+
+Contrastar con HU/contratos y registrar en Trello. IA genero tests, configuracion y correcciones; siguen pendientes la revision humana y la defensa individual.

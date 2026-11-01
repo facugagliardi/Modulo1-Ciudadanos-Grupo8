@@ -87,9 +87,10 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
     public ResponseEntity<ErrorResponse> handleTipoInvalido(MethodArgumentTypeMismatchException ex,
                                                             HttpServletRequest request) {
-        String esperado = ex.getRequiredType() == null ? "otro tipo"
-                : ex.getRequiredType().isEnum() ? "uno de: " + String.join(", ", nombresDeEnum(ex.getRequiredType()))
-                : ex.getRequiredType().getSimpleName();
+        Class<?> requerido = ex.getRequiredType();
+        String esperado = requerido == null ? "otro tipo"
+                : requerido.isEnum() ? "uno de: " + String.join(", ", nombresDeEnum(requerido))
+                : requerido.getSimpleName();
         return responder(HttpStatus.BAD_REQUEST,
                 "Valor invalido en '" + ex.getName() + "': se esperaba " + esperado, request);
     }

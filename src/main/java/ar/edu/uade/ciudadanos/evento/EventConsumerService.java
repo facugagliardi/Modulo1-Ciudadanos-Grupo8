@@ -70,6 +70,7 @@ public class EventConsumerService {
      * Listener que consume mensajes de la cola de Ciudadanos ('q.ciudadanos') y M8 en RabbitMQ.
      * Solo procesa si auto-startup está habilitado.
      */
+    @Transactional
     public void onSocialDocumentationRequested(SocialDocumentationRequestedEvent evento) {
         log.info("Mensaje recibido desde cola RabbitMQ: eventId={}, eventType={}",
                 evento.eventId(), evento.eventType());

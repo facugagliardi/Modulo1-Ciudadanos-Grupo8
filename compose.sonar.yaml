@@ -1,0 +1,17 @@
+name: ciudadanos-sonar
+services:
+  sonarqube:
+    image: sonarqube@sha256:f95aaa9016dd4e92c7d70691167a6d96dbb5d8acffd61eba1cb4335d364a7840
+    ports:
+      - '127.0.0.1:29000:9000'
+    environment:
+      SONAR_ES_BOOTSTRAP_CHECKS_DISABLE: 'true'
+      SONAR_TELEMETRY_ENABLE: 'false'
+    volumes:
+      - sonar_data:/opt/sonarqube/data
+      - sonar_logs:/opt/sonarqube/logs
+      - sonar_extensions:/opt/sonarqube/extensions
+volumes:
+  sonar_data:
+  sonar_logs:
+  sonar_extensions:

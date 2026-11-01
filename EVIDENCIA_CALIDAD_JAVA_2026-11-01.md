@@ -1,5 +1,10 @@
 # Evidencia Java del 01/11/2026
 
+Este archivo conserva las corridas intermedias anteriores a la ampliacion de
+Organizaciones, Representacion y Directorio. Para el estado posterior y el
+Sonar ejecutado consultar CALIDAD_JAVA_TESTING.md y REVISION_SONAR_JAVA.md.
+Los porcentajes y pendientes de abajo son historicos, no el ultimo resultado.
+
 Referencia de inicio: b128191, rama aedelstein, arbol inicialmente limpio salvo
 DocumentoServiceTest iniciado en el turno anterior. Se consulto origin sin
 encontrar commits posteriores en aedelstein. No se integro ni sobrescribio main.

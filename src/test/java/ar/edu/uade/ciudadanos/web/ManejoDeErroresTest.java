@@ -37,6 +37,14 @@ import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
 @MockitoSettings(strictness = Strictness.LENIENT)
 class ManejoDeErroresTest {
 
+    @Test
+    void errorDeTipoSinClaseRequeridaNoLanzaNullPointer() {
+        var ex = new org.springframework.web.method.annotation.MethodArgumentTypeMismatchException("abc", null, "id", null, new IllegalArgumentException());
+        var response = new GlobalExceptionHandler().handleTipoInvalido(ex, new org.springframework.mock.web.MockHttpServletRequest());
+        org.junit.jupiter.api.Assertions.assertEquals(400, response.getStatusCode().value());
+        org.junit.jupiter.api.Assertions.assertTrue(response.getBody().message().contains("otro tipo"));
+    }
+
     @Mock
     private ContactoService contactoService;
 
