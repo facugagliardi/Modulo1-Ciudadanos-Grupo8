@@ -3,6 +3,8 @@ import { Link } from "react-router-dom";
 import { Building2 } from "lucide-react";
 import { listarOrganizaciones } from "@/lib/api/endpoints/organizaciones";
 import { useRecurso } from "@/lib/useRecurso";
+import { usePermiso } from "@/lib/auth/SesionContext";
+import { PERMISOS } from "@/lib/auth/permisos";
 import { formatearFecha } from "@/lib/dominio/formato";
 import { ENTIDADES } from "@/lib/dominio/estados";
 import { etiquetaDe, TIPOS_ORGANIZACION } from "@/lib/dominio/listasBlancas";
@@ -28,6 +30,7 @@ const ESTADOS = [
 ];
 
 export function Organizaciones() {
+  const puedeRegistrar = usePermiso(PERMISOS.EDITAR_TERCEROS);
   const { datos, cargando, error, recargar } = useRecurso(
     useCallback((s) => listarOrganizaciones(s), []),
   );
@@ -74,12 +77,15 @@ export function Organizaciones() {
         titulo="Organizaciones"
         descripcion="Empresas, comercios, asociaciones e instituciones registradas en el municipio."
         acciones={
-          <Button asChild>
-            <Link to="/admin/organizaciones/nueva">
-              <Building2 aria-hidden="true" />
-              Registrar organización
-            </Link>
-          </Button>
+          // El auditor ve todo y no escribe nada: registrar es cargar datos de terceros.
+          puedeRegistrar && (
+            <Button asChild>
+              <Link to="/admin/organizaciones/nueva">
+                <Building2 aria-hidden="true" />
+                Registrar organización
+              </Link>
+            </Button>
+          )
         }
       />
 

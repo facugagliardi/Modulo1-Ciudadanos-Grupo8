@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { ingresar, ingresarEmpleado } from "@/lib/api/endpoints/auth";
 import { mensajeAmable } from "@/lib/api/cliente";
+import { consumirAvisoDeSesionVencida } from "@/lib/auth/almacen";
 import { soloDigitos } from "@/lib/dominio/formato";
 import { Button } from "@/componentes/ui/button";
 import { Campo, CampoContrasena } from "@/componentes/ui/campo";
@@ -49,6 +50,9 @@ export function Ingresar() {
   const [errores, setErrores] = useState({});
   const [errorGeneral, setErrorGeneral] = useState(null);
   const [enviando, setEnviando] = useState(false);
+  // Si se llegó acá porque venció la sesión, decirlo: si no, parece que la
+  // aplicación "se deslogueó sola".
+  const [sesionVencida] = useState(() => consumirAvisoDeSesionVencida());
 
   const esVecino = quien === VECINO;
 
@@ -163,6 +167,15 @@ export function Ingresar() {
           onChange={(e) => cambiar("password", e.target.value)}
           error={errores.password}
         />
+
+        {sesionVencida && !errorGeneral && (
+          <p
+            role="status"
+            className="rounded border border-aviso/40 bg-aviso-suave px-3 py-2 text-[length:var(--texto-dato)] font-medium text-tinta"
+          >
+            Tu sesión venció. Ingresá de nuevo.
+          </p>
+        )}
 
         {errorGeneral && (
           <p

@@ -13,7 +13,7 @@ import { useSesion } from "@/lib/auth/SesionContext";
 import { diasHasta, formatearFecha, nombreCompleto } from "@/lib/dominio/formato";
 import { ENTIDADES } from "@/lib/dominio/estados";
 import { BadgeEstado } from "@/componentes/BadgeEstado";
-import { EstadoVacio } from "@/componentes/Estados";
+import { ErrorEnPantalla, EstadoVacio } from "@/componentes/Estados";
 import { CargaConEsqueleto, ConEsqueleto, useUltimosDatos } from "@/componentes/Esqueleto";
 import { Identificador } from "@/componentes/Identificador";
 import { Encabezado } from "@/componentes/Encabezado";
@@ -48,6 +48,8 @@ export function MisTramites() {
 
   const algoCargando =
     ciudadano.cargando || domicilios.cargando || solicitudes.cargando || expedientes.cargando;
+  // Si algo no se pudo cargar no se puede afirmar que no hay nada pendiente.
+  const algoFallo = [ciudadano, domicilios, solicitudes, expedientes].some((r) => r.error);
   const pendientes = (solicitudes.datos ?? []).filter((s) => s.estado === "PENDIENTE");
   const pendientesDeCarga = faltantesDelLegajo(domicilios.datos ?? [], ciudadano.datos, esCiudadano);
 
@@ -120,6 +122,15 @@ export function MisTramites() {
           )}
         </ConEsqueleto>
 
+        {expedientes.error && expedientes.datos == null ? (
+          <BloqueConError
+            icono={FileText}
+            titulo="Mis expedientes"
+            a="/portal/expedientes"
+            textoEnlace="Ver todos"
+            recurso={expedientes}
+          />
+        ) : (
         <ConEsqueleto
           recurso={expedientes}
           clave={`expedientes:${id}`}
@@ -148,6 +159,7 @@ export function MisTramites() {
             </Bloque>
           )}
         </ConEsqueleto>
+        )}
 
         <ConEsqueleto
           recurso={representaciones}
@@ -181,7 +193,7 @@ export function MisTramites() {
 
       {esCiudadano && <SeguimientoExterno recurso={externos} ciudadanoId={id} />}
 
-      {!algoCargando && !externos.cargando && !externos.error &&
+      {!algoCargando && !algoFallo && !externos.cargando && !externos.error &&
         (externos.datos ?? []).length === 0 &&
         pendientes.length === 0 &&
         pendientesDeCarga.length === 0 &&
@@ -294,6 +306,15 @@ function TarjetaLegajo({ faltantes }) {
         ))}
       </CardCuerpo>
     </Card>
+  );
+}
+
+/** Un bloque que no se pudo cargar: lo dice y deja reintentar, en vez de desaparecer. */
+function BloqueConError({ icono, titulo, a, textoEnlace, recurso }) {
+  return (
+    <Bloque icono={icono} titulo={titulo} a={a} textoEnlace={textoEnlace}>
+      <ErrorEnPantalla error={recurso.error} alReintentar={recurso.recargar} className="py-u2" />
+    </Bloque>
   );
 }
 

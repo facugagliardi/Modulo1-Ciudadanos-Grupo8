@@ -72,7 +72,13 @@ async function comoError(res) {
       path: cuerpo.path ?? null,
     });
   }
-  return new ErrorApi({ status: res.status, message: typeof cuerpo === "string" ? cuerpo : null });
+  // Un cuerpo de texto que no es JSON casi siempre es la página de error del
+  // proxy (nginx, Render, Vercel): HTML que no se le puede mostrar a nadie.
+  // Sólo se conserva si es texto corto y sin marcado.
+  const texto = typeof cuerpo === "string" ? cuerpo.trim() : "";
+  const esMarcado = /<\/?[a-z!][^>]*>/i.test(texto);
+  const util = texto && !esMarcado && texto.length <= 300 ? texto : null;
+  return new ErrorApi({ status: res.status, message: util });
 }
 
 // --- Refresh compartido -----------------------------------------------------
@@ -158,7 +164,7 @@ export async function pedir(ruta, opciones = {}) {
   if (res.status === 401 && !sinAuth && !_reintento) {
     const seRenovo = await refrescarSesion();
     if (seRenovo) return pedir(ruta, { ...opciones, _reintento: true });
-    cerrarSesion();
+    cerrarSesion({ vencida: true });
     throw new ErrorApi({ status: 401, message: "Tu sesión venció. Ingresá de nuevo." });
   }
 
@@ -236,6 +242,11 @@ export function mensajeAmable(error) {
   if (error.status === 404) return m || "No encontramos lo que buscabas.";
   if (error.status === 413) return "El archivo no puede superar los 10 MB.";
   if (error.status === 500) return "El servidor tuvo un problema. Probá de nuevo en un momento.";
+  // 502/503/504: el backend está caído, reiniciando o dormido detrás del proxy.
+  if (error.status >= 502 && error.status <= 504) {
+    return "El servidor no está disponible en este momento. Probá de nuevo en unos minutos.";
+  }
+  if (error.status > 500) return "El servidor tuvo un problema. Probá de nuevo en un momento.";
   if (error.status === 0) return m;
   return m || "No pudimos completar la operación.";
 }

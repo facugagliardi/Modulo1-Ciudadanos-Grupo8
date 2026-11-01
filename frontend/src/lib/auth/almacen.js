@@ -99,10 +99,21 @@ export function rotarTokens({ accessToken, refreshToken }) {
   return estado;
 }
 
-export function cerrarSesion() {
+export function cerrarSesion({ vencida = false } = {}) {
   estado = null;
   guardarEnDisco(null);
+  // El aviso tiene que sobrevivir a la redirección a /ingresar, que lo muestra.
+  sesionVencida = vencida;
   avisar();
+}
+
+let sesionVencida = false;
+
+/** true una sola vez después de que la sesión se cerró por vencimiento. */
+export function consumirAvisoDeSesionVencida() {
+  const v = sesionVencida;
+  sesionVencida = false;
+  return v;
 }
 
 export function obtenerSesion() {

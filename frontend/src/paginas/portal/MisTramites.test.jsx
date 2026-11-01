@@ -124,6 +124,27 @@ describe("Mis trámites", () => {
   });
 });
 
+describe("Mis trámites cuando falla una parte (BUG-FE-002)", () => {
+  it("si fallan los expedientes lo dice, deja reintentar y no afirma que no hay pendientes", async () => {
+    listarExpedientes.mockRejectedValueOnce(new ErrorApi({ status: 0, message: "No pudimos conectarnos con el servidor. Revisá tu conexión e intentá de nuevo." }));
+    renderizar(<MisTramites />);
+    await screen.findByRole("heading", { name: /hola, diego/i });
+    expect(await screen.findByText(/no pudimos conectarnos/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Reintentar" })).toBeInTheDocument();
+    expect(screen.queryByText(/no tenés nada pendiente/i)).not.toBeInTheDocument();
+    // El resto de la pantalla se sigue viendo.
+    expect(screen.getByText("Mi domicilio")).toBeInTheDocument();
+  });
+
+  it("al reintentar con el servidor arriba vuelve el bloque", async () => {
+    listarExpedientes.mockRejectedValueOnce(new ErrorApi({ status: 0, message: "No pudimos conectarnos con el servidor." }));
+    const { default: userEvent } = await import("@testing-library/user-event");
+    renderizar(<MisTramites />);
+    await userEvent.click(await screen.findByRole("button", { name: "Reintentar" }));
+    expect(await screen.findByText(/no tenés expedientes abiertos/i)).toBeInTheDocument();
+  });
+});
+
 describe("Perfil", () => {
   it("permite completar un legajo que todavía no tiene datos personales", async () => {
     const { default: userEvent } = await import("@testing-library/user-event");

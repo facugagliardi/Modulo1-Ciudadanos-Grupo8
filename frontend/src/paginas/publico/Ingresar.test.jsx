@@ -173,3 +173,18 @@ describe("destino después del ingreso", () => {
     expect(navegar).toHaveBeenCalledWith("/portal", { replace: true });
   });
 });
+
+describe("sesión vencida (BUG-FE-004)", () => {
+  it("si se llegó por vencimiento lo dice, sin confundirlo con un error", async () => {
+    const { cerrarSesion } = await import("@/lib/auth/almacen");
+    cerrarSesion({ vencida: true });
+    renderizar(<Ingresar />);
+    expect(screen.getByRole("status")).toHaveTextContent("Tu sesión venció. Ingresá de nuevo.");
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
+  it("en un ingreso normal no muestra el aviso", () => {
+    renderizar(<Ingresar />);
+    expect(screen.queryByText(/tu sesión venció/i)).not.toBeInTheDocument();
+  });
+});

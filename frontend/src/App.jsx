@@ -140,7 +140,14 @@ export function App() {
               />
 
               <Route path="organizaciones" element={<Organizaciones />} />
-              <Route path="organizaciones/nueva" element={<NuevaOrganizacion zona="admin" />} />
+              <Route
+                path="organizaciones/nueva"
+                element={
+                  <RequierePermiso permiso={PERMISOS.EDITAR_TERCEROS}>
+                    <NuevaOrganizacion zona="admin" />
+                  </RequierePermiso>
+                }
+              />
               <Route path="organizaciones/:id" element={<DetalleOrganizacion zona="admin" />} />
               <Route
                 path="documentacion"

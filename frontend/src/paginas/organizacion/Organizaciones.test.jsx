@@ -140,6 +140,21 @@ describe("listado del backoffice", () => {
   });
 });
 
+describe("permisos del listado (BUG-FE-007)", () => {
+  it("el auditor no ve Registrar organización", async () => {
+    conSesion({ id: 99, rol: "AUDITOR", subType: "EMPLEADO" });
+    renderizar(<Organizaciones />);
+    await screen.findByText("Kiosco del Barrio SRL");
+    expect(screen.queryByRole("link", { name: /registrar organización/i })).not.toBeInTheDocument();
+  });
+
+  it("mesa de entradas sí la ve", async () => {
+    conSesion({ id: 99, rol: "MESA_ENTRADAS", subType: "EMPLEADO" });
+    renderizar(<Organizaciones />);
+    expect(await screen.findByRole("link", { name: /registrar organización/i })).toBeInTheDocument();
+  });
+});
+
 describe("detalle", () => {
   it("muestra los datos y las tres pestañas", async () => {
     detalle();

@@ -310,3 +310,59 @@ describe("mensajeAmable", () => {
     expect(mensajeAmable(new Error("otra cosa"))).toMatch(/inesperado/i);
   });
 });
+
+describe("caída del backend detrás del proxy (BUG-FE-001)", () => {
+  const PAGINA_502 =
+    "<html><head><title>502 Bad Gateway</title></head><body><center><h1>502 Bad Gateway</h1></center><hr><center>nginx</center></body></html>";
+
+  it("no muestra el HTML de la página de error del proxy", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(new Response(PAGINA_502, { status: 502, headers: { "Content-Type": "text/html" } })),
+    );
+    const error = await get("/ciudadanos").catch((e) => e);
+    expect(error).toBeInstanceOf(ErrorApi);
+    expect(error.status).toBe(502);
+    expect(error.message).not.toMatch(/<html|nginx/i);
+    expect(mensajeAmable(error)).toBe(
+      "El servidor no está disponible en este momento. Probá de nuevo en unos minutos.",
+    );
+  });
+
+  it("503 y 504 también se explican sin mostrar el cuerpo", () => {
+    for (const status of [503, 504]) {
+      expect(mensajeAmable(new ErrorApi({ status, message: null }))).toMatch(/no está disponible/);
+    }
+    expect(mensajeAmable(new ErrorApi({ status: 507, message: null }))).toMatch(/tuvo un problema/);
+  });
+
+  it("conserva un texto plano corto sin marcado", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(new Response("Recurso bloqueado", { status: 423, headers: { "Content-Type": "text/plain" } })),
+    );
+    const error = await get("/x").catch((e) => e);
+    expect(error.message).toBe("Recurso bloqueado");
+  });
+});
+
+describe("sesión vencida (BUG-FE-004)", () => {
+  it("al fallar el refresh deja el aviso para la pantalla de ingreso, una sola vez", async () => {
+    const { consumirAvisoDeSesionVencida } = await import("../auth/almacen");
+    abrirSesion({ accessToken: jwtFalso({ sub: "3" }), refreshToken: "r", cuerpo: {} });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(new Response(null, { status: 401 })),
+    );
+    await get("/ciudadanos/3").catch(() => {});
+    expect(obtenerSesion()).toBeNull();
+    expect(consumirAvisoDeSesionVencida()).toBe(true);
+    expect(consumirAvisoDeSesionVencida()).toBe(false);
+  });
+
+  it("cerrar sesión a mano no deja aviso de vencimiento", async () => {
+    const { consumirAvisoDeSesionVencida } = await import("../auth/almacen");
+    cerrarSesion();
+    expect(consumirAvisoDeSesionVencida()).toBe(false);
+  });
+});
