@@ -122,6 +122,7 @@ public class OrganizacionService {
 
     @Transactional
     public OrganizacionResponse crear(AuthPrincipal principal, CrearOrganizacionRequest request) {
+        autorizacion.exigirCreacionDeOrganizacion(principal);
         Long creadorId = principal != null ? principal.id() : null;
         Long cuit = normalizarCuit(request.cuit());
         if (organizacionRepository.existsByCuit(cuit)) {
@@ -199,9 +200,7 @@ public class OrganizacionService {
                 throw ApiException.conflicto("La suma total de titularidades supera el 100%");
             }
 
-            boolean esCiudadano = creadorId != null && (
-                    (principal != null && principal.tipoInfo() == TipoSujeto.CIUDADANO)
-                    || directorio.existe(creadorId));
+            boolean esCiudadano = creadorId != null && principal.tipoInfo() == TipoSujeto.CIUDADANO;
 
             if (pctCreador.compareTo(BigDecimal.ZERO) > 0) {
                 if (esCiudadano) {
@@ -211,14 +210,7 @@ public class OrganizacionService {
                     vinculo.setPorcentajeTitularidad(pctCreador);
                     duenoRepository.save(vinculo);
                 } else if (request.otrosDuenos() == null || request.otrosDuenos().isEmpty()) {
-                    if (directorio.existe(creadorId)) {
-                        CiudadanoOrganizacion vinculo = new CiudadanoOrganizacion();
-                        vinculo.setId(new CiudadanoOrganizacionId(creadorId, organizacion.getOrganizacionId()));
-                        vinculo.setPorcentajeTitularidad(pctCreador);
-                        duenoRepository.save(vinculo);
-                    } else {
-                        throw ApiException.invalido("Debe asignar al menos un dueño registrado para la organización");
-                    }
+                    throw ApiException.invalido("Debe asignar al menos un dueño registrado para la organización");
                 }
             }
 

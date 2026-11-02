@@ -77,6 +77,16 @@ public class AutorizacionService {
 
     // ------------------------------------------------------------------ personas
 
+    /** Un ciudadano registra lo propio; un empleado necesita permiso de escritura. */
+    public void exigirCreacionDeOrganizacion(AuthPrincipal principal) {
+        if (principal == null || principal.id() == null) {
+            throw ApiException.noAutenticado("Token ausente o invalido");
+        }
+        if (principal.tipoInfo() != TipoSujeto.CIUDADANO) {
+            exigir(Permiso.EDITAR_TERCEROS, "registrar organizaciones");
+        }
+    }
+
     /** Ver datos de una persona: los propios siempre, los ajenos con permiso. */
     public void exigirLecturaDePersona(Long personaId) {
         if (esPropia(personaId) || puede(Permiso.LEER_TERCEROS)) {

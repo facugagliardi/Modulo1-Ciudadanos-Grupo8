@@ -173,6 +173,33 @@ class AutorizacionServiceTest {
 
     // ---------------------------------------------------------------- auditoria
 
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.EnumSource(value = Rol.class, names = {"MESA_ENTRADAS", "ADMINISTRATIVO", "RESPONSABLE_AREA"})
+    void empleadosConEscrituraPuedenRegistrarOrganizaciones(Rol rol) {
+        autenticadoComo(9L, TipoSujeto.EMPLEADO, rol);
+        assertThatCode(() -> autorizacion.exigirCreacionDeOrganizacion(autorizacion.actual())).doesNotThrowAnyException();
+    }
+
+    @Test
+    void auditorYServicioNoPuedenRegistrarOrganizaciones() {
+        for (var rol : List.of(Rol.AUDITOR, Rol.SERVICIO)) {
+            autenticadoComo(9L, rol == Rol.AUDITOR ? TipoSujeto.EMPLEADO : TipoSujeto.SERVICIO, rol);
+            assertThatThrownBy(() -> autorizacion.exigirCreacionDeOrganizacion(autorizacion.actual()))
+                    .isInstanceOf(ApiException.class)
+                    .satisfies(e -> assertThat(((ApiException)e).getStatus()).isEqualTo(HttpStatus.FORBIDDEN));
+        }
+    }
+
+    @Test
+    void ciudadanoPuedeRegistrarPeroPrincipalAusenteNo() {
+        autenticadoComo(YO, TipoSujeto.CIUDADANO, Rol.PERSONA);
+        assertThatCode(() -> autorizacion.exigirCreacionDeOrganizacion(autorizacion.actual())).doesNotThrowAnyException();
+        assertThatThrownBy(() -> autorizacion.exigirCreacionDeOrganizacion(null)).isInstanceOf(ApiException.class)
+                .satisfies(e -> assertThat(((ApiException)e).getStatus()).isEqualTo(HttpStatus.UNAUTHORIZED));
+        assertThatThrownBy(() -> autorizacion.exigirCreacionDeOrganizacion(new AuthPrincipal(null, TipoSujeto.CIUDADANO, "PERSONA")))
+                .isInstanceOf(ApiException.class);
+    }
+
     @Test
     void elActorDeAuditoriaIncluyeTipoIdYRol() {
         autenticadoComo(9L, TipoSujeto.EMPLEADO, Rol.RESPONSABLE_AREA);

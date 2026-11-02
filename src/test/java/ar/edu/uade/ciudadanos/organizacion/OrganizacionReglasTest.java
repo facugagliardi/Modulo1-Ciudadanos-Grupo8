@@ -260,6 +260,30 @@ class OrganizacionReglasTest {
         verify(duenos,never()).save(argThat(d->d.getId().getIdCiudadano().equals(9L)));
     }
 
+    @Test void empleadoNoSeConvierteEnCiudadanoPorCoincidenciaDeId() {
+        when(directorio.existe(1L)).thenReturn(true);
+        var empleado=new AuthPrincipal(1L,TipoSujeto.EMPLEADO,"MESA_ENTRADAS");
+        assertThrows(ApiException.class,()->service.crear(empleado,new CrearOrganizacionRequest("30712345678","QA",null,null,null,null,null,null)));
+        verify(duenos,never()).save(any());
+    }
+
+    @Test void permisoDeCreacionSeExigeAntesDeConsultarOPersistir() {
+        var auditor=new AuthPrincipal(3L,TipoSujeto.EMPLEADO,"AUDITOR");
+        doThrow(ApiException.prohibido("sin escritura")).when(auth).exigirCreacionDeOrganizacion(auditor);
+        assertThrows(ApiException.class,()->service.crear(auditor,new CrearOrganizacionRequest("30712345678","QA",null,null,null,null,null,null)));
+        verify(repo,never()).existsByCuit(any()); verify(repo,never()).save(any()); verify(duenos,never()).save(any());
+    }
+
+    @Test void razonSocialOpcionalNoPuedeActualizarseABlanco() {
+        try(var factory=jakarta.validation.Validation.buildDefaultValidatorFactory()) {
+            var validator=factory.getValidator();
+            for(String razon:List.of("", "   ", "\n\t"))
+                assertFalse(validator.validate(new ActualizarOrganizacionRequest(razon,null,null)).isEmpty());
+            assertTrue(validator.validate(new ActualizarOrganizacionRequest(null,"Fantasia",null)).isEmpty());
+            assertTrue(validator.validate(new ActualizarOrganizacionRequest(" Empresa ",null,null)).isEmpty());
+        }
+    }
+
     @Test void duplicadosCuitYTaxIdSeRechazanAntesDePersistir() {
         var req=new CrearOrganizacionRequest("30712345678","x",null,null,"TAX",null,null,null);
         when(repo.existsByCuit(30712345678L)).thenReturn(true);
