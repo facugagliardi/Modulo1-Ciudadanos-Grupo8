@@ -1,0 +1,19 @@
+{
+  "eventId": "bbe6df1c-9490-48cf-9d37-22706f9f8d13",
+  "eventType": "caseFileResolved",
+  "eventVersion": "1.0",
+  "occurredAt": "2026-11-02T12:00:00-03:00",
+  "sourceModule": "ciudadanos",
+  "correlationId": "9a21f78c-dc9e-4a76-93c6-d9b3eef0805c",
+  "data": {
+    "caseFileId": "d40e20ba-e2a8-4dd0-a11f-b6d6b58c68a8",
+    "caseFileNumber": "EXP-2026-001042",
+    "state": "resolved",
+    "resolution": "rejected",
+    "externalReference": {
+      "type": "PUBLIC_WORKS_PROJECT",
+      "id": "7b745d35-536d-4387-a722-cb690586305d"
+    },
+    "resolutionSummary": "Dictamen administrativo desfavorable: el proyecto no reúne las condiciones requeridas para su autorización."
+  }
+}

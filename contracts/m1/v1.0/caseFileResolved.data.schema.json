@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:uade:ciudadanos:events:caseFileResolved:data:1.0",
+  "title": "caseFileResolved data v1.0",
+  "description": "Resolución administrativa de un expediente de M1 vinculado a un proyecto de Obras Públicas. Este schema valida exclusivamente data, no el envelope de Core.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "caseFileId",
+    "caseFileNumber",
+    "state",
+    "resolution",
+    "externalReference",
+    "resolutionSummary"
+  ],
+  "properties": {
+    "caseFileId": {
+      "type": "string",
+      "format": "uuid",
+      "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+      "description": "UUID público y persistente del expediente, generado por M1. No es el ID numérico interno ni el número visible."
+    },
+    "caseFileNumber": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "\\S",
+      "description": "Número visible del expediente; no se usa como clave técnica de correlación."
+    },
+    "state": {
+      "type": "string",
+      "const": "resolved"
+    },
+    "resolution": {
+      "type": "string",
+      "enum": ["approved", "rejected"],
+      "description": "Resultado administrativo real, en minúsculas. La aprobación o finalización de la obra no determina este resultado automáticamente."
+    },
+    "externalReference": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "id"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "const": "PUBLIC_WORKS_PROJECT"
+        },
+        "id": {
+          "type": "string",
+          "format": "uuid",
+          "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+          "description": "El mismo publicWorksProjectId UUID recibido de M3; no el projectNumber."
+        }
+      }
+    },
+    "resolutionSummary": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "\\S",
+      "description": "Resumen de la resolución administrativa efectiva, sin datos privados ajenos al contrato."
+    }
+  }
+}
