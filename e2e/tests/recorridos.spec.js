@@ -72,11 +72,12 @@ test('E2E-01 | HU1 CP-FE-001/003/005 y HU3 CP-FE-014 | ingreso y límites del ve
   await expect(page.getByRole('alert')).toContainText('CUIT/CUIL o contraseña incorrectos');
   await expect(page).toHaveURL(/\/ingresar$/);
   await ingresar(page, cuentas.ciudadano);
-  await expect(page.getByRole('heading', { name: 'Mis trámites', exact: true })).toBeVisible();
+  // Esperar el estado final con el ciudadano cargado, no el título transitorio.
+  await expect(page.getByRole('heading', { name: 'Hola, Vecino', exact: true })).toBeVisible();
   await expect(page.getByText('Vecino Testing', { exact: true }).first()).toBeVisible();
   await page.goto('/admin/padron');
   await expect(page).toHaveURL(/\/portal$/);
-  await expect(page.getByRole('heading', { name: 'Mis trámites', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Hola, Vecino', exact: true })).toBeVisible();
 });
 
 test('E2E-02 | HU3 CP-FE-013 | auditor sólo lectura y POST 403 sin persistencia', async ({ page, request }) => {
