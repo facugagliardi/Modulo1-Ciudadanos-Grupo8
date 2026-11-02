@@ -15,6 +15,11 @@ import java.time.OffsetDateTime;
 @Table(name = "expediente")
 public class Expediente {
 
+    @Column(name = "uuid", nullable = false, unique = true)
+    private java.util.UUID uuid = java.util.UUID.randomUUID();
+
+    public java.util.UUID getUuid() { return uuid; }
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "expediente_id")

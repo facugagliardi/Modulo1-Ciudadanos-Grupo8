@@ -27,7 +27,7 @@ autenticación con JWT. Los requerimientos y el contrato REST salen de `ARCHITEC
 
 - **Spring Boot** 3.5.16 · **Java** 21 · Maven wrapper incluido (no hace falta tener Maven)
 - **PostgreSQL** — datos transaccionales (personas, organizaciones, expedientes)
-- **MongoDB** — outbox de eventos, cuyo payload cambia según el `eventType`
+- **PostgreSQL / event_outbox** — publicación de eventos después del commit, con confirmación del broker y reintentos
 
 ---
 
@@ -41,7 +41,6 @@ operativo): [`INSTALACION.md`](INSTALACION.md).** Resumen:
 psql -U postgres -f db/00_crear_database.sql
 psql -U postgres -d ciudadanos_m1 -f db/01_schema.sql
 psql -U postgres -d ciudadanos_m1 -f db/02_datos_iniciales.sql   # opcional
-mongosh "mongodb://localhost:27017" --file db/mongodb_setup.txt
 
 # 2. API (no hace falta tener Maven: el repo trae ./mvnw)
 ./mvnw spring-boot:run
@@ -56,6 +55,43 @@ Las demas variables y la configuracion de produccion estan en `INSTALACION.md`.
 `spring.jpa.hibernate.ddl-auto=validate`: la app **no** crea tablas. Si una entidad y
 `db/01_schema.sql` se desincronizan, el arranque falla con el detalle, en vez de romper
 más tarde en runtime.
+
+### Actualización de una base existente: integración social segura
+
+Antes de arrancar esta versión, aplicar `db/04_integracion_social_segura.sql` sobre
+la base de M1. Es reejecutable: agrega UUID públicos a documentos, solicitudes y
+expedientes, contexto de M8 y la tabla `event_outbox`. No borra datos ni reenvía
+eventos históricos cuya entrega se desconoce. En una instalación nueva estos
+campos ya están incluidos en `db/01_schema.sql`.
+
+```sh
+psql -v ON_ERROR_STOP=1 -U ciudadanos_app -d ciudadanos_m1 -f db/04_integracion_social_segura.sql
+```
+
+El publicador guarda el evento y la intención de envío en la misma transacción del
+negocio. El trabajador despacha hasta 20 pendientes por ciclo (5 segundos), exige
+confirmación del broker y reintenta fallos después de 30 segundos con el mismo
+`eventId`. Una caída después de publicar y antes de guardar la confirmación puede
+repetir el mensaje: los consumidores deben deduplicarlo. `APP_EVENTS_OUTBOX_ENABLED=false`
+pausa el despacho conservando los pendientes. Confirmar el envío al broker no
+equivale a confirmar el procesamiento del módulo destinatario.
+
+M8 exige ciudadano UUID existente y conserva solicitud, programa, edición,
+requisito y correlación originales. Un plazo ausente queda sin informar. Un nuevo
+evento para una `applicationId` ya registrada se rechaza sin duplicar entidades,
+hasta cerrar con M8 la política de actualización. Los pedidos históricos sin
+contexto verificable no generan respuestas con referencias inventadas.
+
+Resolver administrativamente un expediente ya no publica una aprobación de obra
+por defecto. La publicación funcional de `casefileResolved` queda pendiente del
+vínculo UUID con el proyecto, el dictamen real y el nombre acordado con M3/Core.
+
+Pruebas de PostgreSQL: definir `M1_TEST_POSTGRES_URL`, `M1_TEST_POSTGRES_USER` y
+`M1_TEST_POSTGRES_PASSWORD` sobre una base de pruebas donde se permita crear
+esquemas. `M8ContratoPostgresTest` valida Hibernate y el flujo documental completo;
+`EventOutboxPostgresTest` comprueba commit, rollback, reintentos y concurrencia.
+Con `M1_TEST_RABBIT_PORT` definido también verifica confirms y returns en un broker
+local de pruebas, creando y eliminando únicamente recursos con nombres aleatorios.
 
 ---
 

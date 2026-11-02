@@ -28,13 +28,17 @@ class EventConsumerTransaccionPostgresTest {
                     .thenAnswer(inv->{ jdbc.update("INSERT INTO "+table+" VALUES (?)",inv.getArgument(0,String.class)); return true; });
             var expedientes=mock(ExpedienteRepository.class);
             when(expedientes.save(any())).thenThrow(new DataIntegrityViolationException("fallo simulado"));
-            var target=new EventConsumerService(eventos,mock(EventPublisherService.class),new ObjectMapper(),expedientes,null,null);
+            var event=EventConsumerServiceTest.evento();
+            var ciudadanos=mock(ar.edu.uade.ciudadanos.persona.repository.CiudadanoRepository.class);
+            var ciudadano=new ar.edu.uade.ciudadanos.persona.entity.Ciudadano(); ciudadano.setId(1L);
+            when(ciudadanos.findByUuid(UUID.fromString(event.payload().citizenId()))).thenReturn(java.util.Optional.of(ciudadano));
+            var solicitudes=mock(ar.edu.uade.ciudadanos.documentacion.repository.SolicitudDocumentacionRepository.class);
+            var target=new EventConsumerService(eventos,mock(EventPublisherService.class),new ObjectMapper(),expedientes,solicitudes,ciudadanos);
             var proxy=new ProxyFactory(target);
             proxy.addAdvice(new TransactionInterceptor(new DataSourceTransactionManager(ds),new AnnotationTransactionAttributeSource()));
             var consumer=(EventConsumerService)proxy.getProxy();
-            var event=new SocialDocumentationRequestedEvent("evt-rollback","socialDocumentationRequested","2026-11-01T12:00:00Z","M8",null);
             assertThrows(DataIntegrityViolationException.class,()->consumer.onSocialDocumentationRequested(event));
-            verify(eventos).registrarRecibido(eq("evt-rollback"),anyString(),anyString(),anyString(),anyString());
+            verify(eventos).registrarRecibido(eq(event.eventId()),anyString(),anyString(),anyString(),anyString());
             assertEquals(0,jdbc.queryForObject("SELECT COUNT(*) FROM "+table,Integer.class));
         } finally { jdbc.execute("DROP TABLE "+table); }
     }

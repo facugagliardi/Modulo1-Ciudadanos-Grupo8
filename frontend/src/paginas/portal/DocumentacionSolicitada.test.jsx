@@ -57,6 +57,15 @@ beforeEach(() => {
 });
 
 describe("listado de lo que piden", () => {
+  it("conserva el nombre externo y no inventa un plazo", async () => {
+    listarSolicitudes.mockResolvedValue([{ ...PENDIENTE, tipoDocumento: "OTRO", nombreDocumento: "Certificado de ingresos", descripcionDocumento: "Del grupo familiar", obligatorio: false, plazo: null }]);
+    renderizar(<DocumentacionSolicitada />);
+    expect(await screen.findByText("Certificado de ingresos")).toBeInTheDocument();
+    expect(screen.getByText("Sin plazo informado")).toBeInTheDocument();
+    expect(screen.getByText("Del grupo familiar")).toBeInTheDocument();
+    expect(screen.getByText("Opcional")).toBeInTheDocument();
+    expect(screen.queryByText(/null días/)).not.toBeInTheDocument();
+  });
   it("muestra el documento pedido y cuánto tiempo queda", async () => {
     renderizar(<DocumentacionSolicitada />);
     expect(await screen.findByText("Certificado de domicilio")).toBeInTheDocument();

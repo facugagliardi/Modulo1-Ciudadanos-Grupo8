@@ -29,7 +29,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 class EventPublisherServiceTest {
 
     @Mock private EventoService eventoService;
-    @Mock private RabbitTemplate rabbitTemplate;
+    @Mock private EventOutbox outbox;
     @Mock private ar.edu.uade.ciudadanos.persona.repository.CiudadanoRepository ciudadanoRepository;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -37,8 +37,7 @@ class EventPublisherServiceTest {
 
     @BeforeEach
     void setUp() {
-        publisherService = new EventPublisherService(eventoService, rabbitTemplate, objectMapper, ciudadanoRepository);
-        ReflectionTestUtils.setField(publisherService, "exchangeName", "modulo1.topic.exchange");
+        publisherService = new EventPublisherService(eventoService, outbox, objectMapper, ciudadanoRepository);
     }
 
     @Test
@@ -74,23 +73,14 @@ class EventPublisherServiceTest {
         assertThat(payloadCaptor.getValue()).contains("REGISTERED").contains("Juan").contains("sourceModule");
 
         // Verifica despacho a RabbitMQ
-        verify(rabbitTemplate).convertAndSend(eq("modulo1.topic.exchange"), eq("modulo1.citizens.registered"), eq(envelope));
+        verify(outbox).encolar(eq(envelope.eventId()), eq("modulo1.citizens.registered"), eq(payloadCaptor.getValue()));
     }
 
     @Test
-    @DisplayName("Si RabbitMQ falla por desconexión, el evento persiste en BD y no rompe el flujo")
-    void rabbitMqDesconectadoToleraFallo() {
-        when(eventoService.registrarEmitido(any(), any(), any(), any(), any()))
-                .thenReturn(new Evento("M1-EVT-TEST", "citizens", "100", "citizenUpdated", "{}", TipoEvento.EMITIDO));
-
-        doThrow(new AmqpException("Broker no disponible"))
-                .when(rabbitTemplate).convertAndSend(any(String.class), any(String.class), any(Object.class));
-
-        // Debe ejecutarse sin lanzar excepción hacia afuera
-        EventEnvelope<?> envelope = publisherService.publicarEjemplo("citizen-registered");
-
-        assertThat(envelope).isNotNull();
-        verify(eventoService).registrarEmitido(any(), any(), any(), any(), any());
+    void falloAlGuardarOutboxNoSeOculta() {
+        doThrow(new IllegalStateException("base no disponible")).when(outbox).encolar(any(), any(), any());
+        org.junit.jupiter.api.Assertions.assertThrows(IllegalStateException.class,
+                () -> publisherService.publicarEjemplo("citizen-registered"));
     }
 
     @Test

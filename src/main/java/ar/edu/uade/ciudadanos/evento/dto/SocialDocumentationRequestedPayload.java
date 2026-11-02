@@ -11,6 +11,12 @@ public record SocialDocumentationRequestedPayload(
         String programId,
         List<Map<String, Object>> requiredDocuments,
         String deadline,
-        String notes
+        String notes,
+        String applicationNumber,
+        String programEditionId
 ) {
+    public SocialDocumentationRequestedPayload(String citizenId, String applicationId, String programId,
+            List<Map<String, Object>> requiredDocuments, String deadline, String notes) {
+        this(citizenId, applicationId, programId, requiredDocuments, deadline, notes, null, null);
+    }
 }

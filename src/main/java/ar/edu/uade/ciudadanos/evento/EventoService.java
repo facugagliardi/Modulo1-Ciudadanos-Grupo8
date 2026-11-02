@@ -29,7 +29,7 @@ public class EventoService {
     public Evento registrarEmitido(String aggregateType, String aggregateId, String eventType, String payload) {
         String eventId = UUID.randomUUID().toString();
         Evento evento = new Evento(eventId, aggregateType, aggregateId, eventType, payload, TipoEvento.EMITIDO);
-        return eventoRepository.save(evento);
+        return eventoRepository.saveAndFlush(evento);
     }
 
     /**
@@ -38,7 +38,7 @@ public class EventoService {
     @Transactional
     public Evento registrarEmitido(String eventId, String aggregateType, String aggregateId, String eventType, String payload) {
         Evento evento = new Evento(eventId, aggregateType, aggregateId, eventType, payload, TipoEvento.EMITIDO);
-        return eventoRepository.save(evento);
+        return eventoRepository.saveAndFlush(evento);
     }
 
     /**
@@ -47,12 +47,7 @@ public class EventoService {
      */
     @Transactional
     public boolean registrarRecibido(String eventId, String aggregateType, String aggregateId, String eventType, String payload) {
-        if (eventoRepository.existsByEventId(eventId)) {
-            return false;
-        }
-        Evento evento = new Evento(eventId, aggregateType, aggregateId, eventType, payload, TipoEvento.RECIBIDO);
-        eventoRepository.save(evento);
-        return true;
+        return eventoRepository.insertarRecibido(eventId, aggregateType, aggregateId, eventType, payload) == 1;
     }
 
     /**

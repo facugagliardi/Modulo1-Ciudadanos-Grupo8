@@ -295,7 +295,7 @@ class AutomaticEventTriggerTest {
     }
 
     @Test
-    @DisplayName("8. Resolver un expediente (estado RESUELTO) debe disparar automáticamente casefileResolved")
+    @DisplayName("Resolver un expediente no inventa una aprobacion de obra")
     void resolverExpedienteDisparaEventoResolved() {
         ExpedienteService expedienteService = new ExpedienteService(
                 expedienteRepository, actuacionRepository, directorio, autorizacion, new ObjectMapper(), eventPublisherService
@@ -313,6 +313,6 @@ class AutomaticEventTriggerTest {
         CambioEstadoResponse res = expedienteService.cambiarEstado(1042L, EstadoExpediente.RESUELTO);
 
         assertThat(res.estadoNuevo()).isEqualTo("RESUELTO");
-        verify(eventPublisherService).publicarCasefileResolved(any());
+        org.mockito.Mockito.verifyNoInteractions(eventPublisherService);
     }
 }

@@ -16,6 +16,11 @@ import java.time.OffsetDateTime;
 @Table(name = "solicitud_documentacion")
 public class SolicitudDocumentacion {
 
+    @Column(name = "uuid", nullable = false, unique = true)
+    private java.util.UUID uuid = java.util.UUID.randomUUID();
+
+    public java.util.UUID getUuid() { return uuid; }
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "solicitud_id")
@@ -27,8 +32,14 @@ public class SolicitudDocumentacion {
     @Column(name = "tipo_documento", nullable = false, length = 100)
     private String tipoDocumento;
 
-    /** Fecha limite para cumplir. */
-    @Column(name = "plazo", nullable = false)
+    @Column(name = "contexto_social", columnDefinition = "text")
+    private String contextoSocial;
+
+    public String getContextoSocial() { return contextoSocial; }
+    public void setContextoSocial(String contextoSocial) { this.contextoSocial = contextoSocial; }
+
+    /** Fecha limite para cumplir; ausente si el productor no informa plazo. */
+    @Column(name = "plazo")
     private LocalDate plazo;
 
     @Enumerated(EnumType.STRING)

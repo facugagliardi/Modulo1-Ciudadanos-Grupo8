@@ -87,133 +87,79 @@ public class EventConsumerService {
      */
     @Transactional
     public boolean procesarSocialDocumentationRequested(SocialDocumentationRequestedEvent evento) {
-        if (evento == null || evento.eventId() == null) {
-            log.warn("Evento recibido nulo o sin eventId");
-            return false;
+        if (evento == null) throw ar.edu.uade.ciudadanos.common.ApiException.invalido("Evento requerido");
+        String eventId = uuid(evento.eventId(), "eventId");
+        if (eventoService.estaProcesado(eventId)) return false;
+        if (!"socialDocumentationRequested".equals(evento.eventType())
+                || !"desarrollo-social".equals(evento.sourceModule()) || !"1.0".equals(evento.eventVersion())) {
+            throw ar.edu.uade.ciudadanos.common.ApiException.invalido("Contrato social no soportado");
         }
-
-        if (eventoService.estaProcesado(evento.eventId())) {
-            log.info("Evento ya procesado previamente (idempotencia activa): eventId={}", evento.eventId());
-            return false;
+        try { OffsetDateTime.parse(evento.occuredAt()); }
+        catch (RuntimeException e) { throw ar.edu.uade.ciudadanos.common.ApiException.invalido("occurredAt requiere fecha con offset"); }
+        String correlationId = uuid(evento.correlationId(), "correlationId");
+        if (evento.causationId() != null) uuid(evento.causationId(), "causationId");
+        var payload = evento.payload();
+        if (payload == null || payload.requiredDocuments() == null || payload.requiredDocuments().isEmpty()) {
+            throw ar.edu.uade.ciudadanos.common.ApiException.invalido("data y requiredDocuments son obligatorios");
         }
-
-        String rawJson;
-        try {
-            rawJson = objectMapper.writeValueAsString(evento);
-        } catch (Exception e) {
-            rawJson = evento.toString();
+        String citizenId = uuid(payload.citizenId(), "citizenId");
+        Long titularId = resolverTitularId(citizenId);
+        String applicationId = uuid(payload.applicationId(), "applicationId");
+        uuid(payload.programId(), "programId");
+        uuid(payload.programEditionId(), "programEditionId");
+        LocalDate plazo = null;
+        if (payload.deadline() != null) {
+            try {
+                plazo = payload.deadline().length() == 10 ? LocalDate.parse(payload.deadline())
+                        : OffsetDateTime.parse(payload.deadline()).toLocalDate();
+            } catch (RuntimeException e) { throw ar.edu.uade.ciudadanos.common.ApiException.invalido("deadline invalido"); }
         }
-
-        String citizenIdStr = evento.payload() != null ? evento.payload().citizenId() : "1";
-        Long titularId = resolverTitularId(citizenIdStr);
-
-        eventoService.registrarRecibido(
-                evento.eventId(),
-                "citizens",
-                citizenIdStr,
-                evento.eventType() != null ? evento.eventType() : "socialDocumentationRequested",
-                rawJson
-        );
-        log.info("Evento entrante registrado como RECIBIDO en PostgreSQL: eventId={}, titularId={}",
-                evento.eventId(), titularId);
-
-        String appId = evento.payload() != null ? evento.payload().applicationId() : "sol-00456";
-        String progId = evento.payload() != null ? evento.payload().programId() : "prog-00789";
-
-        // 1. Crear Expediente en BD para que aparezca en el panel 'Mis expedientes'
-        Expediente nuevoExp = null;
-        if (expedienteRepository != null) {
-            String numeroExp = "EXP-2026-M8-" + (appId != null ? appId.toUpperCase().replace(" ", "") : "TRAMITE");
-            if (expedienteRepository.existsByNumero(numeroExp)) {
-                numeroExp = numeroExp + "-" + (System.currentTimeMillis() % 10000);
+        var requirementIds = new java.util.HashSet<String>();
+        for (var requirement : payload.requiredDocuments()) {
+            if (requirement == null || !(requirement.get("type") instanceof String type) || type.isBlank()
+                    || type.length() > 100 || !(requirement.get("required") instanceof Boolean)) {
+                throw ar.edu.uade.ciudadanos.common.ApiException.invalido("Requisito sin type o required valido");
             }
-            nuevoExp = new Expediente();
-            nuevoExp.setNumero(numeroExp);
-            nuevoExp.setCiudadanoId(titularId);
-            nuevoExp.setAreaIniciadora("Desarrollo Social");
-            nuevoExp.setCaratula("Solicitud de Programa Social " + progId + " (" + appId + ")");
-            nuevoExp.setEstado(EstadoExpediente.INICIADO);
-            nuevoExp.setFechaInicio(OffsetDateTime.now());
-            nuevoExp = expedienteRepository.save(nuevoExp);
-            log.info("Expediente creado en BD desde evento M8: id={}, numero={}, ciudadanoId={}",
-                    nuevoExp.getExpedienteId(), nuevoExp.getNumero(), titularId);
+            String id = uuid((String) requirement.get("requirementId"), "requirementId");
+            if (!requirementIds.add(id)) throw ar.edu.uade.ciudadanos.common.ApiException.invalido("requirementId repetido");
         }
-
-        // 2. Crear Solicitudes de Documentación en BD para que aparezcan en 'Documentación que te piden'
-        List<Map<String, Object>> reqDocsList = new ArrayList<>();
-        if (solicitudRepository != null) {
-            List<Map<String, Object>> docsRequeridos = evento.payload() != null ? evento.payload().requiredDocuments() : null;
-            if (docsRequeridos == null || docsRequeridos.isEmpty()) {
-                docsRequeridos = List.of(Map.of("documentType", "CERTIFICADO_DOMICILIO"));
-            }
-
-            LocalDate plazo = LocalDate.now().plusDays(15);
-            if (evento.payload() != null && evento.payload().deadline() != null) {
-                try {
-                    plazo = LocalDate.parse(evento.payload().deadline().substring(0, 10));
-                } catch (Exception ignored) {
-                }
-            }
-
-            for (Map<String, Object> docReq : docsRequeridos) {
-                String tipoRaw = String.valueOf(docReq.getOrDefault("documentType", "OTRO")).trim().toUpperCase();
-                String tipoNormalizado = normalizarTipoDocumento(tipoRaw);
-
-                SolicitudDocumentacion solicitud = new SolicitudDocumentacion();
-                solicitud.setTitularId(titularId);
-                solicitud.setTipoDocumento(tipoNormalizado);
-                solicitud.setPlazo(plazo);
-                solicitud.setEstado(EstadoSolicitud.PENDIENTE);
-                solicitud.setOrigen(OrigenSolicitud.EVENTO);
-                solicitud = solicitudRepository.save(solicitud);
-
-                reqDocsList.add(Map.of(
-                        "requestId", "sol-doc-" + solicitud.getSolicitudId(),
-                        "documentType", tipoNormalizado,
-                        "status", "PENDING"
-                ));
-                log.info("SolicitudDocumentacion creada en BD desde evento: id={}, titularId={}, tipo={}",
-                        solicitud.getSolicitudId(), titularId, tipoNormalizado);
-            }
+        if (expedienteRepository == null || solicitudRepository == null) throw new IllegalStateException("Repositorios no disponibles");
+        String numero = "EXP-M8-" + applicationId;
+        String raw;
+        try { raw = objectMapper.writeValueAsString(evento); }
+        catch (java.io.IOException e) { throw new IllegalStateException("No se pudo serializar el evento", e); }
+        if (!eventoService.registrarRecibido(eventId, "citizens", citizenId, evento.eventType(), raw)) return false;
+        // Hasta acordar actualizaciones con M8, nunca crear un segundo expediente para el mismo pedido.
+        if (expedienteRepository.existsByNumero(numero)) {
+            throw ar.edu.uade.ciudadanos.common.ApiException.conflicto("La applicationId ya tiene expediente; actualizacion pendiente de acuerdo con M8");
         }
-
-        // 3. Estructurar la respuesta técnica hacia M8 (socialDocumentationDelivered)
-        Map<String, Object> file = Map.of(
-                "fileId", nuevoExp != null ? String.valueOf(nuevoExp.getExpedienteId()) : "exp-00981",
-                "number", nuevoExp != null ? nuevoExp.getNumero() : "EXP-2026-00981",
-                "initiatingArea", "SOCIAL_DEVELOPMENT",
-                "status", "IN_PROGRESS",
-                "documentationRequests", reqDocsList.isEmpty() ? List.of(
-                        Map.of("requestId", "sol-doc-1", "documentType", "CONSTANCIA_CUIT", "status", "PENDING")
-                ) : reqDocsList
-        );
-
-        String citizenUuidResp = citizenIdStr;
-        if (titularId != null && ciudadanoRepository != null) {
-            citizenUuidResp = ciudadanoRepository.findById(titularId)
-                    .map(c -> c.getUuid() != null ? c.getUuid().toString() : citizenIdStr)
-                    .orElse(citizenIdStr);
+        Expediente expediente = new Expediente();
+        expediente.setNumero(numero);
+        expediente.setCiudadanoId(titularId);
+        expediente.setAreaIniciadora("Desarrollo Social");
+        expediente.setCaratula("Solicitud social " + applicationId);
+        expediente = expedienteRepository.save(expediente);
+        List<Map<String, Object>> solicitudes = new ArrayList<>();
+        for (var requirement : payload.requiredDocuments()) {
+            String type = (String) requirement.get("type");
+            var solicitud = new SolicitudDocumentacion();
+            solicitud.setTitularId(titularId);
+            solicitud.setTipoDocumento(normalizarTipoDocumento(type));
+            solicitud.setPlazo(plazo);
+            solicitud.setOrigen(OrigenSolicitud.EVENTO);
+            var contexto = new ar.edu.uade.ciudadanos.evento.dto.ContextoDocumentacionSocial(
+                    citizenId, applicationId, payload.programId(), payload.programEditionId(), correlationId,
+                    expediente.getUuid().toString(), expediente.getNumero(), requirement, payload.applicationNumber(), payload.notes());
+            try { solicitud.setContextoSocial(objectMapper.writeValueAsString(contexto)); }
+            catch (java.io.IOException e) { throw new IllegalStateException("No se pudo guardar el contexto social", e); }
+            solicitud = solicitudRepository.save(solicitud);
+            solicitudes.add(contexto.solicitud(solicitud.getUuid().toString(), "PENDING", null));
         }
-
-        SocialDocumentationDeliveredData respuestaData = new SocialDocumentationDeliveredData(
-                citizenUuidResp,
-                appId,
-                progId,
-                List.of(file)
-        );
-
-        String correlationId = (evento.correlationId() != null && !evento.correlationId().isBlank())
-                ? evento.correlationId()
-                : UUID.randomUUID().toString();
-
-        EventEnvelope<SocialDocumentationDeliveredData> respuestaEnvelope =
-                eventPublisherService.publicarSocialDocumentationDelivered(evento.eventId(), correlationId, respuestaData);
-
-        if (respuestaEnvelope != null) {
-            log.info("Respuesta socialDocumentationDelivered emitida con causationId={} y correlationId={}: nuevo eventId={}",
-                    evento.eventId(), correlationId, respuestaEnvelope.eventId());
-        }
-
+        var respuesta = new SocialDocumentationDeliveredData(citizenId, applicationId, payload.programId(),
+                List.of(Map.of("fileId", expediente.getUuid().toString(), "number", expediente.getNumero(),
+                        "initiatingArea", "SOCIAL_DEVELOPMENT", "status", "IN_PROGRESS", "documentationRequests", solicitudes)),
+                payload.programEditionId());
+        eventPublisherService.publicarSocialDocumentationDelivered(eventId, correlationId, respuesta);
         return true;
     }
 
@@ -232,7 +178,7 @@ public class EventConsumerService {
             return false;
         }
 
-        eventoService.registrarRecibido(eventId, aggregateType, aggregateId, eventType, rawPayload);
+        if (!eventoService.registrarRecibido(eventId, aggregateType, aggregateId, eventType, rawPayload)) return false;
         log.info("Evento genérico entrante guardado en BD con éxito: eventId={}, eventType={}", eventId, eventType);
 
         // Si es un evento de negocio relacionado con creación de expediente o pedido de documentación:
@@ -319,13 +265,13 @@ public class EventConsumerService {
                 }
             }
         } catch (Exception e) {
-            log.warn("No se pudo parsear payload para creación automática de entidades: {}", e.getMessage());
+            throw new IllegalArgumentException("No se pudo procesar el evento de negocio", e);
         }
     }
 
     private String extraerCitizenId(JsonNode data) {
         if (data == null) {
-            return "1";
+            return null;
         }
         if (data.has("citizenId")) {
             return data.get("citizenId").asText();
@@ -339,7 +285,7 @@ public class EventConsumerService {
         if (data.has("titularId")) {
             return data.get("titularId").asText();
         }
-        return "1";
+        return null;
     }
 
     private void crearSolicitudEnBd(Long titularId, String docTypeRaw, LocalDate plazo) {
@@ -364,7 +310,7 @@ public class EventConsumerService {
             return clean;
         }
         if (clean.contains("INCOME") || clean.contains("INGRESO") || clean.contains("SUELDO")) {
-            return "CONSTANCIA_CUIT";
+            return "OTRO";
         }
         if (clean.contains("BIRTH") || clean.contains("NACIMIENTO")) {
             return "PARTIDA_NACIMIENTO";
@@ -375,54 +321,20 @@ public class EventConsumerService {
         return "OTRO";
     }
 
-    /**
-     * Resuelve el ID interno del ciudadano a partir del identificador recibido en el evento entrante.
-     * Soporta tanto UUID (contrato oficial moderno) como ID numérico / CUIT / DNI (retrocompatibilidad
-     * con módulos externos desactualizados).
-     */
-    private Long resolverTitularId(String citizenIdRaw) {
-        if (ciudadanoRepository == null) {
-            return 1L;
-        }
-        if (citizenIdRaw != null && !citizenIdRaw.isBlank()) {
-            String clean = citizenIdRaw.trim();
-            // 1. Intentar como UUID canónico
-            try {
-                UUID uuid = UUID.fromString(clean);
-                Optional<Ciudadano> porUuid = ciudadanoRepository.findByUuid(uuid);
-                if (porUuid.isPresent()) {
-                    return porUuid.get().getId();
-                }
-            } catch (Exception ignored) {
-            }
-            // 2. Intentar como ID numérico, CUIT o DNI (retrocompatibilidad)
-            try {
-                String digits = clean.replaceAll("[^0-9]", "");
-                if (!digits.isEmpty()) {
-                    Long idNum = Long.parseLong(digits);
-                    if (ciudadanoRepository.existsById(idNum)) {
-                        return idNum;
-                    }
-                    Optional<Ciudadano> porCuit = ciudadanoRepository.findByCuit(idNum);
-                    if (porCuit.isPresent()) {
-                        return porCuit.get().getId();
-                    }
-                    Optional<Ciudadano> porDni = ciudadanoRepository.findByDocumentoId(digits);
-                    if (porDni.isPresent()) {
-                        return porDni.get().getId();
-                    }
-                }
-            } catch (Exception ignored) {
-            }
-        }
-        // Fallback: buscar el primer ciudadano de la base de datos
+    private Long resolverTitularId(String raw) {
+        if (ciudadanoRepository == null) throw new IllegalStateException("Directorio de ciudadanos no disponible");
+        return ciudadanoRepository.findByUuid(UUID.fromString(uuid(raw, "citizenId")))
+                .orElseThrow(() -> ar.edu.uade.ciudadanos.common.ApiException.noEncontrado("citizenId no existe en M1"))
+                .getId();
+    }
+
+    private String uuid(String raw, String campo) {
         try {
-            return ciudadanoRepository.findAll().stream()
-                    .findFirst()
-                    .map(Ciudadano::getId)
-                    .orElse(1L);
-        } catch (Exception e) {
-            return 1L;
+            UUID value = UUID.fromString(raw);
+            if (!value.toString().equalsIgnoreCase(raw)) throw new IllegalArgumentException();
+            return value.toString();
+        } catch (IllegalArgumentException | NullPointerException e) {
+            throw ar.edu.uade.ciudadanos.common.ApiException.invalido(campo + " debe ser UUID canonico");
         }
     }
 }

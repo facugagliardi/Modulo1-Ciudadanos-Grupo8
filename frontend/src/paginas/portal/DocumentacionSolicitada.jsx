@@ -93,7 +93,7 @@ export function DocumentacionSolicitada() {
                       >
                         <CheckCircle2 className="size-4 shrink-0 text-vigente" aria-hidden="true" />
                         <span className="font-medium">
-                          {etiquetaDe(TIPOS_DOCUMENTO, s.tipoDocumento)}
+                          {(s.nombreDocumento || etiquetaDe(TIPOS_DOCUMENTO, s.tipoDocumento))}
                         </span>
                         <span className="text-[length:var(--texto-dato)] text-apagado">
                           entregada
@@ -130,7 +130,9 @@ function Solicitud({ solicitud, ciudadanoId, alCumplir }) {
             <AlertTriangle className="mt-0.5 size-5 shrink-0 text-sello" aria-hidden="true" />
           )}
           <div className="min-w-0">
-            <p className="font-medium">{etiquetaDe(TIPOS_DOCUMENTO, solicitud.tipoDocumento)}</p>
+            <p className="font-medium">{(solicitud.nombreDocumento || etiquetaDe(TIPOS_DOCUMENTO, solicitud.tipoDocumento))}</p>
+            {solicitud.descripcionDocumento && <p className="text-apagado">{solicitud.descripcionDocumento}</p>}
+            {solicitud.obligatorio === false && <p className="text-apagado">Opcional</p>}
             <p
               className={cn(
                 "text-[length:var(--texto-dato)]",
@@ -141,6 +143,7 @@ function Solicitud({ solicitud, ciudadanoId, alCumplir }) {
                 ? `Venció el ${formatearFecha(solicitud.plazo)}. Entregalo igual: todavía lo podés cumplir.`
                 : dias === 0
                   ? "Vence hoy"
+                  : dias === null ? "Sin plazo informado"
                   : `Tenés hasta el ${formatearFecha(solicitud.plazo)} · ${dias} ${dias === 1 ? "día" : "días"}`}
             </p>
           </div>
@@ -267,7 +270,7 @@ function EntregarDocumento({ solicitud, ciudadanoId, alCumplir }) {
 
       <ContenidoDialogo
         className="max-w-lg"
-        titulo={`Entregar ${etiquetaDe(TIPOS_DOCUMENTO, solicitud.tipoDocumento)}`}
+        titulo={`Entregar ${(solicitud.nombreDocumento || etiquetaDe(TIPOS_DOCUMENTO, solicitud.tipoDocumento))}`}
         descripcion="Se sube el archivo y queda asociado a lo que te pidieron."
       >
         <form onSubmit={entregar} noValidate className="flex flex-col gap-u2">

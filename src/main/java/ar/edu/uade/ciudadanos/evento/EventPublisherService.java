@@ -19,44 +19,29 @@ import java.util.Map;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.amqp.rabbit.core.RabbitTemplate;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Servicio centralizado para la emision de eventos asincronicos.
  * Garantiza la persistencia en la tabla events de PostgreSQL (patron Outbox)
- * y la publicacion en el broker RabbitMQ.
+ * y su despacho confirmado mediante un trabajador de outbox.
  */
 @Service
+@Transactional
 public class EventPublisherService {
 
     private static final Logger log = LoggerFactory.getLogger(EventPublisherService.class);
 
     private final EventoService eventoService;
-    private final RabbitTemplate rabbitTemplate;
+    private final EventOutbox outbox;
     private final ObjectMapper objectMapper;
     private final ar.edu.uade.ciudadanos.persona.repository.CiudadanoRepository ciudadanoRepository;
 
-    @Value("${app.events.exchange:muni.inbox}")
-    private String exchangeName;
-
-    public EventPublisherService(EventoService eventoService,
-                                 RabbitTemplate rabbitTemplate,
-                                 ObjectMapper objectMapper) {
-        this(eventoService, rabbitTemplate, objectMapper, null);
-    }
-
-    @Autowired
-    public EventPublisherService(EventoService eventoService,
-                                 RabbitTemplate rabbitTemplate,
-                                 ObjectMapper objectMapper,
-                                 @Autowired(required = false)
-                                 ar.edu.uade.ciudadanos.persona.repository.CiudadanoRepository ciudadanoRepository) {
+    public EventPublisherService(EventoService eventoService, EventOutbox outbox, ObjectMapper objectMapper,
+            ar.edu.uade.ciudadanos.persona.repository.CiudadanoRepository ciudadanoRepository) {
         this.eventoService = eventoService;
-        this.rabbitTemplate = rabbitTemplate;
+        this.outbox = outbox;
         this.objectMapper = objectMapper;
         this.ciudadanoRepository = ciudadanoRepository;
     }
@@ -64,7 +49,7 @@ public class EventPublisherService {
     /**
      * Publica cualquier EventEnvelope generico:
      * 1. Guarda en PostgreSQL (tabla events) con TipoEvento.EMITIDO.
-     * 2. Intenta enviar a RabbitMQ. Si el broker no esta disponible, registra warning sin cortar la transaccion.
+     * 2. Encola en la misma transaccion; el trabajador envia luego del commit y reintenta fallos.
      */
     @Transactional
     public <T> EventEnvelope<T> publicar(EventEnvelope<T> envelope, String routingKey) {
@@ -78,13 +63,9 @@ public class EventPublisherService {
         }
 
         try {
-            rabbitTemplate.convertAndSend(exchangeName, routingKey, envelope);
-            log.info("Evento despachado a RabbitMQ: exchange={}, routingKey={}, eventId={}",
-                    exchangeName, routingKey, envelope.eventId());
-        } catch (Exception ex) {
-            log.warn("RabbitMQ no disponible al despachar evento {}. " +
-                    "El evento quedo registrado en la base de datos de eventos para posterior reintento. Detalle: {}",
-                    envelope.eventId(), ex.getMessage());
+            outbox.encolar(envelope.eventId(), routingKey, objectMapper.writeValueAsString(envelope));
+        } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
+            throw new IllegalStateException("No se pudo serializar el outbox", e);
         }
 
         return envelope;
@@ -316,7 +297,7 @@ public class EventPublisherService {
             String uuid = resolverCitizenUuid(data.citizenId());
             if (!uuid.equals(data.citizenId())) {
                 dataConUuid = new SocialDocumentationDeliveredData(
-                        uuid, data.applicationId(), data.programId(), data.files()
+                        uuid, data.applicationId(), data.programId(), data.files(), data.programEditionId()
                 );
             }
         }

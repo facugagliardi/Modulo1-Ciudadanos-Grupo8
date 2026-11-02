@@ -38,6 +38,8 @@ spring:
 
 
   rabbitmq:
+    publisher-confirm-type: correlated
+    publisher-returns: true
     host: ${RABBITMQ_HOST:localhost}
     port: ${RABBITMQ_PORT:5672}
     username: ${RABBITMQ_USER:guest}
@@ -60,6 +62,7 @@ server:
 
 app:
   events:
+    outbox-enabled: ${APP_EVENTS_OUTBOX_ENABLED:true}
     exchange: ${APP_EVENTS_EXCHANGE:muni.inbox}
     queue: ${APP_EVENTS_QUEUE:q.ciudadanos}
     source-module: ${APP_EVENTS_SOURCE_MODULE:ciudadanos}

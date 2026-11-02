@@ -15,13 +15,9 @@ import ar.edu.uade.ciudadanos.persona.dto.CambioEstadoResponse;
 import ar.edu.uade.ciudadanos.security.AutorizacionService;
 import ar.edu.uade.ciudadanos.security.Permiso;
 import ar.edu.uade.ciudadanos.evento.EventPublisherService;
-import ar.edu.uade.ciudadanos.evento.dto.SocialDocumentationDeliveredData;
+import ar.edu.uade.ciudadanos.evento.dto.ContextoDocumentacionSocial;
 import java.time.LocalDate;
 import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,8 +25,6 @@ import org.springframework.transaction.annotation.Transactional;
 /** Pedidos de documentacion faltante (RF-27, RF-28, RF-29). */
 @Service
 public class SolicitudDocumentacionService {
-
-    private static final Logger log = LoggerFactory.getLogger(SolicitudDocumentacionService.class);
 
     private final SolicitudDocumentacionRepository solicitudRepository;
     private final DocumentoService documentoService;
@@ -116,39 +110,18 @@ public class SolicitudDocumentacionService {
             documentoService.exigirDocumentoDe(request.documentoId(), solicitud.getTitularId());
             solicitud.setDocumentoId(request.documentoId());
 
-            if (eventPublisherService != null) {
+            // Las solicitudes internas o antiguas sin contexto verificable no generan respuestas M8.
+            if (solicitud.getContextoSocial() != null) {
+                if (eventPublisherService == null) throw new IllegalStateException("Publicador no disponible");
+                ContextoDocumentacionSocial contexto;
                 try {
-                    Map<String, Object> reqInfo = Map.of(
-                            "requestId", "sol-doc-" + solicitud.getSolicitudId(),
-                            "documentType", solicitud.getTipoDocumento(),
-                            "status", "COMPLETED",
-                            "documentId", "doc-" + request.documentoId()
-                    );
-                    Map<String, Object> fileInfo = Map.of(
-                            "fileId", "exp-doc-" + solicitud.getSolicitudId(),
-                            "number", "EXP-2026-DOC-" + solicitud.getSolicitudId(),
-                            "initiatingArea", "DOCUMENTACION",
-                            "status", "COMPLETED",
-                            "documentationRequests", List.of(reqInfo)
-                    );
-                    String citizenUuid = directorio.resolverUuid(solicitud.getTitularId())
-                            .map(UUID::toString)
-                            .orElse(String.valueOf(solicitud.getTitularId()));
-                    SocialDocumentationDeliveredData data = new SocialDocumentationDeliveredData(
-                            citizenUuid,
-                            "sol-" + solicitud.getSolicitudId(),
-                            "prog-general",
-                            List.of(fileInfo)
-                    );
-                    eventPublisherService.publicarSocialDocumentationDelivered(
-                            "solicitud-cumplida-" + solicitud.getSolicitudId(),
-                            UUID.randomUUID().toString(),
-                            data
-                    );
-                    log.info("Evento socialDocumentationDelivered emitido por cumplimiento de solicitud id={}", solicitudId);
-                } catch (Exception e) {
-                    log.warn("No se pudo emitir evento por cumplimiento de documentacion: {}", e.getMessage());
-                }
+                    contexto = new com.fasterxml.jackson.databind.ObjectMapper().readValue(solicitud.getContextoSocial(),
+                            ContextoDocumentacionSocial.class);
+                } catch (java.io.IOException e) { throw new IllegalStateException("Contexto social invalido", e); }
+                String documentId = documentoService.uuidDe(request.documentoId()).toString();
+                // Accion propia posterior: se conserva el hilo y se omite una causa de evento inexistente.
+                eventPublisherService.publicarSocialDocumentationDelivered(null, contexto.correlationId(),
+                        contexto.entrega(solicitud.getUuid().toString(), documentId));
             }
         }
         if (nuevo == EstadoSolicitud.VENCIDA) {

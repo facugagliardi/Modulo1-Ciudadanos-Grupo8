@@ -146,6 +146,8 @@
                 </dependencies>
                 <configuration>
                     <targetClasses>${dominio.pit}</targetClasses>
+                    <!-- La integracion con contexto completo corre en Surefire; las mutaciones usan las pruebas unitarias. -->
+                    <excludedTestClasses><param>ar.edu.uade.ciudadanos.evento.M8ContratoPostgresTest</param></excludedTestClasses>
                     <threads>4</threads>
                     <mutationThreshold>60</mutationThreshold>
                     <outputFormats><param>HTML</param><param>XML</param></outputFormats>

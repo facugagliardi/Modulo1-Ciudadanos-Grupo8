@@ -28,6 +28,12 @@ Las 11 pruebas de `TramitesExternosPostgresTest` se habilitan expresamente con
 El runner genera una clave aleatoria, la enmascara y usa una instancia PostgreSQL
 exclusiva. Nunca se utiliza `application-local.yml` para esos tests.
 
+El job Java también inicia RabbitMQ aislado y define `M1_TEST_RABBIT_PORT` para
+comprobar confirms y returns del outbox sin omitir esa prueba. El flujo M8 completo
+se ejecuta en Surefire con Hibernate y un schema aleatorio; se excluye de PIT para
+no levantar todo Spring por cada mutante. Sus servicios conservan pruebas unitarias
+en la ejecución de mutaciones.
+
 PMD aplica las reglas de defectos declaradas en `config/pmd.xml` a fuentes y tests.
 ESLint aplica las reglas recomendadas de JavaScript, con soporte JSX nativo y
 globales de Vitest solamente en los tests. Se eliminan imports sin uso en vez

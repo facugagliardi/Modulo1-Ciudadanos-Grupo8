@@ -80,7 +80,7 @@ export function Documentacion() {
     {
       clave: "tipoDocumento",
       titulo: "Documento",
-      render: (s) => etiquetaDe(TIPOS_DOCUMENTO, s.tipoDocumento),
+      render: (s) => (s.nombreDocumento || etiquetaDe(TIPOS_DOCUMENTO, s.tipoDocumento)),
     },
     {
       clave: "plazo",
@@ -91,7 +91,7 @@ export function Documentacion() {
         const atrasada = s.estado === "PENDIENTE" && dias < 0;
         return (
           <span className={atrasada ? "font-medium text-sello" : "tabular"}>
-            {formatearFecha(s.plazo)}
+            {s.plazo ? formatearFecha(s.plazo) : "Sin plazo informado"}
             {atrasada && <span className="ml-1.5">· vencido</span>}
           </span>
         );

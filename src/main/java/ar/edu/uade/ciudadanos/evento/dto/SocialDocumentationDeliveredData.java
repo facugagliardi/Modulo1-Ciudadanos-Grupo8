@@ -10,8 +10,13 @@ public record SocialDocumentationDeliveredData(
         String citizenId,
         String applicationId,
         String programId,
-        List<Map<String, Object>> files
+        List<Map<String, Object>> files,
+        String programEditionId
 ) {
+    public SocialDocumentationDeliveredData(String citizenId, String applicationId, String programId,
+            List<Map<String, Object>> files) {
+        this(citizenId, applicationId, programId, files, null);
+    }
     public SocialDocumentationDeliveredData(UUID citizenUuid, String applicationId, String programId, List<Map<String, Object>> files) {
         this(citizenUuid != null ? citizenUuid.toString() : null, applicationId, programId, files);
     }

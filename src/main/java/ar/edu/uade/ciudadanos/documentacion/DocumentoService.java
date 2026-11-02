@@ -208,6 +208,9 @@ public class DocumentoService {
         }
     }
 
+    @Transactional(readOnly = true)
+    public java.util.UUID uuidDe(Long documentoId) { return buscar(documentoId).getUuid(); }
+
     // ------------------------------------------------------------------ helpers
 
     private Documento buscar(Long id) {

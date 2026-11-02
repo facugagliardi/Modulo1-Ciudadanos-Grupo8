@@ -19,6 +19,16 @@ jobs:
     name: Java - tests, cobertura, PIT y PMD
     runs-on: ubuntu-24.04
     timeout-minutes: 14
+    env:
+      M1_TEST_RABBIT_PORT: '55679'
+    services:
+      rabbitmq:
+        image: rabbitmq:4.3-management@sha256:1cc652597e8d31d2bb4afc3be60f84961fe17aa4edc5bf067cbf9834afcc441b
+        ports:
+          - 55679:5672
+        options: >-
+          --health-cmd "rabbitmq-diagnostics -q ping"
+          --health-interval 5s --health-timeout 5s --health-retries 30
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:

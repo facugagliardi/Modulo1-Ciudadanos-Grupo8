@@ -64,7 +64,7 @@ class SolicitudDocumentacionServiceTest {
         assertEquals(EstadoSolicitud.CUMPLIDA, s.getEstado());
         assertEquals(8L, s.getDocumentoId());
         verify(documentos).exigirDocumentoDe(8L, 2L);
-        verify(eventos).publicarSocialDocumentationDelivered(eq("solicitud-cumplida-1"), anyString(), any());
+        verifyNoInteractions(eventos);
     }
 
     @Test void noCumpleSinDocumentoOConDocumentoAjeno() {
@@ -98,14 +98,18 @@ class SolicitudDocumentacionServiceTest {
         verifyNoInteractions(documentos, eventos);
     }
 
-    @Test void publicaUuidDelDirectorio() {
-        solicitud(EstadoSolicitud.PENDIENTE);
-        UUID uuid = UUID.randomUUID();
-        when(directorio.resolverUuid(2L)).thenReturn(Optional.of(uuid));
+    @Test void conservaElContextoOriginalAlCompletarDocumento() throws Exception {
+        var s = solicitud(EstadoSolicitud.PENDIENTE);
+        var contexto = contexto(s);
+        UUID doc = UUID.randomUUID();
+        when(documentos.uuidDe(8L)).thenReturn(doc);
         service.cambiarEstado(1L, new CambioEstadoSolicitudRequest(EstadoSolicitud.CUMPLIDA, 8L));
-        verify(eventos).publicarSocialDocumentationDelivered(eq("solicitud-cumplida-1"), anyString(), argThat(data ->
-                data.citizenId().equals(uuid.toString()) && data.applicationId().equals("sol-1")
-                && data.files().getFirst().get("status").equals("COMPLETED")));
+        verify(eventos).publicarSocialDocumentationDelivered(isNull(), eq(contexto.correlationId()), argThat(data ->
+                data.citizenId().equals(contexto.citizenId()) && data.applicationId().equals(contexto.applicationId())
+                && data.programEditionId().equals(contexto.programEditionId())
+                && data.files().getFirst().get("fileId").equals(contexto.fileId())
+                && data.files().getFirst().toString().contains(doc.toString())
+                && data.files().getFirst().toString().contains("INCOME_CERTIFICATE")));
     }
 
     @Test void sinPublicadorPuedeCumplir() {
@@ -116,14 +120,25 @@ class SolicitudDocumentacionServiceTest {
         verify(documentos).exigirDocumentoDe(8L, 2L);
     }
 
-    /** Caracterizacion del riesgo actual: no acredita entrega ni reproceso del evento. */
-    @Test void falloDePublicacionNoRevierteEstadoActual() {
+    @Test void falloAlPersistirEntregaNoSeOculta() throws Exception {
         var s = solicitud(EstadoSolicitud.PENDIENTE);
-        doThrow(new IllegalStateException("broker caido")).when(eventos)
-                .publicarSocialDocumentationDelivered(anyString(), anyString(), any());
-        service.cambiarEstado(1L, new CambioEstadoSolicitudRequest(EstadoSolicitud.CUMPLIDA, 8L));
-        assertEquals(EstadoSolicitud.CUMPLIDA, s.getEstado());
-        assertEquals(8L, s.getDocumentoId());
+        contexto(s);
+        when(documentos.uuidDe(8L)).thenReturn(UUID.randomUUID());
+        doThrow(new IllegalStateException("base caida")).when(eventos)
+                .publicarSocialDocumentationDelivered(isNull(), anyString(), any());
+        assertThrows(IllegalStateException.class, () -> service.cambiarEstado(1L,
+                new CambioEstadoSolicitudRequest(EstadoSolicitud.CUMPLIDA, 8L)));
+        assertEquals(EstadoSolicitud.PENDIENTE, s.getEstado());
+    }
+
+    private ar.edu.uade.ciudadanos.evento.dto.ContextoDocumentacionSocial contexto(SolicitudDocumentacion s) throws Exception {
+        var c = new ar.edu.uade.ciudadanos.evento.dto.ContextoDocumentacionSocial(
+                UUID.randomUUID().toString(), UUID.randomUUID().toString(), UUID.randomUUID().toString(),
+                UUID.randomUUID().toString(), UUID.randomUUID().toString(), UUID.randomUUID().toString(), "EXP-1",
+                Map.of("requirementId", UUID.randomUUID().toString(), "type", "INCOME_CERTIFICATE",
+                        "name", "Certificado de ingresos", "required", true), "SOL-1", "Notas");
+        s.setContextoSocial(new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(c));
+        return c;
     }
 
     private SolicitudDocumentacion solicitud(EstadoSolicitud estado) {
