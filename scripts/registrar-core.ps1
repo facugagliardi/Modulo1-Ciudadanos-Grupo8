@@ -3,7 +3,8 @@ param(
     [switch]$Consultar,
     [switch]$SoloSuscripciones,
     [ValidateSet('ticketCreated','ticketUpdated','updateTicketStatus','exemptionRequested',
-        'updateExemptionStatus','paymentPlanRequested','updatePaymentPlanStatus','socialDocumentationRequested')]
+        'updateExemptionStatus','paymentPlanRequested','updatePaymentPlanStatus','socialDocumentationRequested',
+        'publicWorksProjectApproved','publicWorksProjectCompleted')]
     [string[]]$Suscripciones = @('ticketCreated','ticketUpdated','updateTicketStatus',
         'exemptionRequested','paymentPlanRequested','socialDocumentationRequested')
 )
@@ -11,7 +12,7 @@ $ErrorActionPreference = 'Stop'
 if ($Aplicar -and $Consultar) { throw 'Usar -Consultar o -Aplicar, no ambos.' }
 
 # Sin -Aplicar muestra solamente el plan; no requiere ni imprime credenciales.
-$publicaciones = @('citizenUpdated','casefileResolved','citizenInfoDelivered','organizationInfoDelivered',
+$publicaciones = @('citizenUpdated','caseFileResolved','citizenInfoDelivered','organizationInfoDelivered',
     'organizationRegistered','representationGranted','representationExpired','socialDocumentationDelivered')
 $coreBase = $env:CORE_API_URL
 if ([string]::IsNullOrWhiteSpace($coreBase)) { $coreBase = 'https://core-uade-2026.duckdns.org/api/v1' }

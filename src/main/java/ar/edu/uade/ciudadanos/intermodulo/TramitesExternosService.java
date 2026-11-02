@@ -116,6 +116,10 @@ public class TramitesExternosService {
         ObjectNode seguro = mapper.createObjectNode();
         seguro.put("eventId", eventId).put("eventType", eventType).put("sourceModule", source);
         seguro.put("occurredAt", fecha.toString());
+        // El recibo conserva el hilo de Core sin agregar metadatos al seguimiento publico.
+        for (String campo : List.of("eventVersion", "correlationId", "causationId")) {
+            if (envelope.hasNonNull(campo)) seguro.set(campo, envelope.get(campo));
+        }
         seguro.set("data", publico);
         int insertados = jdbc.update("""
                 INSERT INTO events(event_id, aggregate_type, aggregate_id, event_type, payload, type)

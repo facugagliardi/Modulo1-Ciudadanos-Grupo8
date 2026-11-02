@@ -59,6 +59,15 @@ beforeEach(() => {
 });
 
 describe("carátula", () => {
+  it("muestra un expediente institucional sin buscar ni enlazar un ciudadano inexistente", async () => {
+    obtenerExpediente.mockResolvedValue({ ...EXPEDIENTE, ciudadanoId: null, estadoObra: "COMPLETED" });
+    renderizarDetalle();
+    expect(await screen.findByText("Institucional")).toBeInTheDocument();
+    expect(screen.getByText(/Obra pública: finalizada/)).toBeInTheDocument();
+    expect(obtenerCiudadano).not.toHaveBeenCalled();
+    expect(screen.queryByRole("link", { name: /Ciudadano #null/ })).not.toBeInTheDocument();
+    expect(screen.getByText("En trámite")).toBeInTheDocument();
+  });
   it("muestra el número, el asunto y los campos del expediente", async () => {
     renderizarDetalle();
     expect(await screen.findByText("EXP-2026-000001")).toBeInTheDocument();

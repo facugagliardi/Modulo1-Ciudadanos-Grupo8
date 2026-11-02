@@ -177,6 +177,36 @@ class TramitesExternosPostgresTest {
     }
 
     @Test
+    void rentasConservaElHiloDeCoreSinExponerloEnElSeguimiento() throws Exception {
+        String correlationId = UUID.randomUUID().toString();
+        ObjectNode solicitud = rentas("exemptionRequested", "2026-11-02T18:30:00-03:00");
+        solicitud.put("eventVersion", "1.0").put("correlationId", correlationId).putNull("causationId");
+        assertThat(aplicar(solicitud)).isEqualTo("APLICADO");
+
+        ObjectNode resolucion = rentas("updateExemptionStatus", "2026-11-02T18:31:00-03:00");
+        resolucion.put("eventVersion", "1.0").put("correlationId", correlationId)
+                .put("causationId", solicitud.path("eventId").asText());
+        ((ObjectNode) resolucion.get("data")).put("status", "REJECTED").put("reason", "Prueba de rechazo");
+        assertThat(aplicar(resolucion)).isEqualTo("APLICADO");
+
+        var recibo = mapper.readTree(jdbc.queryForObject("SELECT payload FROM events WHERE event_id=?",
+                String.class, resolucion.path("eventId").asText()));
+        assertThat(recibo.path("eventVersion").asText()).isEqualTo("1.0");
+        assertThat(recibo.path("correlationId").asText()).isEqualTo(correlationId);
+        assertThat(recibo.path("causationId").asText()).isEqualTo(solicitud.path("eventId").asText());
+        assertThat(recibo.path("data").path("requestId").asText()).isEqualTo("exr-600");
+        var tramite = service.listar(99L).getFirst();
+        assertThat(tramite.estado()).isEqualTo("REJECTED");
+        assertThat(tramite.datos().has("correlationId")).isFalse();
+        assertThat(tramite.datos().has("causationId")).isFalse();
+
+        resolucion.put("correlationId", UUID.randomUUID().toString());
+        assertThat(aplicar(resolucion)).isEqualTo("DUPLICADO");
+        assertThat(jdbc.queryForObject("SELECT payload FROM events WHERE event_id=?", String.class,
+                resolucion.path("eventId").asText())).isEqualTo(recibo.toString());
+    }
+
+    @Test
     void admiteFechaLegacyPeroRechazaDosFechasContradictorias() {
         ObjectNode evento = rentas("exemptionRequested", "2026-10-27T10:00:00-03:00");
         evento.set("occuredAt", evento.remove("occurredAt"));

@@ -84,7 +84,7 @@ export function DetalleExpediente({ zona = "portal" }) {
               expediente={exp}
               titular={titular.datos}
               enlaceTitular={
-                zona === "admin" && puedeLeerTerceros ? `/admin/padron/${ciudadanoId}` : null
+                zona === "admin" && puedeLeerTerceros && ciudadanoId != null ? `/admin/padron/${ciudadanoId}` : null
               }
               acciones={
                 puedeCambiarEstado && (

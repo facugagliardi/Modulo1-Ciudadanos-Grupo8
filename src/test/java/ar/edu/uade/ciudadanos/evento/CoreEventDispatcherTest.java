@@ -14,7 +14,18 @@ import static org.mockito.Mockito.*;
 class CoreEventDispatcherTest {
     private final TramitesExternosService tramites = mock(TramitesExternosService.class);
     private final EventConsumerService documentos = mock(EventConsumerService.class);
-    private final CoreEventDispatcher dispatcher = new CoreEventDispatcher(new ObjectMapper(), tramites, documentos);
+    private final ar.edu.uade.ciudadanos.intermodulo.ProyectosObrasService obras = mock(ar.edu.uade.ciudadanos.intermodulo.ProyectosObrasService.class);
+    private final CoreEventDispatcher dispatcher = new CoreEventDispatcher(new ObjectMapper(), tramites, documentos, obras);
+
+    @Test
+    void despachaLosDosEventosDeProyectosAObras() {
+        when(obras.procesar(any())).thenReturn("APLICADO");
+        for (String tipo : ar.edu.uade.ciudadanos.intermodulo.ProyectosObrasService.EVENTOS) {
+            assertThat(dispatcher.procesar("{\"eventType\":\"" + tipo + "\",\"data\":{}}")).isEqualTo("APLICADO");
+        }
+        verify(obras, times(2)).procesar(any());
+        verifyNoInteractions(tramites, documentos);
+    }
 
     @Test
     void despachaLosSieteEventosSinInterpretarlosComoSolicitudesM8() {
@@ -29,7 +40,7 @@ class CoreEventDispatcherTest {
     @Test
     void mensajeIrrelevanteSeConfirmaSinCrearEntidades() {
         assertThat(dispatcher.procesar("{\"eventType\":\"paymentRegistered\",\"data\":{}}")).isEqualTo("IGNORADO");
-        verifyNoInteractions(tramites, documentos);
+        verifyNoInteractions(tramites, documentos, obras);
     }
 
     @Test

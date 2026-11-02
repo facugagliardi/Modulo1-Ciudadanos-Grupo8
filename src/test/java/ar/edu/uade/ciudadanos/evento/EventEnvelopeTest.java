@@ -83,26 +83,16 @@ class EventEnvelopeTest {
     }
 
     @Test
-    @DisplayName("casefileResolved debe contener todos los campos requeridos para Módulo 3 y cumplir la plantilla de Core")
+    @DisplayName("caseFileResolved debe contener todos los campos requeridos para Módulo 3 y cumplir la plantilla de Core")
     void serializarCaseFileResolved() throws Exception {
         CaseFileResolvedData data = new CaseFileResolvedData(
-                1042L,
-                "EXP-2026-001042",
-                "resolved",
-                "approved",
-                "Obras Públicas",
-                "Aprobación y autorización de ejecución de obra pública",
-                84L,
-                Map.of("type", "PUBLIC_WORKS_PROJECT", "id", "OBRA-8832"),
-                "Dictamen administrativo favorable. Se autoriza la ejecución de la obra conforme al pliego técnico.",
-                UpdatedBy.areaUser(32424L),
-                "2026-10-15T11:45:00-03:00"
-        );
+                java.util.UUID.fromString("d40e20ba-e2a8-4dd0-a11f-b6d6b58c68a8"), "EXP-2026-001042", "resolved", "approved",
+                Map.of("type", "PUBLIC_WORKS_PROJECT", "id", "7b745d35-536d-4387-a722-cb690586305d"), "Dictamen real");
         String eventId = "4e8b2d3f-95c1-4e0f-b234-000000008921";
         EventEnvelope<CaseFileResolvedData> envelope = EventEnvelope.de(
                 eventId,
                 "2026-10-15T11:45:00-03:00",
-                "casefileResolved",
+                "caseFileResolved",
                 "ciudadanos",
                 data
         );
@@ -112,14 +102,14 @@ class EventEnvelopeTest {
 
         assertThat(root.has("occuredAt")).isFalse();
         assertThat(root.get("eventId").asText()).isEqualTo(eventId);
-        assertThat(root.get("eventType").asText()).isEqualTo("casefileResolved");
+        assertThat(root.get("eventType").asText()).isEqualTo("caseFileResolved");
         assertThat(root.get("sourceModule").asText()).isEqualTo("ciudadanos");
         assertThat(root.get("eventVersion").asText()).isEqualTo("1.0");
         assertThat(root.get("occurredAt").asText()).isEqualTo("2026-10-15T11:45:00-03:00");
         assertThat(root.get("data").get("caseFileNumber").asText()).isEqualTo("EXP-2026-001042");
         assertThat(root.get("data").get("state").asText()).isEqualTo("resolved");
-        assertThat(root.get("data").get("initiatingArea").asText()).isEqualTo("Obras Públicas");
-        assertThat(root.get("data").get("updatedBy").get("id").asLong()).isEqualTo(32424L);
+        assertThat(root.get("data").get("caseFileId").asText()).isEqualTo(data.caseFileId().toString());
+        assertThat(root.get("data").has("citizenId")).isFalse();
     }
 
     @Test

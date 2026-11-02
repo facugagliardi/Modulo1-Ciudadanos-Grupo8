@@ -2,7 +2,7 @@
 
 Contrato implementado en la rama `aedelstein`, 27 de octubre de 2026. Complementa el catálogo Word v3.0; no acredita despliegue ni suscripciones registradas en Core.
 
-Fuentes: contrato de M2 v1.78 (confirmado definitivo por M2), documento de eventos salientes de M5 del 10/10/2026 y FAQ del Core compartidos por el equipo. M2 aprobó el contrato v3.1 de M1, incluyendo actorId de empleados. El documento M5 conserva ejemplos legacy `c-00123`; en esta integración `citizenId` debe ser el UUID canónico real de M1.
+Fuentes: contrato de M2 v1.78 (confirmado definitivo por M2), documento de eventos salientes de M5 del 10/10/2026 y FAQ del Core compartidos por el equipo. M2 aprobó el contrato v3.1 de M1, incluyendo actorId de empleados. Los contratos actuales de M5 son los cuatro schemas del PR #81 en la revisión `7fc76da994c2e2e429004d7576d7124ffdbaaf0a`, aprobados técnicamente por M1/Core. `citizenId` debe ser el UUID canónico real de M1; los fixtures locales de M5 no son ciudadanos existentes en nuestro despliegue.
 
 ## Identidad en login y renovación
 
@@ -41,7 +41,7 @@ Los UUID del ejemplo son ilustrativos: cada módulo conserva el recibido de la c
 
 La renovación vuelve a leer la cuenta, conserva su UUID persistido y toma estado/rol actual. Los refresh anteriores al cambio, sin UUID, se actualizan al renovarse. Una cuenta bloqueada/inactiva no obtiene otro access por refresh. Esto no agrega revocación inmediata de access ya emitidos ni invalidación del refresh anterior.
 
-**Acordar con M2:** su `ModuleUser.citizenId` actualmente se usa también para agentes. Para empleados deben aceptar `actorId` como identidad autenticada o definir un vínculo ciudadano real; M1 no entrega un ciudadano ficticio para llenar ese campo.
+**Confirmado por M2:** los empleados se identifican mediante `actorId` y `actorType`, nunca enviando `actorId` como `citizenId`. Un empleado sin ciudadano vinculado opera como staff y no crea tickets identificados como ciudadano. M1 no entrega un ciudadano ficticio para llenar ese campo.
 
 ## Consumos implementados
 
@@ -74,6 +74,7 @@ Reglas de consumo:
 - Se serializan escrituras simultáneas por trámite. Eventos antiguos o con igual instante no reemplazan el estado más nuevo.
 - Para orden temporal se usa `createdAt`, `updatedAt` o `updateOccurredAt` de M2; para M5, fecha del sobre. Un alta M2 tardía puede completar datos iniciales sin retroceder el estado.
 - M5 separa exención y plan por tipo + `requestId`; no se mezclan solicitudes con identificadores coincidentes. Un rechazo no inventa datos de otorgamiento.
+- El recibo persistido conserva `eventVersion`, `correlationId` y `causationId` cuando están presentes y no son nulos, además de `eventId` y `requestId`. Los metadatos de correlación no se agregan a los datos del seguimiento público. La mejora no completa retroactivamente recibos anteriores y debe desplegarse antes de confirmarla operativa a M5.
 
 Hay controles de sobre, origen, UUID, estados y los datos necesarios para la proyección. No se implementa aquí un validador completo del JSON Schema de M2 ni lógica operativa de cada variante.
 
@@ -119,7 +120,7 @@ Antes de reiniciar el backend modificado sobre una base existente, ejecutar `db/
 
 No usar `retool_schema.sql` como migración de una base con datos: ese script incluye DROP de tablas.
 
-No se aplicó esta migración a la base activa/remota ni se reinició el proceso del usuario. Hasta aplicar migración y desplegar, los nuevos campos y consumidores no están disponibles en ese ambiente.
+La estructura M2/M5 ya está operativa en la base de Render: el 2/11/2026 se verificaron login y consulta de seguimiento del ciudadano de prueba. Esta revisión no vuelve a aplicar la migración remota. Las mejoras locales posteriores, incluida la conservación del hilo de Core en los recibos, requieren un nuevo despliegue antes de confirmarlas en ese ambiente.
 
 ## Registro con Core
 
@@ -131,9 +132,9 @@ Preparado `scripts/registrar-core.ps1`. Sin parámetros sólo muestra el plan. P
 
 Sin switches, el script muestra un plan sin conectarse. `./scripts/registrar-core.ps1 -Consultar` obtiene token y consulta el mapa sin modificar publicaciones ni suscripciones. Para registrar únicamente el consumo operativo faltante, una vez coordinado: `./scripts/registrar-core.ps1 -Aplicar -SoloSuscripciones -Suscripciones updateTicketStatus`.
 
-`-Aplicar` puede registrar las publicaciones implementadas y las suscripciones seleccionadas. Los dos cambios de estado de Rentas se excluyen del lote predeterminado hasta que M5 confirme sus nombres; después se pueden seleccionar explícitamente con `-Suscripciones updateExemptionStatus,updatePaymentPlanStatus`. Si Core devuelve error se detiene: algunas operaciones anteriores pueden haber tenido éxito; revisar el mapa antes de repetir.
+`-Aplicar` puede registrar las publicaciones implementadas y las suscripciones seleccionadas. Core confirmó el 2/11/2026 las cuatro relaciones de Rentas activas; no volver a registrarlas para esta prueba. Si se usa el script para otro ambiente, revisar primero el mapa y seleccionar explícitamente las suscripciones. Si Core devuelve error se detiene: algunas operaciones anteriores pueden haber tenido éxito; revisar el mapa antes de repetir.
 
-No se ejecutó registro remoto desde M1. Core agregó la suscripción a updateTicketStatus. La consulta autenticada del mapa realizada posteriormente por M1 confirmó ciudadanos en consumedBy de los cinco tipos activos indicados abajo. Tampoco se declararon consumos de M3/M4 u otros tipos sin implementación.
+No se ejecutó registro remoto desde esta revisión. Core agregó la suscripción a updateTicketStatus y confirmó las cuatro relaciones de Rentas. La consulta autenticada previa de M1 confirmó los cinco tipos entonces activos; las actualizaciones posteriores provienen de confirmaciones de Core. Para la integración de Obras y su estado operativo, consultar `INTEGRACION_M3.md`.
 
 ### Ambiente confirmado por Core el 28 de octubre
 
@@ -158,8 +159,10 @@ Estado comunicado por Core y contrastado por M1 mediante GET autenticado a /api/
 | `exemptionRequested` | Activa, maxAttempts 4 |
 | `paymentPlanRequested` | Activa, maxAttempts 4 |
 | `updateTicketStatus` | Suscripción agregada por Core con maxAttempts 4; mapa confirma ciudadanos en consumedBy. El owner todavía figura como ciudadanos |
-| `updateExemptionStatus` | Nombre exacto no registrado; confirmar con Rentas antes de darlo de alta |
-| `updatePaymentPlanStatus` | Nombre exacto no registrado; confirmar con Rentas antes de darlo de alta |
+| `updateExemptionStatus` | Core confirmó activa con maxAttempts 4 el 2/11/2026 |
+| `updatePaymentPlanStatus` | Core confirmó activa con maxAttempts 4 el 2/11/2026 |
+
+El 2/11/2026 Core confirmó los cuatro schemas de data de Rentas asociados a la revisión `7fc76da994c2e2e429004d7576d7124ffdbaaf0a`, sus publicaciones y las cuatro suscripciones de ciudadanos activas con `maxAttempts: 4`. Es confirmación del equipo Core, no una consulta nueva del mapa desde este cambio. La E2E sigue pendiente de publicar un evento real y verificar ruteo, recibo y proyección. El ciudadano autorizado de prueba es `f398dbcb-a2b4-49af-a724-3529c6ddd0f6` (ID interno 4).
 
 Core habilitó la IP de esta PC y entregó credenciales por privado; el secreto nuevo reemplaza al anterior. Se probaron sólo en memoria, sin guardarlos en archivos. Desde esta PC se verificó HTTP 200 al obtener token y consultar el mapa, autenticación AMQP TLS con validación de certificado/hostname y declaración pasiva de q.ciudadanos. La cola tenía 2 mensajes pendientes y 0 consumidores. No se publicó ni consumió ningún mensaje, y no se alteraron suscripciones. Esto verifica conexión y acceso, no el procesamiento de negocio.
 
@@ -167,10 +170,10 @@ Si se cambia de red o se despliega en un servidor hay que confirmar nuevamente l
 
 ## Pendientes que deben responder los equipos
 
-1. Core: nombres/suscripciones pendientes de Rentas y confirmación de M8. Acceso desde esta PC, credenciales y consumo registrado de updateTicketStatus ya verificados. Revalidar red si cambia el equipo de ejecución.
-2. M2: desplegar y verificar el ajuste HS256, acordar cuentas de prueba y compartir por privado la clave Base64 y su interpretacion. La aceptación de actorId para empleados y el contrato v3.1 ya fueron confirmados por M2. El backend ya esta alojado en Render; falta confirmar a los pares el despliegue del algoritmo fijado.
-3. M5: confirmar los nombres exactos `updateExemptionStatus` y `updatePaymentPlanStatus` contra su publicación real en Core, y fixtures con UUID canónico real de ciudadano; el documento adjunto aún contiene IDs de ejemplo `c-00123`. No es necesario convertir los `requestId` legacy en UUID para correlacionarlos: son claves externas de M5.
-4. Acordar y ejecutar una prueba de punta a punta por Core después de migración y despliegue. Las pruebas locales no acreditan entrega del broker compartido.
+1. Core: confirmar conexión del único consumidor de la cola compartida antes de publicar. Las cuatro relaciones de Rentas ya están confirmadas activas; no requieren nuevo registro.
+2. M2: completar la prueba de tickets y la validación de cuentas/JWT desde su módulo. M1 ya comprobó HS256 e identidad en Render; las credenciales y claves se comparten por privado.
+3. M5: publicar `exemptionRequested` completo con el UUID canónico autorizado y compartir `eventId`/`requestId`. Después probar resolución y planes, deduplicación y orden de eventos. El consumidor aún admite identificadores externos legacy; las publicaciones nuevas deben respetar los UUID de sus schemas.
+4. Ejecutar la prueba conjunta prevista para el 2/11/2026 a las 18:30 (Argentina). Comparar outbox M5, ruteo Core, recibo M1 y seguimiento persistido; las pruebas locales no acreditan entrega del broker compartido.
 
 ## Verificación local
 

@@ -84,6 +84,23 @@ class EventPublisherServiceTest {
     }
 
     @Test
+    void respuestaM3UsaCasingYCorrelacionExactos() {
+        var expediente = new ar.edu.uade.ciudadanos.expediente.entity.Expediente();
+        expediente.setNumero("EXP-1");
+        expediente.setPublicWorksProjectId(java.util.UUID.randomUUID());
+        expediente.setEstado(ar.edu.uade.ciudadanos.expediente.entity.EstadoExpediente.RESUELTO);
+        var data = ar.edu.uade.ciudadanos.evento.dto.CaseFileResolvedData.preparar(expediente, "rejected", "Dictamen real");
+        String correlationId = java.util.UUID.randomUUID().toString();
+        var envelope = publisherService.publicarCaseFileResolved(data, correlationId);
+        assertThat(envelope.eventType()).isEqualTo("caseFileResolved");
+        assertThat(envelope.sourceModule()).isEqualTo("ciudadanos");
+        assertThat(envelope.correlationId()).isEqualTo(correlationId);
+        assertThat(envelope.causationId()).isNull();
+        assertThat(envelope.data().caseFileId()).isEqualTo(expediente.getUuid());
+        verify(outbox).encolar(eq(envelope.eventId()), eq("caseFileResolved"), any());
+    }
+
+    @Test
     @DisplayName("publicarEjemplo debe generar y publicar todos los ejemplos del catálogo oficial")
     void publicarEjemplosOficiales() {
         when(eventoService.registrarEmitido(any(), any(), any(), any(), any()))

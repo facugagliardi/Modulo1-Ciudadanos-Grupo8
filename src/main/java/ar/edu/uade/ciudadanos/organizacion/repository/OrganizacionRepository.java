@@ -10,6 +10,8 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface OrganizacionRepository extends JpaRepository<Organizacion, Long> {
 
+    Optional<Organizacion> findByUuid(java.util.UUID uuid);
+
     Optional<Organizacion> findByCuit(Long cuit);
 
     Optional<Organizacion> findByTaxId(String taxId);

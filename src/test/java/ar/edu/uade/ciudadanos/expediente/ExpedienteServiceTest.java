@@ -42,7 +42,7 @@ class ExpedienteServiceTest {
 
     @Test void listadoFiltraPorTitularYLecturaExigePermiso() {
         var e = expediente();
-        when(auth.actual()).thenReturn(new AuthPrincipal(2L, null, "PERSONA"));
+        when(auth.actual()).thenReturn(new AuthPrincipal(2L, TipoSujeto.CIUDADANO, "PERSONA"));
         when(repo.findByCiudadanoId(2L)).thenReturn(List.of(e));
         assertEquals(1, service.listar().size());
         verify(repo, never()).findAll();
@@ -90,6 +90,7 @@ class ExpedienteServiceTest {
     }
 
     private Expediente expediente() {
+        when(auth.actual()).thenReturn(new AuthPrincipal(2L, TipoSujeto.CIUDADANO, "PERSONA"));
         var e = new Expediente(); e.setExpedienteId(1L); e.setCiudadanoId(2L); e.setEstado(EstadoExpediente.INICIADO);
         when(repo.findById(1L)).thenReturn(Optional.of(e));
         return e;

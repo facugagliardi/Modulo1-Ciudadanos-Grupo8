@@ -151,30 +151,15 @@ public class EventPublisherService {
     }
 
     /**
-     * 2. casefileResolved (M1 -> M3 Obras Publicas)
+     * 2. caseFileResolved (M1 -> M3 Obras Publicas)
      */
-    public EventEnvelope<CaseFileResolvedData> publicarCasefileResolved(CaseFileResolvedData data) {
-        CaseFileResolvedData dataConUuid = data;
-        if (data != null && data.citizenId() != null) {
-            String uuid = resolverCitizenUuid(data.citizenId());
-            if (!uuid.equals(data.citizenId())) {
-                dataConUuid = new CaseFileResolvedData(
-                        data.caseFileId(), data.caseFileNumber(), data.state(), data.resolution(),
-                        data.initiatingArea(), data.title(), uuid, data.externalReference(),
-                        data.resolutionSummary(), data.updatedBy(), data.statusChangedAt()
-                );
-            }
+    public EventEnvelope<CaseFileResolvedData> publicarCaseFileResolved(CaseFileResolvedData data, String correlationId) {
+        if (data == null || correlationId == null || !UUID.fromString(correlationId).toString().equalsIgnoreCase(correlationId)) {
+            throw new IllegalArgumentException("Resolucion y correlationId UUID son obligatorios");
         }
-        String eventId = generarEventId();
-        String occuredAt = fechaActualIso();
-        EventEnvelope<CaseFileResolvedData> envelope = EventEnvelope.de(
-                eventId,
-                occuredAt,
-                "casefileResolved",
-                EventEnvelope.SOURCE_MODULE_CIUDADANOS,
-                dataConUuid
-        );
-        return publicar(envelope, "modulo1.casefiles.resolved");
+        var envelope = EventEnvelope.de(generarEventId(), fechaActualIso(), "caseFileResolved",
+                EventEnvelope.SOURCE_MODULE_CIUDADANOS, correlationId, data);
+        return publicar(envelope, "caseFileResolved");
     }
 
     /**
@@ -386,19 +371,10 @@ public class EventPublisherService {
             }
             case "casefile-resolved" -> {
                 CaseFileResolvedData data = new CaseFileResolvedData(
-                        1042L,
-                        "EXP-2026-001042",
-                        "resolved",
-                        "approved",
-                        "Obras Públicas",
-                        "Aprobación y autorización de ejecución de obra pública",
-                        EJEMPLO_CITIZEN_UUID,
-                        Map.of("type", "PUBLIC_WORKS_PROJECT", "id", "OBRA-8832"),
-                        "Dictamen administrativo favorable. Se autoriza la ejecución de la obra conforme al pliego técnico.",
-                        UpdatedBy.areaUser(32424L),
-                        fechaActualIso()
-                );
-                yield publicarCasefileResolved(data);
+                        UUID.fromString("d40e20ba-e2a8-4dd0-a11f-b6d6b58c68a8"), "EXP-2026-001042", "resolved", "approved",
+                        Map.of("type", "PUBLIC_WORKS_PROJECT", "id", "7b745d35-536d-4387-a722-cb690586305d"),
+                        "Ejemplo de dictamen administrativo favorable.");
+                yield publicarCaseFileResolved(data, UUID.randomUUID().toString());
             }
             case "citizen-info-delivered" -> {
                 CitizenInfoDeliveredData data = new CitizenInfoDeliveredData(

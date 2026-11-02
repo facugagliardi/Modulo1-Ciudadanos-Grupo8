@@ -45,7 +45,9 @@ export function Caratula({ expediente, titular, enlaceTitular, acciones }) {
 
         <dl className="mt-u4 grid gap-u3 border-t border-borde pt-u3 sm:grid-cols-2 lg:grid-cols-4">
           <CampoSellado etiqueta="Titular">
-            {enlaceTitular ? (
+            {expediente.ciudadanoId == null ? (
+              "Institucional"
+            ) : enlaceTitular ? (
               <Link to={enlaceTitular} className="font-medium text-expediente hover:underline">
                 {titular ? nombreCompleto(titular) : `Ciudadano #${expediente.ciudadanoId}`}
               </Link>
@@ -66,6 +68,13 @@ export function Caratula({ expediente, titular, enlaceTitular, acciones }) {
             <span className="tabular">{expediente.actuacionesCount ?? 0}</span>
           </CampoSellado>
         </dl>
+
+        {expediente.estadoObra && (
+          <p className="mt-u3 text-apagado">
+            Obra pública: {expediente.estadoObra === "COMPLETED" ? "finalizada" : "aprobada"}.
+            {" "}El estado administrativo se muestra por separado en el expediente.
+          </p>
+        )}
 
         {acciones && (
           <div className="mt-u3 flex flex-wrap items-center gap-u2 border-t border-borde pt-u3">

@@ -28,8 +28,19 @@ public class Expediente {
     @Column(name = "numero", nullable = false, unique = true, length = 100)
     private String numero;
 
-    /** Ciudadano titular (RF-31). */
-    @Column(name = "ciudadano_id", nullable = false)
+    @Column(name = "public_works_project_id", unique = true)
+    private java.util.UUID publicWorksProjectId;
+
+    @Column(name = "estado_obra", length = 20)
+    private String estadoObra;
+
+    public java.util.UUID getPublicWorksProjectId() { return publicWorksProjectId; }
+    public void setPublicWorksProjectId(java.util.UUID id) { publicWorksProjectId = id; }
+    public String getEstadoObra() { return estadoObra; }
+    public void setEstadoObra(String estado) { estadoObra = estado; }
+
+    /** Titular opcional: null identifica un expediente institucional. */
+    @Column(name = "ciudadano_id")
     private Long ciudadanoId;
 
     @Column(name = "area_iniciadora", nullable = false, length = 255)

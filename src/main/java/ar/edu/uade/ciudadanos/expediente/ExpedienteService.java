@@ -69,7 +69,7 @@ public class ExpedienteService {
     @Transactional
     public ExpedienteResponse crear(CrearExpedienteRequest request) {
         autorizacion.exigir(Permiso.GESTIONAR_EXPEDIENTES, "iniciar un expediente");
-        directorio.exigirQueExista(request.ciudadanoId());
+        if (request.ciudadanoId() != null) directorio.exigirQueExista(request.ciudadanoId());
 
         String numero = request.numero() == null || request.numero().isBlank()
                 ? generarNumero()
@@ -91,13 +91,17 @@ public class ExpedienteService {
     @Transactional(readOnly = true)
     public ExpedienteResponse obtener(Long id) {
         Expediente expediente = buscar(id);
-        autorizacion.exigirLecturaDePersona(expediente.getCiudadanoId());
+        exigirLectura(expediente);
         return armar(expediente);
     }
 
     /** Listado completo para internos; un titular ve solo los suyos. */
     @Transactional(readOnly = true)
     public List<ExpedienteResponse> listar() {
+        if (!autorizacion.puede(Permiso.LEER_TERCEROS)
+                && autorizacion.actual().tipoInfo() != ar.edu.uade.ciudadanos.security.TipoSujeto.CIUDADANO) {
+            autorizacion.exigir(Permiso.LEER_TERCEROS, "listar expedientes institucionales o de terceros");
+        }
         List<Expediente> expedientes = autorizacion.puede(Permiso.LEER_TERCEROS)
                 ? expedienteRepository.findAll()
                 : expedienteRepository.findByCiudadanoId(autorizacion.actual().id());
@@ -115,7 +119,7 @@ public class ExpedienteService {
         expediente.setEstado(nuevo);
 
         // RESUELTO no implica aprobacion de una obra. El contrato bilateral debe
-        // aportar proyecto UUID y dictamen reales antes de emitir casefileResolved.
+        // aportar proyecto UUID y dictamen reales antes de emitir caseFileResolved.
 
         return CambioEstadoResponse.de(id, anterior, nuevo);
     }
@@ -150,7 +154,7 @@ public class ExpedienteService {
     @Transactional(readOnly = true)
     public List<ActuacionResponse> listarActuaciones(Long expedienteId) {
         Expediente expediente = buscar(expedienteId);
-        autorizacion.exigirLecturaDePersona(expediente.getCiudadanoId());
+        exigirLectura(expediente);
 
         return actuacionRepository.findByIdExpedienteIdOrderByIdActuacionIdAsc(expedienteId).stream()
                 .map(this::aResponse)
@@ -162,7 +166,7 @@ public class ExpedienteService {
     private ExpedienteResponse armar(Expediente e) {
         return new ExpedienteResponse(e.getExpedienteId(), e.getNumero(), e.getCiudadanoId(), e.getCaratula(),
                 e.getAreaIniciadora(), e.getEstado(), e.getFechaInicio(),
-                actuacionRepository.countByIdExpedienteId(e.getExpedienteId()));
+                actuacionRepository.countByIdExpedienteId(e.getExpedienteId()), e.getPublicWorksProjectId(), e.getEstadoObra());
     }
 
     private ActuacionResponse aResponse(Actuacion a) {
@@ -204,6 +208,15 @@ public class ExpedienteService {
         } catch (JsonProcessingException e) {
             log.warn("Adjuntos con JSON invalido, se devuelven vacios: {}", json, e);
             return List.of();
+        }
+    }
+
+    private void exigirLectura(Expediente expediente) {
+        if (expediente.getCiudadanoId() == null
+                || autorizacion.actual().tipoInfo() != ar.edu.uade.ciudadanos.security.TipoSujeto.CIUDADANO) {
+            autorizacion.exigir(Permiso.LEER_TERCEROS, "consultar el expediente");
+        } else {
+            autorizacion.exigirLecturaDePersona(expediente.getCiudadanoId());
         }
     }
 

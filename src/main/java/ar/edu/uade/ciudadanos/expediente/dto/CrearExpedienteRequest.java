@@ -1,7 +1,6 @@
 package ar.edu.uade.ciudadanos.expediente.dto;
 
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
 /**
@@ -16,7 +15,6 @@ public record CrearExpedienteRequest(
         @Size(max = 100, message = "numero no puede superar los 100 caracteres")
         String numero,
 
-        @NotNull(message = "ciudadanoId es obligatorio")
         Long ciudadanoId,
 
         @NotBlank(message = "caratula es obligatoria")

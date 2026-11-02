@@ -83,8 +83,8 @@ hasta cerrar con M8 la política de actualización. Los pedidos históricos sin
 contexto verificable no generan respuestas con referencias inventadas.
 
 Resolver administrativamente un expediente ya no publica una aprobación de obra
-por defecto. La publicación funcional de `casefileResolved` queda pendiente del
-vínculo UUID con el proyecto, el dictamen real y el nombre acordado con M3/Core.
+por defecto. La publicación funcional de `caseFileResolved` queda pendiente de
+confirmar con M3 el momento de respuesta y de disponer del dictamen real.
 
 Pruebas de PostgreSQL: definir `M1_TEST_POSTGRES_URL`, `M1_TEST_POSTGRES_USER` y
 `M1_TEST_POSTGRES_PASSWORD` sobre una base de pruebas donde se permita crear
@@ -92,6 +92,38 @@ esquemas. `M8ContratoPostgresTest` valida Hibernate y el flujo documental comple
 `EventOutboxPostgresTest` comprueba commit, rollback, reintentos y concurrencia.
 Con `M1_TEST_RABBIT_PORT` definido también verifica confirms y returns en un broker
 local de pruebas, creando y eliminando únicamente recursos con nombres aleatorios.
+
+### Integración de proyectos M3 v0.7
+
+Antes de arrancar esta version sobre una base existente, aplicar
+`db/05_integracion_obras.sql`. Agrega la proyeccion de proyectos de M3 y permite
+expedientes institucionales sin ciudadano. Las instalaciones nuevas ya incluyen
+las columnas y tablas en `db/01_schema.sql`. La migracion es reejecutable.
+
+`publicWorksProjectApproved` de `obras` crea un expediente por `publicWorksProjectId`
+UUID, con titular opcional resuelto exclusivamente por UUID de ciudadano. Un
+`publicWorksProjectCompleted` actualiza el estado de la obra sin resolver el
+expediente administrativo. Si llega antes de la aprobacion, queda en la proyeccion
+hasta recibir el alta. Las fechas de aprobacion y finalizacion se comparan por
+separado; duplicados y mensajes antiguos no crean expedientes adicionales.
+Un cambio de titular o un `caseFileId` ajeno se rechaza sin consumir el evento.
+
+Los expedientes institucionales y sus actuaciones requieren `LEER_TERCEROS` para
+lectura. Los listados de ciudadanos siguen mostrando exclusivamente los propios;
+un ID de empleado numericamente igual no da acceso al expediente de un ciudadano.
+
+La respuesta preparada usa exactamente `caseFileResolved`, sourceModule
+`ciudadanos`, caseFileId UUID y externalReference `{type: "PUBLIC_WORKS_PROJECT",
+id: <publicWorksProjectId UUID>}`. Solo acepta `approved` o `rejected` y exige un
+resumen real. No hay disparador automatico de esta respuesta: falta cerrar con M3
+cuando informar el vinculo y la resolucion. Las rutas de ejemplo siguen siendo
+pruebas manuales y no sustituyen el circuito administrativo.
+
+`scripts/registrar-core.ps1 -Suscripciones publicWorksProjectApproved,publicWorksProjectCompleted`
+muestra el plan de registro sin aplicarlo. No se registro ningun cambio en Core
+como parte de esta implementacion. Los schemas de referencia y su procedencia
+quedan en `src/test/resources/contracts/m3`. La E2E compartida requiere que Core
+resuelva credenciales, red y schemas de M3; las pruebas locales no la acreditan.
 
 ---
 
@@ -542,7 +574,7 @@ Conforme a lo acordado en la mesa de Product Owners para evitar desalineaciones 
   - `citizenUpdated` (variantes `REGISTERED`, `UPDATED`, `BLOCKED`, `DECEASED`, `ADDRESS_UPDATED`): transmite `citizenId` en formato UUID.
   - `citizenInfoDelivered`: respuesta inter-módulo con `citizenId` en formato UUID y `correlationId`.
   - `socialDocumentationDelivered`: respuesta a M8 con `citizenId` en formato UUID.
-  - `casefileResolved`: resolución de expedientes transmitiendo el UUID resuelto del titular (`citizenId`).
+  - `caseFileResolved`: respuesta M3 preparada con `caseFileId` UUID, referencia UUID de proyecto y resultado `approved`/`rejected`; sin disparador automatico hasta cerrar el acuerdo bilateral.
   - `organizationRegistered`, `representationGranted`, `representationExpired`.
 
 ---

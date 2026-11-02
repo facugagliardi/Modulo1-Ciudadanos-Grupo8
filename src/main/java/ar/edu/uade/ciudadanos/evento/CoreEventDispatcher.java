@@ -20,11 +20,14 @@ public class CoreEventDispatcher {
     private final ObjectMapper mapper;
     private final TramitesExternosService tramites;
     private final EventConsumerService documentos;
+    private final ar.edu.uade.ciudadanos.intermodulo.ProyectosObrasService obras;
 
-    public CoreEventDispatcher(ObjectMapper mapper, TramitesExternosService tramites, EventConsumerService documentos) {
+    public CoreEventDispatcher(ObjectMapper mapper, TramitesExternosService tramites, EventConsumerService documentos,
+            ar.edu.uade.ciudadanos.intermodulo.ProyectosObrasService obras) {
         this.mapper = mapper;
         this.tramites = tramites;
         this.documentos = documentos;
+        this.obras = obras;
     }
 
     @RabbitListener(queues = "${app.events.queue:q.ciudadanos}")
@@ -42,6 +45,7 @@ public class CoreEventDispatcher {
             JsonNode evento = mapper.readTree(rawJson);
             if (evento == null || !evento.isObject()) throw ApiException.invalido("El evento debe ser un objeto JSON");
             String tipo = evento.path("eventType").asText();
+            if (ar.edu.uade.ciudadanos.intermodulo.ProyectosObrasService.EVENTOS.contains(tipo)) return obras.procesar(evento);
             if (TramitesExternosService.EVENTOS.contains(tipo)) return tramites.procesar(evento);
             if (tipo.equals("socialDocumentationRequested")) {
                 if (!evento.path("sourceModule").asText().equals("desarrollo-social")) {
