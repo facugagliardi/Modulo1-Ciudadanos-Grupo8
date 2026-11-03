@@ -23,11 +23,14 @@ import org.springframework.web.filter.OncePerRequestFilter;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private static final String PREFIJO_BEARER = "Bearer ";
+    private static final String PREFIJO_RUTAS_MODULO = "/integraciones/v1/";
 
     private final JwtService jwtService;
+    private final ModuleTokenService moduleTokenService;
 
-    public JwtAuthenticationFilter(JwtService jwtService) {
+    public JwtAuthenticationFilter(JwtService jwtService, ModuleTokenService moduleTokenService) {
         this.jwtService = jwtService;
+        this.moduleTokenService = moduleTokenService;
     }
 
     @Override
@@ -38,7 +41,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         if (header != null && header.startsWith(PREFIJO_BEARER)
                 && SecurityContextHolder.getContext().getAuthentication() == null) {
 
-            AuthPrincipal principal = jwtService.validarAccessToken(header.substring(PREFIJO_BEARER.length()).trim());
+            String token = header.substring(PREFIJO_BEARER.length()).trim();
+            AuthPrincipal principal = jwtService.validarAccessToken(token);
+            if (principal == null && request.getRequestURI().startsWith(PREFIJO_RUTAS_MODULO)) {
+                principal = moduleTokenService.validar(token);
+            }
             if (principal != null) {
                 var authorities = List.of(new SimpleGrantedAuthority("ROLE_" + principal.rol()));
                 var auth = new UsernamePasswordAuthenticationToken(principal, null, authorities);

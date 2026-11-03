@@ -26,6 +26,8 @@ class SeguridadHttpTest {
         mvc=MockMvcBuilders.webAppContextSetup(context).apply(springSecurity()).build();
         when(context.getBean(JwtService.class).validarAccessToken("valido"))
                 .thenReturn(new AuthPrincipal(2L,TipoSujeto.CIUDADANO,"PERSONA"));
+        when(context.getBean(ModuleTokenService.class).validar("modulo-valido"))
+                .thenReturn(new AuthPrincipal(null,TipoSujeto.SERVICIO,"SERVICIO"));
     }
     @AfterEach void cerrar() { context.close(); }
 
@@ -38,6 +40,10 @@ class SeguridadHttpTest {
                 .andExpect(status().isOk()).andExpect(content().string("ok"))
                 .andExpect(header().doesNotExist("Set-Cookie")).andReturn();
         assertNull(result.getRequest().getSession(false));
+        mvc.perform(post("/integraciones/v1/prueba").header("Authorization","Bearer modulo-valido"))
+                .andExpect(status().isOk());
+        mvc.perform(post("/prueba-segura").header("Authorization","Bearer modulo-valido"))
+                .andExpect(status().isUnauthorized());
     }
 
     @Test void corsRechazaOrigenAjenoYPermiteSoloOrigenConfiguradoSinCredenciales() throws Exception {
@@ -53,9 +59,14 @@ class SeguridadHttpTest {
     @Configuration @EnableWebMvc @org.springframework.security.config.annotation.web.configuration.EnableWebSecurity
     static class Config {
         @Bean JwtService jwtService() { return mock(JwtService.class); }
-        @Bean JwtAuthenticationFilter jwtFilter(JwtService jwt) { return new JwtAuthenticationFilter(jwt); }
+        @Bean ModuleTokenService moduleTokenService() { return mock(ModuleTokenService.class); }
+        @Bean JwtAuthenticationFilter jwtFilter(JwtService jwt, ModuleTokenService module) {
+            return new JwtAuthenticationFilter(jwt,module);
+        }
         @Bean ObjectMapper mapper() { return new ObjectMapper().findAndRegisterModules(); }
         @Bean Probe probe() { return new Probe(); }
     }
-    @RestController static class Probe { @PostMapping("/prueba-segura") String post() { return "ok"; } }
+    @RestController static class Probe {
+        @PostMapping({"/prueba-segura", "/integraciones/v1/prueba"}) String post() { return "ok"; }
+    }
 }

@@ -35,22 +35,20 @@ Organización: estados `PENDIENTE`, `ACTIVA`, `INACTIVA`, `BLOQUEADA`, `RECHAZAD
 
 Las organizaciones reciben UUID persistido mediante la migración; se conservan los IDs numéricos históricos y los contratos anteriores. Estos UUID nuevos se deben comunicar al consumir este directorio, sin asumir que los eventos históricos ya usaban UUID.
 
-## Autenticación: punto a cerrar
+## Autenticación acordada con M6 y Core/M9
 
-Hoy M1 valida JWT de usuario HS256 y exige `CONSULTA_INTERMODULO` para estas consultas. No se habilita acceso anónimo ni se usa un empleado compartido como credencial de máquina.
+M6 obtiene un token en `POST /api/v1/auth/module-token` de Core y lo envía sin modificar como Bearer a M1. M1 eligió la validación local (opción B) para que cada consulta no dependa de una llamada sincrónica a `/auth/me` de Core.
 
-El §3 del catálogo describe el token RS256 emitido por Core para autenticar operaciones con Core. No confirma por sí solo que ese token autorice consultas de datos en M1. M1 todavía NO valida module-token RS256 entrante.
+M1 verifica la firma RS256 con la clave pública PEM entregada por M9 por canal privado, además de vencimiento y estos claims: `iss=muni-core`, `aud=muni-platform`, `kind=module`, `sub=module:ambiente` y `jti` no vacío. No espera `scope`. Tras validar, crea un sujeto técnico `SERVICIO`, cuyo único permiso es `CONSULTA_INTERMODULO`.
 
-Antes de habilitar M6 por ese mecanismo, cerrar con Core: si corresponde usarlo entre módulos, clave pública/JWKS y rotación, issuer/audience y claims reales, identificador exacto de M6 y autorización para consultar el directorio. Propuesta de permiso local acotado: `CONSULTA_INTERMODULO`; no asumir que Core emite un claim scope con ese nombre. Hasta entonces no hay E2E M6–M1 ni acceso de máquina anunciado como disponible.
+La lista de módulos es cerrada y comienza con `ambiente`. Esta autenticación técnica se acepta solamente bajo `/integraciones/v1/`; el mismo token no abre las demás APIs de M1. La clave vive en `APP_MODULE_AUTH_PUBLIC_KEY_PEM`, nunca en Git. M9 debe avisar antes de rotarla porque no ofrece JWKS. Falta recibir la PEM, configurar Render, aplicar la migración, desplegar y ejecutar la E2E.
 
 ## Mensaje para M6
 
-Hola M6, gracias por detallar los usos. Pueden mantener `sub` como clave interna y usar `actorId` UUID para `updatedBy.id`. En nuestros access tokens de usuario viajan `sub`, `sub_type`, `rol`, `typ`, `actorType`, `actorId`, `iss`, `iat` y `exp`. `citizenId` aparece solo en ciudadanos; no en empleados. No enviamos nombre ni `organizationId` en el token.
+Hola M6, gracias. Confirmamos que vamos a usar la opción B: validación RS256 local con la clave pública PEM de M9.
 
-M1 ya está hosteado en https://ciudadanos-m1-backend.onrender.com. Preparamos localmente consultas acotadas por citizenId UUID, organizationId UUID, CUIT y la equivalencia `actorType + sub → actorId` sin login previo. Las rutas y los ejemplos sanitizados están en el contrato adjunto. Estas rutas nuevas aún requieren migración y despliegue; no confirmamos disponibilidad ni E2E todavía.
+Ya implementamos la verificación de firma y vencimiento, `iss=muni-core`, `aud=muni-platform`, `kind=module`, `sub=module:ambiente` y `jti`. No esperamos `scope`: después de validar asignamos únicamente `CONSULTA_INTERMODULO`. El token técnico queda limitado a `/integraciones/v1/**` y no habilita las demás APIs de M1.
 
-Si un registro existe pero está inactivo, devolvemos su estado real; si no existe, 404. No entregamos legajos ni credenciales. La relación laboral con la contratista y la pertenencia a la cuadrilla las administra M6; M1 valida la identidad y el estado de los registros.
+Tomamos también la confirmación de que todos los integrantes de cuadrillas serán `EMPLEADO`. La consulta principal queda `GET /integraciones/v1/actores?actorType=EMPLEADO&sub=...`; ustedes conservan `sub` y usan el `actorId` UUID devuelto para `updatedBy.id`.
 
-Sobre RS256: el §3 documenta el module-token para Core, pero M1 hoy no lo valida en sus consultas REST. Necesitamos cerrar con Core su uso entre módulos y la validación de firma/claims y permisos antes de habilitar ese acceso. No les vamos a pedir usar una cuenta de empleado compartida como token de módulo.
-
-Para cerrar la identificación de integrantes: ¿todos son cuentas EMPLEADO municipal de M1, o también ciudadanos que trabajan para la contratista? La consulta admite ambos tipos, pero necesitamos conservar esa distinción junto con el sub numérico.
+Nos falta recibir/configurar la clave pública por privado, aplicar la migración y desplegar. Cuando esté live les enviamos la URL final y coordinamos una prueba con un module-token real. Como Core no publica JWKS, necesitamos que M9 nos avise antes de cada rotación de la PEM.

@@ -536,11 +536,11 @@ denylist (Redis o una tabla) que consulte el filtro.
 emisión ni almacenamiento de códigos, así que la verificación no verifica nada. Falta una
 tabla de códigos con vencimiento y el envío por mail/SMS.
 
-**3. El rol `SERVICIO` existe pero no se emite.** Ningún endpoint entrega un token con
-ese rol, así que hoy las consultas inter-módulo las cubren los roles de empleado, que
-también tienen `CONSULTA_INTERMODULO`. Falta definir cómo se autentican los módulos entre
-sí (client credentials, mTLS, clave compartida); cuando eso exista, el permiso ya está
-puesto y no hay que tocar ninguna anotación.
+**3. La autenticación técnica todavía requiere configuración de ambiente.** Los tokens
+RS256 emitidos por Core se validan localmente con una PEM privada y una lista cerrada de
+módulos. Se convierten al rol interno `SERVICIO`, cuyo único permiso es
+`CONSULTA_INTERMODULO`, y solo se aceptan en `/integraciones/v1/**`. Falta cargar la clave
+pública entregada por M9 y completar la E2E con un token real de `ambiente`.
 
 **4. Los archivos se guardan en el disco local** (`AlmacenamientoLocal`). Sirve para
 desarrollo y para un único nodo; con más de una instancia hace falta almacenamiento

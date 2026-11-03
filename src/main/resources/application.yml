@@ -77,6 +77,13 @@ app:
     issuer: modulo1-ciudadanos
     access-token-ttl-seconds: 900      # 15 min
     refresh-token-ttl-seconds: 604800  # 7 dias
+  module-auth:
+    # Clave publica PEM de Core/M9. Sin clave, los tokens de modulo no autentican.
+    public-key-pem: ${APP_MODULE_AUTH_PUBLIC_KEY_PEM:}
+    issuer: ${APP_MODULE_AUTH_ISSUER:muni-core}
+    audience: ${APP_MODULE_AUTH_AUDIENCE:muni-platform}
+    # Lista cerrada: un token valido de otro modulo no accede automaticamente.
+    allowed-modules: ${APP_MODULE_AUTH_ALLOWED_MODULES:ambiente}
 
 logging:
   level:

@@ -2,6 +2,7 @@ package ar.edu.uade.ciudadanos.config;
 
 import ar.edu.uade.ciudadanos.security.JwtAuthenticationFilter;
 import ar.edu.uade.ciudadanos.security.JwtProperties;
+import ar.edu.uade.ciudadanos.security.ModuleTokenProperties;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import ar.edu.uade.ciudadanos.common.ErrorResponse;
 import java.util.List;
@@ -30,7 +31,7 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
  * JWT que emite {@code /auth/**}.
  */
 @Configuration
-@EnableConfigurationProperties(JwtProperties.class)
+@EnableConfigurationProperties({JwtProperties.class, ModuleTokenProperties.class})
 @EnableMethodSecurity
 public class SecurityConfig {
 
