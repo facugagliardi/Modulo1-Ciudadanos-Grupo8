@@ -36,6 +36,7 @@ public class ModuleTokenService {
                     || !properties.getIssuer().equals(claims.getIssuer())
                     || !audienciaValida(claims.get("aud"))
                     || !"module".equals(claims.get("kind", String.class))
+                    || claims.getExpiration() == null
                     || claims.getId() == null || claims.getId().isBlank()
                     || subject == null || !subject.startsWith(SUBJECT_PREFIX)) {
                 return null;

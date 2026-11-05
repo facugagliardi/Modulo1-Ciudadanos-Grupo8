@@ -1,6 +1,6 @@
 # Integración M1–M6: directorio e identidad
 
-Estado al 5/11: implementado; migración `db/06_consultas_m6.sql` aplicada y clave pública configurada en Render. Falta comprobar el despliegue actualizado y una consulta con token real de Ambiente. La base del backend es `https://ciudadanos-m1-backend.onrender.com`.
+Estado al 5/11: implementado y desplegado; migración `db/06_consultas_m6.sql` aplicada y clave pública configurada en Render. Se verificó directorio HTTP 200 con identidad coincidente usando una cuenta de pruebas autorizada, y HTTP 401 sin token o con token inválido. Falta la consulta con token real de Ambiente, solicitada a M6. La base del backend es `https://ciudadanos-m1-backend.onrender.com`.
 
 ## Tokens de usuarios (existentes)
 
@@ -45,8 +45,9 @@ La lista de módulos es cerrada y comienza con `ambiente`. Esta autenticación t
 
 Core confirmó estos claims y entregó la PEM vigente. Se verificó RSA de 2048 bits y
 SHA-256 del DER `349c2c04aa1e8bbb2eb999979057006fc323ae3e4c8549616c27b23f0ae64a78`.
-La PEM se guardó con Save only en `ciudadanos-m1-backend`, servicio
-`srv-dbhq5p5g1s2s73anghi0`; el próximo despliegue debe cargarla. No se incluyó en Git.
+La PEM se guardó y cargó al desplegar `ciudadanos-m1-backend`, servicio
+`srv-dbhq5p5g1s2s73anghi0`. No se incluyó en Git. Además de rechazar tokens vencidos,
+se exige explícitamente que incluyan `exp`; un token firmado sin vencimiento se rechaza.
 La validación con token firmado realmente por Core sigue pendiente de prueba conjunta.
 
 ## Mensaje para M6
@@ -57,4 +58,4 @@ Ya implementamos la verificación de firma y vencimiento, `iss=muni-core`, `aud=
 
 Tomamos también la confirmación de que todos los integrantes de cuadrillas serán `EMPLEADO`. La consulta principal queda `GET /integraciones/v1/actores?actorType=EMPLEADO&sub=...`; ustedes conservan `sub` y usan el `actorId` UUID devuelto para `updatedBy.id`.
 
-Ya recibimos y verificamos la clave pública y aplicamos la migración. Estamos terminando el despliegue; cuando esté comprobado coordinamos una consulta con un module-token real de Ambiente. Como Core no publica JWKS, M9 confirmó que coordinará previamente cada rotación de la PEM.
+Ya recibimos y verificamos la clave pública, aplicamos la migración y desplegamos. Pueden consultar `GET /integraciones/v1/actores?actorType=EMPLEADO&sub=1` con un module-token vigente de Ambiente como Bearer. Compartan solo el código HTTP y si recibieron un actorId UUID, sin compartir el token. Como Core no publica JWKS, M9 confirmó que coordinará previamente cada rotación de la PEM.

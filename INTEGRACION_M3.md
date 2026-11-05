@@ -71,7 +71,12 @@ No volver a registrar esas relaciones desde M1.
 
 El 5/11 se aplicaron las migraciones 05, 06 y 07 en la base usada por Render,
 conservando los conteos previos de registros. La clave pública de Core quedó guardada
-en el ambiente del servicio. Falta comprobar el despliegue de esta revisión.
+en el ambiente del servicio. El backend actualizado se desplegó en
+`ciudadanos-m1-backend` (`srv-dbhq5p5g1s2s73anghi0`), validó el esquema con Hibernate
+y reconectó por AMQPS como `module_ciudadanos`. La validación HTTP del endpoint
+rechaza payload incompleto sin modificar expedientes. El resultado de CI/despliegue
+y las revisiones efectivas se conservan en `output/integracion-2026-11-05` del
+workspace de preparación; esa evidencia no se distribuye con git clone.
 M3 confirmó credenciales y red resueltas, listener permanente en Azure Test y una
 prueba satisfactoria con M6/Core. Esa confirmación no acredita todavía la E2E M1/M3.
 No se publicaron eventos de prueba al Core como parte de la preparación.

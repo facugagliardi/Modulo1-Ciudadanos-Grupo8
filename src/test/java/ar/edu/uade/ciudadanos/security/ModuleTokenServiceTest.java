@@ -68,6 +68,15 @@ class ModuleTokenServiceTest {
     }
 
     @Test
+    void rechazaTokenFirmadoSinVencimientoAunqueLosDemasClaimsCoincidan() {
+        ModuleTokenService service = new ModuleTokenService(properties(coreKeys, Set.of("ambiente")));
+        String sinVencimiento = Jwts.builder().issuer("muni-core").subject("module:ambiente")
+                .claim("aud", "muni-platform").claim("kind", "module").id("sin-exp")
+                .signWith(coreKeys.getPrivate(), Jwts.SIG.RS256).compact();
+        assertThat(service.validar(sinVencimiento)).isNull();
+    }
+
+    @Test
     void sinClaveNoHabilitaModulosYClaveInvalidaImpideArranque() {
         ModuleTokenProperties disabled = properties(coreKeys, Set.of("ambiente"));
         disabled.setPublicKeyPem("");
