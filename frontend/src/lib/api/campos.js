@@ -72,6 +72,7 @@ export const CAMPOS = {
   // --- expedientes ---
   crearExpediente: ["numero", "ciudadanoId", "caratula", "areaIniciadora"],
   crearActuacion: ["tipo", "descripcion", "moduloOrigen", "adjuntos"],
+  resolverObra: ["resultado", "resumen"],
 
   // --- documentacion ---
   validarDocumento: ["aprobado", "vigenciaHasta"],

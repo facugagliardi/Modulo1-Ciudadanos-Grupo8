@@ -1,6 +1,6 @@
 # Integración M1–M6: directorio e identidad
 
-Estado: implementado localmente; requiere migración `db/06_consultas_m6.sql` y despliegue. La base actual del backend es `https://ciudadanos-m1-backend.onrender.com`. La disponibilidad de esa base no implica que estas rutas nuevas estén desplegadas.
+Estado al 5/11: implementado; migración `db/06_consultas_m6.sql` aplicada y clave pública configurada en Render. Falta comprobar el despliegue actualizado y una consulta con token real de Ambiente. La base del backend es `https://ciudadanos-m1-backend.onrender.com`.
 
 ## Tokens de usuarios (existentes)
 
@@ -41,7 +41,13 @@ M6 obtiene un token en `POST /api/v1/auth/module-token` de Core y lo envía sin 
 
 M1 verifica la firma RS256 con la clave pública PEM entregada por M9 por canal privado, además de vencimiento y estos claims: `iss=muni-core`, `aud=muni-platform`, `kind=module`, `sub=module:ambiente` y `jti` no vacío. No espera `scope`. Tras validar, crea un sujeto técnico `SERVICIO`, cuyo único permiso es `CONSULTA_INTERMODULO`.
 
-La lista de módulos es cerrada y comienza con `ambiente`. Esta autenticación técnica se acepta solamente bajo `/integraciones/v1/`; el mismo token no abre las demás APIs de M1. La clave vive en `APP_MODULE_AUTH_PUBLIC_KEY_PEM`, nunca en Git. M9 debe avisar antes de rotarla porque no ofrece JWKS. Falta recibir la PEM, configurar Render, aplicar la migración, desplegar y ejecutar la E2E.
+La lista de módulos es cerrada y comienza con `ambiente`. Esta autenticación técnica se acepta solamente bajo `/integraciones/v1/`; el mismo token no abre las demás APIs de M1. La clave vive en `APP_MODULE_AUTH_PUBLIC_KEY_PEM`, nunca en Git. M9 debe avisar antes de rotarla porque no ofrece JWKS.
+
+Core confirmó estos claims y entregó la PEM vigente. Se verificó RSA de 2048 bits y
+SHA-256 del DER `349c2c04aa1e8bbb2eb999979057006fc323ae3e4c8549616c27b23f0ae64a78`.
+La PEM se guardó con Save only en `ciudadanos-m1-backend`, servicio
+`srv-dbhq5p5g1s2s73anghi0`; el próximo despliegue debe cargarla. No se incluyó en Git.
+La validación con token firmado realmente por Core sigue pendiente de prueba conjunta.
 
 ## Mensaje para M6
 
@@ -51,4 +57,4 @@ Ya implementamos la verificación de firma y vencimiento, `iss=muni-core`, `aud=
 
 Tomamos también la confirmación de que todos los integrantes de cuadrillas serán `EMPLEADO`. La consulta principal queda `GET /integraciones/v1/actores?actorType=EMPLEADO&sub=...`; ustedes conservan `sub` y usan el `actorId` UUID devuelto para `updatedBy.id`.
 
-Nos falta recibir/configurar la clave pública por privado, aplicar la migración y desplegar. Cuando esté live les enviamos la URL final y coordinamos una prueba con un module-token real. Como Core no publica JWKS, necesitamos que M9 nos avise antes de cada rotación de la PEM.
+Ya recibimos y verificamos la clave pública y aplicamos la migración. Estamos terminando el despliegue; cuando esté comprobado coordinamos una consulta con un module-token real de Ambiente. Como Core no publica JWKS, M9 confirmó que coordinará previamente cada rotación de la PEM.

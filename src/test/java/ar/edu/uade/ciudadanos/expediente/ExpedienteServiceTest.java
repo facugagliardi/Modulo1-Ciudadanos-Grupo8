@@ -20,8 +20,9 @@ class ExpedienteServiceTest {
     private final ExpedienteRepository repo = mock(ExpedienteRepository.class);
     private final ActuacionRepository actuaciones = mock(ActuacionRepository.class);
     private final AutorizacionService auth = mock(AutorizacionService.class);
+    private final ar.edu.uade.ciudadanos.evento.EventPublisherService publisher = mock(ar.edu.uade.ciudadanos.evento.EventPublisherService.class);
     private final ExpedienteService service = new ExpedienteService(repo, actuaciones,
-            mock(CiudadanoDirectorioService.class), auth, new ObjectMapper());
+            mock(CiudadanoDirectorioService.class), auth, new ObjectMapper(), publisher);
 
     @ParameterizedTest @NullAndEmptySource @ValueSource(strings = {" "})
     void generaNumeroSiNoSeInforma(String numero) {
@@ -89,10 +90,52 @@ class ExpedienteServiceTest {
         verify(auth).exigirLecturaDePersona(2L);
     }
 
+    @ParameterizedTest @ValueSource(strings = {"approved", "rejected"})
+    void resolucionUsaDictamenActorYCorrelacionOriginal(String resultado) {
+        var e = expediente(); e.setNumero("EXP-M3-1"); e.setPublicWorksProjectId(UUID.randomUUID());
+        e.setEstado(EstadoExpediente.EN_TRAMITE);
+        UUID correlacion = UUID.randomUUID(), eventId = UUID.randomUUID();
+        when(auth.actual()).thenReturn(new AuthPrincipal(7L, TipoSujeto.EMPLEADO, "ADMINISTRATIVO"));
+        when(repo.findCorrelacionObra(1L)).thenReturn(Optional.of(correlacion));
+        when(publisher.publicarCaseFileResolved(any(), eq(correlacion.toString()))).thenAnswer(i ->
+                ar.edu.uade.ciudadanos.evento.dto.EventEnvelope.de(eventId.toString(), "2026-11-05T12:00:00Z",
+                        "caseFileResolved", "ciudadanos", correlacion.toString(), i.getArgument(0)));
+        var response = service.resolverObra(1L, new ResolverObraRequest(resultado, "  Dictamen efectivo  "));
+        assertEquals(EstadoExpediente.RESUELTO, response.estado());
+        assertEquals(resultado, response.resolucionObra());
+        assertEquals("Dictamen efectivo", response.resumenResolucionObra());
+        assertNotNull(response.resueltoEn()); assertEquals(eventId, e.getResolucionEventId());
+        assertEquals("EMPLEADO:7:ADMINISTRATIVO", e.getResueltoPor());
+        verify(publisher).publicarCaseFileResolved(argThat(d -> d.caseFileId().equals(e.getUuid())
+                && d.externalReference().get("id").equals(e.getPublicWorksProjectId().toString())
+                && d.resolution().equals(resultado)), eq(correlacion.toString()));
+    }
+
+    @Test void noResuelveSinDatosValidosVinculoOReferenciaOriginal() {
+        var invalidos = Arrays.asList(null, new ResolverObraRequest(null,"dictamen"), new ResolverObraRequest("otro","dictamen"),
+                new ResolverObraRequest("approved",null), new ResolverObraRequest("approved"," "), new ResolverObraRequest("approved","x".repeat(4001)));
+        for (var request : invalidos) assertThrows(ApiException.class, () -> service.resolverObra(1L,request));
+        assertThrows(ApiException.class, () -> service.resolverObra(99L,new ResolverObraRequest("approved","dictamen")));
+        var e=expediente(); e.setEstado(EstadoExpediente.EN_TRAMITE);
+        assertThrows(ApiException.class, () -> service.resolverObra(1L,new ResolverObraRequest("approved","dictamen")));
+        e.setPublicWorksProjectId(UUID.randomUUID());
+        assertThrows(ApiException.class, () -> service.resolverObra(1L,new ResolverObraRequest("approved","dictamen")));
+        assertEquals(EstadoExpediente.EN_TRAMITE,e.getEstado());
+        assertThrows(ApiException.class, () -> service.cambiarEstado(1L,EstadoExpediente.RESUELTO));
+        verifyNoInteractions(publisher);
+    }
+
+    @Test void resolverExigePermisoAntesDeLeerElExpediente() {
+        doThrow(ApiException.prohibido("Sin permiso")).when(auth).exigir(eq(Permiso.CAMBIAR_ESTADO_EXPEDIENTE),anyString());
+        assertThrows(ApiException.class, () -> service.resolverObra(1L,new ResolverObraRequest("approved","dictamen")));
+        verifyNoInteractions(repo,publisher);
+    }
+
     private Expediente expediente() {
         when(auth.actual()).thenReturn(new AuthPrincipal(2L, TipoSujeto.CIUDADANO, "PERSONA"));
         var e = new Expediente(); e.setExpedienteId(1L); e.setCiudadanoId(2L); e.setEstado(EstadoExpediente.INICIADO);
         when(repo.findById(1L)).thenReturn(Optional.of(e));
+        when(repo.findByIdForUpdate(1L)).thenReturn(Optional.of(e));
         return e;
     }
 }

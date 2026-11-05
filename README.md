@@ -115,9 +115,11 @@ un ID de empleado numericamente igual no da acceso al expediente de un ciudadano
 La respuesta preparada usa exactamente `caseFileResolved`, sourceModule
 `ciudadanos`, caseFileId UUID y externalReference `{type: "PUBLIC_WORKS_PROJECT",
 id: <publicWorksProjectId UUID>}`. Solo acepta `approved` o `rejected` y exige un
-resumen real. No hay disparador automatico de esta respuesta: falta cerrar con M3
-cuando informar el vinculo y la resolucion. Las rutas de ejemplo siguen siendo
-pruebas manuales y no sustituyen el circuito administrativo.
+resumen real. El acuerdo con M3 del 5/11 confirma que se responde al resolver,
+sin informar el UUID al crear el expediente. La operacion administrativa
+`POST /expedientes/{id}/resolucion-obra` registra resultado, dictamen y auditoria,
+y encola la respuesta transaccionalmente. Requiere la migracion
+`db/07_resolucion_obras.sql`. Los ejemplos manuales no sustituyen este circuito.
 
 `scripts/registrar-core.ps1 -Suscripciones publicWorksProjectApproved,publicWorksProjectCompleted`
 muestra el plan de registro sin aplicarlo. No se registro ningun cambio en Core

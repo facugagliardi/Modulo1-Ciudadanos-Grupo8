@@ -248,6 +248,11 @@ CREATE TABLE expediente (
     estado          VARCHAR(50)  NOT NULL DEFAULT 'INICIADO',
     caratula        VARCHAR(255) NOT NULL,
     fecha_inicio    TIMESTAMPTZ  NOT NULL DEFAULT now(),
+    resolucion_obra VARCHAR(20),
+    resumen_resolucion_obra VARCHAR(4000),
+    resuelto_en TIMESTAMPTZ,
+    resuelto_por VARCHAR(200),
+    resolucion_event_id UUID UNIQUE,
     CONSTRAINT fk_expediente_ciudadano FOREIGN KEY (ciudadano_id) REFERENCES ciudadano (ciudadano_id),
     CONSTRAINT uk_expediente_numero    UNIQUE (numero),
     CONSTRAINT ck_expediente_estado    CHECK (estado IN ('INICIADO', 'EN_TRAMITE', 'RESUELTO', 'ARCHIVADO'))

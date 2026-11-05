@@ -6,6 +6,7 @@ import ar.edu.uade.ciudadanos.expediente.dto.CambioEstadoExpedienteRequest;
 import ar.edu.uade.ciudadanos.expediente.dto.CrearActuacionRequest;
 import ar.edu.uade.ciudadanos.expediente.dto.CrearExpedienteRequest;
 import ar.edu.uade.ciudadanos.expediente.dto.ExpedienteResponse;
+import ar.edu.uade.ciudadanos.expediente.dto.ResolverObraRequest;
 import ar.edu.uade.ciudadanos.persona.dto.CambioEstadoResponse;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -56,6 +57,12 @@ public class ExpedienteController {
     public CambioEstadoResponse cambiarEstado(@PathVariable Long id,
                                               @Valid @RequestBody CambioEstadoExpedienteRequest request) {
         return expedienteService.cambiarEstado(id, request.estado());
+    }
+
+    /** Dictamen de obra segun el acuerdo bilateral M1/M3 v1.0. */
+    @PostMapping("/{id}/resolucion-obra")
+    public ExpedienteResponse resolverObra(@PathVariable Long id, @Valid @RequestBody ResolverObraRequest request) {
+        return expedienteService.resolverObra(id, request);
     }
 
     /** INFERIDO (RF-33, RF-34). */

@@ -1,6 +1,6 @@
 # Integración M1 - Obras: preparación y despliegue
 
-Estado al 2 de noviembre de 2026. Complementa los contratos versionados en
+Estado actualizado al 5 de noviembre de 2026. Complementa los contratos versionados en
 `contracts/m1/v1.0` y los schemas de referencia M3 en
 `src/test/resources/contracts/m3`.
 
@@ -21,20 +21,33 @@ Estado al 2 de noviembre de 2026. Complementa los contratos versionados en
 - El acceso a expedientes institucionales requiere `LEER_TERCEROS`; un ID
   numérico coincidente de empleado no equivale al ciudadano titular.
 
-## Resolución pendiente de acuerdo bilateral
+## Resolución administrativa acordada con M3
 
 El contrato publicado de `caseFileResolved` usa `caseFileId` UUID,
 `externalReference.type=PUBLIC_WORKS_PROJECT`, referencia UUID al proyecto,
 `state=resolved`, `resolution=approved|rejected` y resumen real del dictamen.
 
-No hay disparador automático de la respuesta. Antes de implementarlo y
-activarlo, M1 y Obras deben confirmar el momento de emisión, cómo capturar el
-dictamen efectivo y cómo informar el UUID antes de la resolución si M3 lo
-necesita. No inferir aprobación administrativa desde un evento de proyecto.
+M3 confirmó que la respuesta se emite únicamente al existir resolución administrativa
+real. Para v1.0 no necesita el UUID del expediente al crearlo: lo registra al recibir
+`caseFileResolved`, junto al número y resultado, y correlaciona por proyecto.
+
+`POST /expedientes/{id}/resolucion-obra` recibe `{ "resultado": "approved"|"rejected",
+"resumen": "dictamen real" }`. Exige `CAMBIAR_ESTADO_EXPEDIENTE`, proyecto vinculado,
+estado `EN_TRAMITE` y correlación original persistida. El resultado no tiene valor
+predeterminado. Estado, resumen, fecha, actor, eventId y outbox se guardan en una
+transacción. El bloqueo de fila impide resolver/publicar dos veces. Si falla el outbox,
+se revierte también la resolución. El PATCH genérico no permite resolver obras sin
+dictamen. La UI interna permite registrar y consultar el resultado.
+
+No se publica por la mera creación del expediente ni por la finalización de la obra.
+La migración `db/07_resolucion_obras.sql` agrega los campos de auditoría, sin completar
+ni publicar resoluciones históricas.
 
 Core recibió el schema de la revisión inmutable
-`0b1eab33e99e71dac8e3f947409e8dab981258bc`; su asociación seguía pendiente en
-la última respuesta compartida. Los dos schemas de proyectos y las tres
+`0b1eab33e99e71dac8e3f947409e8dab981258bc`. El 5/11 Core verificó en AWS que
+`caseFileResolved` pertenece a `ciudadanos`, pero `json_schema` sigue NULL; su equipo
+debe asociarlo y confirmar el resultado antes de la prueba compartida.
+Los dos schemas de proyectos y las tres
 relaciones M1/M3 ya fueron confirmados activos, con `maxAttempts: 4`.
 No volver a registrar esas relaciones desde M1.
 
@@ -56,7 +69,9 @@ No volver a registrar esas relaciones desde M1.
 6. Probar finalización, duplicados y orden inverso. El expediente conserva
    su estado administrativo y no emite `caseFileResolved` por estos hechos.
 
-No se aplicó la migración a la base compartida ni se desplegó Render como
-parte de esta preparación. La conexión de Obras desde Azure requiere la
-verificación del equipo M3/Core; no se necesita su contraseña para las
-pruebas locales de M1.
+El 5/11 se aplicaron las migraciones 05, 06 y 07 en la base usada por Render,
+conservando los conteos previos de registros. La clave pública de Core quedó guardada
+en el ambiente del servicio. Falta comprobar el despliegue de esta revisión.
+M3 confirmó credenciales y red resueltas, listener permanente en Azure Test y una
+prueba satisfactoria con M6/Core. Esa confirmación no acredita todavía la E2E M1/M3.
+No se publicaron eventos de prueba al Core como parte de la preparación.

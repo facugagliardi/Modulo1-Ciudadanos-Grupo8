@@ -56,7 +56,7 @@ public class ProyectosObrasService {
                         rs.getObject("approved_at", OffsetDateTime.class), rs.getObject("completed_at", OffsetDateTime.class)), projectId);
         Proyecto previo = previos.isEmpty() ? null : previos.getFirst();
         Expediente expediente = previo == null || previo.expedienteId() == null ? null
-                : expedientes.findById(previo.expedienteId()).orElseThrow(() -> new IllegalStateException("Vinculo M3 roto"));
+                : expedientes.findByIdForUpdate(previo.expedienteId()).orElseThrow(() -> new IllegalStateException("Vinculo M3 roto"));
         // Nunca asociar un UUID ajeno enviado por M3 con otro expediente.
         if (data.has("caseFileId") && (expediente == null || !expediente.getUuid().equals(uuid(data, "caseFileId")))) {
             throw ApiException.conflicto("caseFileId no coincide con el expediente del proyecto");

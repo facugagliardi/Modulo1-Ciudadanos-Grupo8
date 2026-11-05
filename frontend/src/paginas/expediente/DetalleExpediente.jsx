@@ -16,6 +16,7 @@ import { CambiarEstado } from "@/componentes/CambiarEstado";
 import { ENTIDADES } from "@/lib/dominio/estados";
 import { Caratula } from "@/componentes/expediente/Caratula";
 import { Actuaciones } from "@/componentes/expediente/Actuaciones";
+import { ResolucionObra } from "@/componentes/expediente/ResolucionObra";
 
 /**
  * El expediente, con su carátula y su historia.
@@ -95,7 +96,9 @@ export function DetalleExpediente({ zona = "portal" }) {
                     // Regla del alcance que el backend todavía no valida: un
                     // expediente no debería resolverse sin ninguna actuación.
                     destinosBloqueados={
-                      lista.length === 0
+                      exp.publicWorksProjectId
+                        ? { RESUELTO: "Usá Resolver expediente de obra para registrar el dictamen" }
+                        : lista.length === 0
                         ? { RESUELTO: "Necesita al menos una actuación" }
                         : {}
                     }
@@ -107,6 +110,10 @@ export function DetalleExpediente({ zona = "portal" }) {
                 )
               }
             />
+
+            {exp.publicWorksProjectId && (puedeCambiarEstado || exp.resolucionObra) && (
+              <ResolucionObra expediente={exp} alGuardar={expediente.recargar} />
+            )}
 
             {actuaciones.error && (
               <ErrorEnPantalla error={actuaciones.error} alReintentar={actuaciones.recargar} />

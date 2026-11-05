@@ -7,6 +7,8 @@ import ar.edu.uade.ciudadanos.expediente.dto.ActuacionResponse;
 import ar.edu.uade.ciudadanos.expediente.dto.CrearActuacionRequest;
 import ar.edu.uade.ciudadanos.expediente.dto.CrearExpedienteRequest;
 import ar.edu.uade.ciudadanos.expediente.dto.ExpedienteResponse;
+import ar.edu.uade.ciudadanos.expediente.dto.ResolverObraRequest;
+import ar.edu.uade.ciudadanos.evento.dto.CaseFileResolvedData;
 import ar.edu.uade.ciudadanos.expediente.entity.Actuacion;
 import ar.edu.uade.ciudadanos.expediente.entity.ActuacionId;
 import ar.edu.uade.ciudadanos.expediente.entity.EstadoExpediente;
@@ -112,16 +114,43 @@ public class ExpedienteService {
     @Transactional
     public CambioEstadoResponse cambiarEstado(Long id, EstadoExpediente nuevo) {
         autorizacion.exigir(Permiso.CAMBIAR_ESTADO_EXPEDIENTE, "cambiar el estado de un expediente");
-        Expediente expediente = buscar(id);
+        Expediente expediente = buscarParaActualizar(id);
+
+        if (nuevo == EstadoExpediente.RESUELTO && expediente.getPublicWorksProjectId() != null) {
+            throw ApiException.invalido("Para resolver una obra debe registrar el resultado y el dictamen en /expedientes/{id}/resolucion-obra");
+        }
 
         EstadoExpediente anterior = expediente.getEstado();
         TransicionesEstado.exigirExpediente(anterior, nuevo);
         expediente.setEstado(nuevo);
 
-        // RESUELTO no implica aprobacion de una obra. El contrato bilateral debe
-        // aportar proyecto UUID y dictamen reales antes de emitir caseFileResolved.
-
         return CambioEstadoResponse.de(id, anterior, nuevo);
+    }
+
+    /** Resultado, auditoria y outbox se confirman juntos; el bloqueo impide dos resoluciones. */
+    @Transactional
+    public ExpedienteResponse resolverObra(Long id, ResolverObraRequest request) {
+        autorizacion.exigir(Permiso.CAMBIAR_ESTADO_EXPEDIENTE, "resolver un expediente de obra");
+        if (request == null || request.resultado() == null
+                || !java.util.Set.of("approved", "rejected").contains(request.resultado())
+                || request.resumen() == null || request.resumen().isBlank() || request.resumen().length() > 4000) {
+            throw ApiException.invalido("Indique resultado approved/rejected y un resumen del dictamen de hasta 4000 caracteres");
+        }
+        Expediente expediente = buscarParaActualizar(id);
+        if (expediente.getPublicWorksProjectId() == null) {
+            throw ApiException.invalido("El expediente no esta vinculado a un proyecto de Obras Publicas");
+        }
+        TransicionesEstado.exigirExpediente(expediente.getEstado(), EstadoExpediente.RESUELTO);
+        var correlacion = expedienteRepository.findCorrelacionObra(id)
+                .orElseThrow(() -> ApiException.conflicto("No se encontro la correlacion original del proyecto"));
+        var actor = autorizacion.actual();
+        String resumen = request.resumen().trim();
+        expediente.setEstado(EstadoExpediente.RESUELTO);
+        var evento = eventPublisherService.publicarCaseFileResolved(
+                CaseFileResolvedData.preparar(expediente, request.resultado(), resumen), correlacion.toString());
+        expediente.registrarResolucionObra(request.resultado(), resumen,
+                actor.tipoInfo() + ":" + actor.id() + ":" + actor.rol(), java.util.UUID.fromString(evento.eventId()));
+        return armar(expediente);
     }
 
     /** RF-33, RF-34. */
@@ -166,7 +195,8 @@ public class ExpedienteService {
     private ExpedienteResponse armar(Expediente e) {
         return new ExpedienteResponse(e.getExpedienteId(), e.getNumero(), e.getCiudadanoId(), e.getCaratula(),
                 e.getAreaIniciadora(), e.getEstado(), e.getFechaInicio(),
-                actuacionRepository.countByIdExpedienteId(e.getExpedienteId()), e.getPublicWorksProjectId(), e.getEstadoObra());
+                actuacionRepository.countByIdExpedienteId(e.getExpedienteId()), e.getPublicWorksProjectId(), e.getEstadoObra(),
+                e.getResolucionObra(), e.getResumenResolucionObra(), e.getResueltoEn());
     }
 
     private ActuacionResponse aResponse(Actuacion a) {
@@ -222,6 +252,11 @@ public class ExpedienteService {
 
     private Expediente buscar(Long id) {
         return expedienteRepository.findById(id)
+                .orElseThrow(() -> ApiException.noEncontrado("No existe el expediente " + id));
+    }
+
+    private Expediente buscarParaActualizar(Long id) {
+        return expedienteRepository.findByIdForUpdate(id)
                 .orElseThrow(() -> ApiException.noEncontrado("No existe el expediente " + id));
     }
 }

@@ -45,7 +45,11 @@ no producen por sí solas este evento.
 M1 ya implementó y probó localmente los expedientes institucionales, el vínculo
 por publicWorksProjectId y el consumo de aprobación/finalización. Esa adaptación
 todavía no está desplegada. El DTO y el publicador de la respuesta están preparados;
-su disparador automático sigue pendiente de cerrar con Obras.
+su emisión desde la resolución administrativa está implementada en
+`POST /expedientes/{id}/resolucion-obra`. Exige resultado y dictamen efectivos y
+conserva la correlación del proyecto. M3 confirmó que no necesita el UUID al crear
+el expediente. El 5/11 Core informó que `json_schema` sigue NULL en AWS; falta su
+asociación y la prueba conjunta. Ver `INTEGRACION_M3.md`.
 
 La estructura de data se comparte para revisión de Core. Publicar este archivo
 no implica que el schema ya haya sido cargado ni que la E2E esté aprobada. Core

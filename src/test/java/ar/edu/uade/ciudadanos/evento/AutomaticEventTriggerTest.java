@@ -308,7 +308,7 @@ class AutomaticEventTriggerTest {
         exp.setAreaIniciadora("Obras Públicas");
         exp.setCaratula("Aprobación y autorización de ejecución de obra pública");
         exp.setEstado(EstadoExpediente.EN_TRAMITE);
-        when(expedienteRepository.findById(1042L)).thenReturn(Optional.of(exp));
+        when(expedienteRepository.findByIdForUpdate(1042L)).thenReturn(Optional.of(exp));
 
         CambioEstadoResponse res = expedienteService.cambiarEstado(1042L, EstadoExpediente.RESUELTO);
 

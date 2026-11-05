@@ -24,6 +24,10 @@ export function cambiarEstadoExpediente(id, estado) {
   return patch(`/expedientes/${id}/estado`, cuerpo("cambiarEstado", { estado }));
 }
 
+export function resolverObra(id, datos) {
+  return post(`/expedientes/${id}/resolucion-obra`, cuerpo("resolverObra", datos));
+}
+
 /** actuacionId es un contador POR expediente: la clave real es (expedienteId, actuacionId). */
 export async function listarActuaciones(expedienteId, senal) {
   const res = await get(`/expedientes/${expedienteId}/actuaciones`, senal);

@@ -14,5 +14,8 @@ public record ExpedienteResponse(
         OffsetDateTime fechaInicio,
         long actuacionesCount,
         java.util.UUID publicWorksProjectId,
-        String estadoObra) {
+        String estadoObra,
+        String resolucionObra,
+        String resumenResolucionObra,
+        OffsetDateTime resueltoEn) {
 }

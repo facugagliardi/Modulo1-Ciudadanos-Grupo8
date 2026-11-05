@@ -83,7 +83,7 @@ class ProyectosObrasServiceTest {
 
     @Test void finalizacionActualizaObraSinCambiarEstadoAdministrativo() throws Exception {
         var e=evento(false); previo(e,20L,OffsetDateTime.parse("2026-11-01T12:00:00Z"),null);aceptar();
-        var exp=new Expediente();exp.setEstado(EstadoExpediente.EN_TRAMITE);when(repo.findById(20L)).thenReturn(Optional.of(exp));
+        var exp=new Expediente();exp.setEstado(EstadoExpediente.EN_TRAMITE);when(repo.findByIdForUpdate(20L)).thenReturn(Optional.of(exp));
         ((ObjectNode)e.path("data")).put("caseFileId",exp.getUuid().toString());
         assertEquals("APLICADO",service.procesar(e));assertEquals("COMPLETED",exp.getEstadoObra());assertEquals(EstadoExpediente.EN_TRAMITE,exp.getEstado());
     }
@@ -100,7 +100,7 @@ class ProyectosObrasServiceTest {
 
     @Test void rechazaCambioDeTitularYReferenciaAjena() throws Exception {
         var e=evento(true);previo(e,20L,OffsetDateTime.parse("2026-10-01T12:00:00Z"),null);
-        var exp=new Expediente();exp.setCiudadanoId(8L);when(repo.findById(20L)).thenReturn(Optional.of(exp));
+        var exp=new Expediente();exp.setCiudadanoId(8L);when(repo.findByIdForUpdate(20L)).thenReturn(Optional.of(exp));
         assertThrows(ApiException.class,() -> service.procesar(e));verify(events,never()).registrarRecibido(any(),any(),any(),any(),any());
         var completion=evento(false);((ObjectNode)completion.path("data")).put("caseFileId",UUID.randomUUID().toString());
         assertThrows(ApiException.class,() -> service.procesar(completion));

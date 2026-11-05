@@ -3,6 +3,7 @@ package ar.edu.uade.ciudadanos.intermodulo;
 import ar.edu.uade.ciudadanos.common.ApiException;
 import ar.edu.uade.ciudadanos.evento.dto.CaseFileResolvedData;
 import ar.edu.uade.ciudadanos.expediente.ExpedienteService;
+import ar.edu.uade.ciudadanos.expediente.dto.ResolverObraRequest;
 import ar.edu.uade.ciudadanos.expediente.entity.EstadoExpediente;
 import ar.edu.uade.ciudadanos.expediente.repository.ExpedienteRepository;
 import ar.edu.uade.ciudadanos.security.*;
@@ -15,6 +16,8 @@ import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
@@ -28,6 +31,7 @@ import static org.junit.jupiter.api.Assertions.*;
 @EnabledIfEnvironmentVariable(named="M1_TEST_POSTGRES_URL", matches=".+")
 @SpringBootTest(properties={"spring.config.import=", "app.events.outbox-enabled=false",
         "spring.rabbitmq.listener.simple.auto-startup=false", "spring.jpa.properties.hibernate.format_sql=false"})
+@AutoConfigureMockMvc
 class M3ContratoPostgresTest {
     private static final String SCHEMA="m3_"+UUID.randomUUID().toString().replace("-", "");
     private static JdbcTemplate admin;
@@ -41,7 +45,8 @@ class M3ContratoPostgresTest {
         String scoped=url+(url.contains("?")?"&":"?")+"currentSchema="+SCHEMA;
         var ds=new DriverManagerDataSource(scoped,user,pass);
         new ResourceDatabasePopulator(new FileSystemResource("db/01_schema.sql"),new FileSystemResource("db/05_integracion_obras.sql"),
-                new FileSystemResource("db/05_integracion_obras.sql")).execute(ds);
+                new FileSystemResource("db/05_integracion_obras.sql"), new FileSystemResource("db/07_resolucion_obras.sql"),
+                new FileSystemResource("db/07_resolucion_obras.sql")).execute(ds);
         p.add("spring.datasource.url", () -> scoped); p.add("spring.datasource.username", () -> user); p.add("spring.datasource.password", () -> pass);
     }
     @AfterAll static void limpiar(){if(admin!=null) admin.execute("DROP SCHEMA "+SCHEMA+" CASCADE");}
@@ -51,6 +56,11 @@ class M3ContratoPostgresTest {
     @Autowired ExpedienteRepository repo;
     @Autowired JdbcTemplate jdbc;
     @Autowired ObjectMapper mapper;
+    @Autowired MockMvc mvc;
+
+    @BeforeEach void aislarCasos() {
+        jdbc.execute("TRUNCATE event_outbox, events, proyecto_obra_externo, expediente CASCADE");
+    }
 
     private ObjectNode evento(UUID project, boolean approval) {
         var e=mapper.createObjectNode();
@@ -67,7 +77,7 @@ class M3ContratoPostgresTest {
             new UsernamePasswordAuthenticationToken(new AuthPrincipal(id,tipo,rol),null,java.util.List.of()));}
     private int recibidos(String eventId){return jdbc.queryForObject("SELECT count(*) FROM events WHERE event_id=?",Integer.class,eventId);}
 
-    @Test void expedienteInstitucionalYFinalizacionNoResuelvenNiPublican() {
+    @Test void expedienteInstitucionalYFinalizacionNoResuelvenNiPublican() throws Exception {
         UUID id=UUID.randomUUID(); var a=evento(id,true);
         assertEquals("APLICADO",obras.procesar(a));
         var e=repo.findById(exp(id)).orElseThrow();
@@ -81,11 +91,75 @@ class M3ContratoPostgresTest {
         assertEquals(0,jdbc.queryForObject("SELECT count(*) FROM event_outbox",Integer.class));
         sesion(99L,TipoSujeto.EMPLEADO,"ADMINISTRATIVO");
         expedientes.cambiarEstado(e.getExpedienteId(),EstadoExpediente.EN_TRAMITE);
-        expedientes.cambiarEstado(e.getExpedienteId(),EstadoExpediente.RESUELTO);
+        long expedienteId = e.getExpedienteId();
+        assertThrows(ApiException.class, () -> expedientes.cambiarEstado(expedienteId,EstadoExpediente.RESUELTO));
         assertEquals(0,jdbc.queryForObject("SELECT count(*) FROM event_outbox",Integer.class));
-        var resolved=CaseFileResolvedData.preparar(repo.findById(e.getExpedienteId()).orElseThrow(),"rejected","Dictamen desfavorable real");
+        expedientes.resolverObra(expedienteId, new ResolverObraRequest("rejected", "Dictamen desfavorable real"));
+        var resolved=CaseFileResolvedData.preparar(repo.findById(expedienteId).orElseThrow(),"rejected","Dictamen desfavorable real");
         assertEquals(e.getUuid(),resolved.caseFileId()); assertEquals(id.toString(),resolved.externalReference().get("id"));
         assertEquals("rejected",resolved.resolution());
+        assertEquals("EMPLEADO:99:ADMINISTRATIVO",repo.findById(expedienteId).orElseThrow().getResueltoPor());
+        String eventId=repo.findById(expedienteId).orElseThrow().getResolucionEventId().toString();
+        var publicado=mapper.readTree(jdbc.queryForObject("SELECT payload FROM events WHERE event_id=?",String.class,eventId));
+        assertEquals(a.path("correlationId").asText(),publicado.path("correlationId").asText());
+        assertEquals("caseFileResolved",publicado.path("eventType").asText());
+        assertEquals("ciudadanos",publicado.path("sourceModule").asText());
+        assertEquals("rejected",publicado.path("data").path("resolution").asText());
+        assertEquals(id.toString(),publicado.path("data").path("externalReference").path("id").asText());
+        assertEquals(1,jdbc.queryForObject("SELECT count(*) FROM event_outbox WHERE event_id=?",Integer.class,eventId));
+        assertThrows(ApiException.class, () -> expedientes.resolverObra(expedienteId,new ResolverObraRequest("approved","Segundo dictamen")));
+    }
+
+    @Test void falloDelOutboxRevierteEstadoDictamenYEvento() {
+        UUID project=UUID.randomUUID(); obras.procesar(evento(project,true)); long id=exp(project);
+        sesion(99L,TipoSujeto.EMPLEADO,"ADMINISTRATIVO");
+        expedientes.cambiarEstado(id,EstadoExpediente.EN_TRAMITE);
+        jdbc.execute("ALTER TABLE event_outbox ADD CONSTRAINT prueba_fallo_resolucion CHECK (routing_key <> 'caseFileResolved') NOT VALID");
+        try {
+            assertThrows(RuntimeException.class, () -> expedientes.resolverObra(id,new ResolverObraRequest("approved","Dictamen de prueba")));
+            var e=repo.findById(id).orElseThrow();
+            assertEquals(EstadoExpediente.EN_TRAMITE,e.getEstado());
+            assertNull(e.getResolucionObra()); assertNull(e.getResolucionEventId());
+            assertEquals(0,jdbc.queryForObject("SELECT count(*) FROM events WHERE payload::jsonb->'data'->'externalReference'->>'id'=? AND type='EMITIDO'",Integer.class,project.toString()));
+        } finally { jdbc.execute("ALTER TABLE event_outbox DROP CONSTRAINT prueba_fallo_resolucion"); }
+        assertEquals("approved",expedientes.resolverObra(id,new ResolverObraRequest("approved","Dictamen de prueba")).resolucionObra());
+    }
+
+    @Test void resolucionesConcurrentesPublicanUnaSolaVez() throws Exception {
+        UUID project=UUID.randomUUID(); obras.procesar(evento(project,true)); long id=exp(project);
+        sesion(99L,TipoSujeto.EMPLEADO,"ADMINISTRATIVO"); expedientes.cambiarEstado(id,EstadoExpediente.EN_TRAMITE);
+        try(var pool=Executors.newFixedThreadPool(2)) {
+            java.util.concurrent.Callable<Boolean> resolver=() -> {
+                sesion(99L,TipoSujeto.EMPLEADO,"ADMINISTRATIVO");
+                try {expedientes.resolverObra(id,new ResolverObraRequest("approved","Dictamen concurrente"));return true;}
+                catch(ApiException yaResuelto){return false;}
+                finally {SecurityContextHolder.clearContext();}
+            };
+            var a=pool.submit(resolver); var b=pool.submit(resolver);
+            assertNotEquals(a.get(15,TimeUnit.SECONDS),b.get(15,TimeUnit.SECONDS));
+        }
+        assertEquals(1,jdbc.queryForObject("SELECT count(*) FROM events WHERE payload::jsonb->'data'->'externalReference'->>'id'=? AND type='EMITIDO'",Integer.class,project.toString()));
+    }
+
+    @Test void endpointExigeSesionPermisoYDictamenValido() throws Exception {
+        UUID project=UUID.randomUUID(); obras.procesar(evento(project,true)); long id=exp(project);
+        sesion(99L,TipoSujeto.EMPLEADO,"ADMINISTRATIVO"); expedientes.cambiarEstado(id,EstadoExpediente.EN_TRAMITE);
+        SecurityContextHolder.clearContext();
+        String ruta="/expedientes/"+id+"/resolucion-obra";
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post(ruta)
+                .contentType("application/json").content("{\"resultado\":\"approved\",\"resumen\":\"Dictamen\"}"))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isUnauthorized());
+        var auditor=new UsernamePasswordAuthenticationToken(new AuthPrincipal(99L,TipoSujeto.EMPLEADO,"AUDITOR"),null,java.util.List.of());
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post(ruta)
+                .with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication(auditor))
+                .contentType("application/json").content("{\"resultado\":\"approved\",\"resumen\":\"Dictamen\"}"))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isForbidden());
+        var adminUser=new UsernamePasswordAuthenticationToken(new AuthPrincipal(99L,TipoSujeto.EMPLEADO,"ADMINISTRATIVO"),null,java.util.List.of());
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post(ruta)
+                .with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication(adminUser))
+                .contentType("application/json").content("{\"resultado\":\"otro\",\"resumen\":\" \"}"))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isBadRequest());
+        assertNull(repo.findById(id).orElseThrow().getResolucionObra());
     }
 
     @Test void completadoAdelantadoSeVinculaAlLlegarLaAprobacion() {

@@ -5,6 +5,13 @@ migraciones a la base compartida ni garantiza que Render u otros módulos hayan
 desplegado esa revisión. Este documento distingue capacidad local de una prueba
 conjunta por Core. No se declara una E2E remota sin recibo y efecto en destino.
 
+Actualización 05/11: las filas originales de esta matriz conservan el alcance del
+tag. M6 ya tiene validación RS256 implementada, PEM verificada/configurada en Render
+y migración aplicada. M3 confirmó el momento de respuesta; se implementó la resolución
+administrativa con dictamen y outbox, y se aplicó su migración. El despliegue y las
+pruebas compartidas se registran en `INTEGRACION_M3.md` e `INTEGRACION_M6.md`.
+Core informó que aún debe asociar el schema `caseFileResolved` en AWS.
+
 ## Lista general
 
 | Módulo | Qué soporta M1 | Qué puede demostrarse | Qué falta para comunicación real compartida |

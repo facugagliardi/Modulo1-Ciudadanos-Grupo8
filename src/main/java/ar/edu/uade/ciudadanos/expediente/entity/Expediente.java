@@ -34,6 +34,35 @@ public class Expediente {
     @Column(name = "estado_obra", length = 20)
     private String estadoObra;
 
+    @Column(name = "resolucion_obra", length = 20)
+    private String resolucionObra;
+
+    @Column(name = "resumen_resolucion_obra", length = 4000)
+    private String resumenResolucionObra;
+
+    @Column(name = "resuelto_en")
+    private OffsetDateTime resueltoEn;
+
+    @Column(name = "resuelto_por", length = 200)
+    private String resueltoPor;
+
+    @Column(name = "resolucion_event_id")
+    private java.util.UUID resolucionEventId;
+
+    public String getResolucionObra() { return resolucionObra; }
+    public String getResumenResolucionObra() { return resumenResolucionObra; }
+    public OffsetDateTime getResueltoEn() { return resueltoEn; }
+    public String getResueltoPor() { return resueltoPor; }
+    public java.util.UUID getResolucionEventId() { return resolucionEventId; }
+
+    public void registrarResolucionObra(String resultado, String resumen, String actor, java.util.UUID eventId) {
+        this.resolucionObra = resultado;
+        this.resumenResolucionObra = resumen;
+        this.resueltoPor = actor;
+        this.resueltoEn = OffsetDateTime.now();
+        this.resolucionEventId = eventId;
+    }
+
     public java.util.UUID getPublicWorksProjectId() { return publicWorksProjectId; }
     public void setPublicWorksProjectId(java.util.UUID id) { publicWorksProjectId = id; }
     public String getEstadoObra() { return estadoObra; }
