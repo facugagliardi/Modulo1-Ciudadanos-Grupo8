@@ -37,7 +37,10 @@ services:
       retries: 40
 
   rabbitmq:
-    image: rabbitmq:4.3-management@sha256:1cc652597e8d31d2bb4afc3be60f84961fe17aa4edc5bf067cbf9834afcc441b
+    image: ciudadanos-testing-rabbitmq
+    build:
+      context: ./docker/testing
+      dockerfile: rabbitmq.Dockerfile
     hostname: rabbitmq-testing
     environment:
       RABBITMQ_CONFIG_FILE: /run/config/rabbit/rabbitmq

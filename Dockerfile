@@ -1,5 +1,11 @@
 FROM maven:3.10.0-eclipse-temurin-21-noble@sha256:bde9fcc1d6849a2a627fffd4b2ff0824c855f060923c8a8bf7d010d2e263840d AS build
 
+# USN-8996-1 (CVE-2026-109518): disable retries while upgrading the vulnerable APT client.
+RUN apt-get -o Acquire::Retries=0 update \
+    && apt-get -o Acquire::Retries=0 install -y --no-install-recommends --only-upgrade apt \
+    && dpkg --compare-versions "$(dpkg-query -W -f='${Version}' apt)" ge 2.8.4ubuntu0.1 \
+    && rm -rf /var/lib/apt/lists/*
+
 # Maven 3.10.0 bundles Guava 33.7.1; replace it with the compatible security patch.
 RUN curl -fsSL --retry 3 https://repo.maven.apache.org/maven2/com/google/guava/guava/33.7.2-jre/guava-33.7.2-jre.jar -o /tmp/guava.jar \
     && echo 'b530942257fb935f8b2cfaa5f8eb5bd59c555fd8e8d01b8ce98912e077ea606c  /tmp/guava.jar' | sha256sum -c - \
@@ -12,6 +18,11 @@ COPY src/main ./src/main
 RUN mvn -B -ntp -Dmaven.test.skip=true package && rm -rf /root/.m2/repository
 
 FROM eclipse-temurin:21-jre-jammy@sha256:1eac8b8fee11ca7d6725a48bc5d41992ed1561504ebae25490d2d062847e8269 AS runtime
+
+RUN apt-get -o Acquire::Retries=0 update \
+    && apt-get -o Acquire::Retries=0 install -y --no-install-recommends --only-upgrade apt \
+    && dpkg --compare-versions "$(dpkg-query -W -f='${Version}' apt)" ge 2.4.15ubuntu0.1 \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 RUN mkdir -p /app/archivos-documentos && chown -R 10001:10001 /app

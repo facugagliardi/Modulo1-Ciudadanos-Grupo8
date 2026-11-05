@@ -184,7 +184,7 @@ jobs:
             --imagen frontend=ciudadanos-testing-frontend:latest \
             --imagen node=ciudadanos-testing-node:latest \
             --imagen postgres=ciudadanos-testing-postgres:latest \
-            --imagen rabbitmq=rabbitmq:4.3-management@sha256:1cc652597e8d31d2bb4afc3be60f84961fe17aa4edc5bf067cbf9834afcc441b \
+            --imagen rabbitmq=ciudadanos-testing-rabbitmq:latest \
             --imagen maven-build=ciudadanos-testing-backend-build:latest \
             --imagen node-build=ciudadanos-testing-frontend-build:latest
       - name: Guardar evidencia tecnica
