@@ -231,7 +231,76 @@
   }
 }
 
+/* --- Hojas del calendario ------------------------------------------------
+   Cambiar de mes con las flechas corre la hoja nueva desde el lado del salto,
+   poco y rápido: se pasan varias seguidas y cada una no puede hacer esperar.
+   Subir de nivel (días -> meses -> años) se aleja, y elegir un mes o un año
+   se acerca: dice si se bajó o se subió en el zoom. Con el teclado no se
+   anima (lo decide `fecha.jsx`). Es una hoja que se monta nueva, así que
+   un clic encima de otro arranca la siguiente desde cero, que es lo correcto. */
+@keyframes cal-desde-derecha {
+  from {
+    opacity: 0;
+    transform: translateX(12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes cal-desde-izquierda {
+  from {
+    opacity: 0;
+    transform: translateX(-12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes cal-alejar {
+  from {
+    opacity: 0;
+    transform: scale(1.05);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes cal-acercar {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
 @layer components {
+  .cal-siguiente {
+    animation: cal-desde-derecha var(--dur-2) var(--ease-salida) both;
+  }
+  .cal-anterior {
+    animation: cal-desde-izquierda var(--dur-2) var(--ease-salida) both;
+  }
+  .cal-alejar {
+    animation: cal-alejar var(--dur-2) var(--ease-salida) both;
+  }
+  .cal-acercar {
+    animation: cal-acercar var(--dur-2) var(--ease-salida) both;
+  }
+
+  /* El panel crece desde el control que lo abrió, no desde su centro. Radix
+     publica el punto según para qué lado se haya acomodado el panel. */
+  .panel-flotante {
+    transform-origin: var(
+      --radix-popover-content-transform-origin,
+      var(--radix-select-content-transform-origin, top)
+    );
+  }
   .panel-flotante[data-state="open"] {
     animation: panel-entra var(--dur-2) var(--ease-salida);
   }

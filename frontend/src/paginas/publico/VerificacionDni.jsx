@@ -135,7 +135,7 @@ function SelectorDeFoto({ id, etiqueta, foto, onElegir }) {
 function ResultadoVerificacion({ resultado }) {
   const { coincide, campos = [], problemas = [] } = resultado;
   return (
-    <div className="flex flex-col gap-u2" aria-live="polite">
+    <div className="aparece flex flex-col gap-u2" aria-live="polite">
       {coincide ? (
         <p className="flex items-center gap-2 rounded border border-vigente bg-vigente-suave px-3 py-2 text-sm font-medium text-vigente">
           <CheckCircle2 className="size-4 shrink-0" aria-hidden="true" />
