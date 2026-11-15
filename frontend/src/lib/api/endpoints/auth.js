@@ -35,6 +35,24 @@ export function registrarCiudadano(datos) {
 }
 
 /**
+ * Verifica el DNI argentino contra los datos del formulario, ANTES de crear la
+ * cuenta. Es publica (no hay sesion todavia). `imagen` es UNA sola foto con el
+ * frente arriba y el dorso abajo (ver `unirFrenteYDorso`). Responde
+ * `{ coincide, campos: [{ campo, etiqueta, ingresado, leido, coincide, detalle }], problemas, leido }`.
+ */
+export function verificarDni({ imagen, ...datos }) {
+  const form = new FormData();
+  form.append("imagen", imagen);
+  form.append("dni", soloDigitos(datos.dni));
+  form.append("cuil", soloDigitos(datos.cuit));
+  form.append("nombre", datos.nombre.trim());
+  form.append("apellido", datos.apellido.trim());
+  form.append("fechaNacimiento", datos.fechaNacimiento);
+  form.append("nacionalidad", datos.nacionalidad.trim());
+  return pedir("/auth/verificar-dni", { metodo: "POST", form, sinAuth: true });
+}
+
+/**
  * Cierra la sesion. El backend responde 204 pero no revoca nada (los tokens
  * son stateless y no hay denylist), asi que lo que realmente corta el acceso
  * es descartarlos de este lado.

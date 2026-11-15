@@ -28,6 +28,10 @@ services:
       - postgres:/var/lib/postgresql/data
       - ./db/01_schema.sql:/init/01_schema.sql:ro
       - ./db/03_integracion_m2_m5.sql:/init/03_integracion_m2_m5.sql:ro
+      - ./db/04_integracion_social_segura.sql:/init/04_integracion_social_segura.sql:ro
+      - ./db/05_integracion_obras.sql:/init/05_integracion_obras.sql:ro
+      - ./db/06_consultas_m6.sql:/init/06_consultas_m6.sql:ro
+      - ./db/07_resolucion_obras.sql:/init/07_resolucion_obras.sql:ro
       - ./docker/testing/seed.sql:/init/seed.sql:ro
       - ./docker/testing/iniciar-db.sh:/docker-entrypoint-initdb.d/01-iniciar.sh:ro
     healthcheck:
@@ -76,6 +80,9 @@ services:
       ALMACENAMIENTO_DIR: /app/archivos-documentos
       APP_CORS_ALLOWED_ORIGINS: ${APP_CORS_ALLOWED_ORIGINS:-http://localhost:8090,http://127.0.0.1:8090,http://localhost:5173,http://127.0.0.1:5173}
       LOGGING_LEVEL_AR_EDU_UADE_CIUDADANOS: INFO
+      # Se toma del .env de la raiz (ignorado por Git). Ver .env.example.
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+      GROQ_MODEL: ${GROQ_MODEL:-qwen/qwen3.8-27b}
     depends_on:
       postgres:
         condition: service_healthy

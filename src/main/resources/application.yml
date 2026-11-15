@@ -70,6 +70,14 @@ app:
   almacenamiento:
     directorio: ${ALMACENAMIENTO_DIR:./archivos-documentos}
 
+  # Verificacion del DNI argentino en el registro (POST /auth/verificar-dni).
+  # Sin GROQ_API_KEY el endpoint responde 503 y el resto de la app anda igual.
+  groq:
+    api-key: ${GROQ_API_KEY:}
+    model: ${GROQ_MODEL:qwen/qwen3.8-27b}
+    # "none" apaga el razonamiento de Qwen 3; vaciarlo si el modelo no lo soporta.
+    reasoning-effort: ${GROQ_REASONING_EFFORT:none}
+
   jwt:
     # HS256 exige >= 32 bytes. Generar con: openssl rand -base64 48
     # Definir APP_JWT_SECRET o usar el archivo local ignorado por Git.

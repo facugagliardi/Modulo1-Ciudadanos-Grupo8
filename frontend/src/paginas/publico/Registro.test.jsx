@@ -12,8 +12,18 @@ vi.mock("react-router-dom", async () => {
 });
 
 const registrarYEntrar = vi.fn();
+const verificarDni = vi.fn();
 vi.mock("@/lib/api/endpoints/auth", () => ({
   registrarYEntrar: (...a) => registrarYEntrar(...a),
+  verificarDni: (...a) => verificarDni(...a),
+}));
+
+// jsdom no tiene canvas: la compresión se prueba en el navegador.
+const unida = new File(["fd"], "dni-frente-y-dorso.jpg", { type: "image/jpeg" });
+const unirFrenteYDorso = vi.fn();
+vi.mock("@/lib/dominio/imagen", () => ({
+  comprimirImagen: async (archivo) => archivo,
+  unirFrenteYDorso: (...a) => unirFrenteYDorso(...a),
 }));
 
 const subirDocumento = vi.fn();
@@ -35,15 +45,18 @@ beforeEach(() => {
   subirDocumento.mockResolvedValue({ documentoId: 10 });
   crearContacto.mockReset();
   crearContacto.mockResolvedValue({ contactoId: 20 });
+  verificarDni.mockReset();
+  unirFrenteYDorso.mockReset();
+  unirFrenteYDorso.mockResolvedValue(unida);
 });
 
-async function completarCiudadano() {
+async function completarCiudadano({ nacionalidad = "Uruguaya" } = {}) {
   await userEvent.type(screen.getByLabelText("Nombre"), "Ana");
   await userEvent.type(screen.getByLabelText("Apellido"), "Pérez");
   await userEvent.type(screen.getByLabelText("DNI"), "40123456");
   await escribirFecha(screen.getByLabelText(/fecha de nacimiento/i), "1997-03-08");
   await userEvent.clear(screen.getByLabelText("Nacionalidad"));
-  await userEvent.type(screen.getByLabelText("Nacionalidad"), "Argentina");
+  await userEvent.type(screen.getByLabelText("Nacionalidad"), nacionalidad);
   await userEvent.type(screen.getByLabelText("CUIL"), "20-40123456-7");
   await userEvent.type(screen.getByLabelText("Contraseña"), "clave-segura-1");
 }
@@ -66,7 +79,7 @@ describe("formulario de ciudadano", () => {
 describe("validación paso 1", () => {
   it("no llama al backend con el formulario vacío", async () => {
     renderizar(<Registro />);
-    await userEvent.click(screen.getByRole("button", { name: /continuar a documentación/i }));
+    await userEvent.click(screen.getByRole("button", { name: /^continuar a/i }));
 
     expect(await screen.findByText(/ingresá tu nombre/i)).toBeInTheDocument();
     expect(screen.getByText(/ingresá tu dni/i)).toBeInTheDocument();
@@ -105,14 +118,14 @@ describe("validación paso 1", () => {
   });
 });
 
-describe("flujo de onboarding completo (3 pasos)", () => {
+describe("flujo de onboarding sin DNI argentino (3 pasos)", () => {
   it("avanza por los 3 pasos obligatorios: registro, documento y contacto antes de entrar", async () => {
     renderizar(<Registro />);
     await completarCiudadano();
     await userEvent.click(screen.getByRole("button", { name: /continuar a documentación/i }));
 
     expect(registrarYEntrar).toHaveBeenCalledWith(
-      expect.objectContaining({ dni: "40123456", nombre: "Ana", nacionalidad: "Argentina" }),
+      expect.objectContaining({ dni: "40123456", nombre: "Ana", nacionalidad: "Uruguaya" }),
     );
 
     // Paso 2: Foto de DNI
@@ -167,5 +180,86 @@ describe("flujo de onboarding completo (3 pasos)", () => {
     await userEvent.click(screen.getByRole("button", { name: /continuar a documentación/i }));
 
     expect(await screen.findByText("nombre es obligatorio")).toBeInTheDocument();
+  });
+});
+
+describe("registro con DNI argentino: verificación antes de crear la cuenta", () => {
+  const frente = new File(["f"], "frente.jpg", { type: "image/jpeg" });
+  const dorso = new File(["d"], "dorso.jpg", { type: "image/jpeg" });
+
+  const campo = (campo, coincide, leido) => ({
+    campo,
+    etiqueta: campo,
+    ingresado: "x",
+    leido,
+    coincide,
+    detalle: null,
+  });
+
+  async function llegarAVerificar() {
+    renderizar(<Registro />);
+    await completarCiudadano({ nacionalidad: "Argentina" });
+    await userEvent.click(screen.getByRole("button", { name: /continuar a verificar dni/i }));
+    expect(await screen.findByText(/verificá tu dni/i)).toBeInTheDocument();
+    await userEvent.upload(screen.getByLabelText(/foto del frente/i), frente);
+    await userEvent.upload(screen.getByLabelText(/foto del dorso/i), dorso);
+  }
+
+  it("no crea la cuenta en el paso 1", async () => {
+    await llegarAVerificar();
+    expect(registrarYEntrar).not.toHaveBeenCalled();
+  });
+
+  it("si coincide, crea la cuenta, guarda frente y dorso y pasa al contacto", async () => {
+    verificarDni.mockResolvedValue({
+      coincide: true,
+      problemas: [],
+      campos: [campo("apellido", true, "PÉREZ"), campo("dni", true, "40123456")],
+    });
+    await llegarAVerificar();
+    await userEvent.click(screen.getByRole("button", { name: /^verificar dni$/i }));
+
+    // Una sola imagen a Groq: frente arriba, dorso abajo (en ese orden).
+    expect(unirFrenteYDorso).toHaveBeenCalledWith(frente, dorso);
+    expect(verificarDni).toHaveBeenCalledWith(
+      expect.objectContaining({ imagen: unida, dni: "40123456", cuit: "20-40123456-7" }),
+    );
+    expect(await screen.findByText(/tus datos coinciden con el dni/i)).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: /crear mi cuenta/i }));
+    expect(registrarYEntrar).toHaveBeenCalledTimes(1);
+    expect(subirDocumento).toHaveBeenCalledWith(1, { archivo: frente, tipoDocumento: "DNI" });
+    expect(subirDocumento).toHaveBeenCalledWith(1, { archivo: dorso, tipoDocumento: "DNI" });
+    expect(await screen.findByText(/datos de contacto/i)).toBeInTheDocument();
+  });
+
+  it("si no coincide, muestra qué dice el DNI y no deja crear la cuenta", async () => {
+    verificarDni.mockResolvedValue({
+      coincide: false,
+      problemas: ["El DNI esta vencido desde el 2020-01-01."],
+      campos: [campo("apellido", false, "PEREZ GOMEZ")],
+    });
+    await llegarAVerificar();
+    await userEvent.click(screen.getByRole("button", { name: /^verificar dni$/i }));
+
+    expect(await screen.findByText(/los datos no coinciden/i)).toBeInTheDocument();
+    expect(screen.getByText("PEREZ GOMEZ")).toBeInTheDocument();
+    expect(screen.getByText(/vencido/i)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /crear mi cuenta/i })).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: /corregir mis datos/i }));
+    expect(screen.getByLabelText("Apellido")).toHaveValue("Pérez");
+    expect(registrarYEntrar).not.toHaveBeenCalled();
+  });
+
+  it("explica el 409 volviendo al paso 1 después de verificar", async () => {
+    verificarDni.mockResolvedValue({ coincide: true, problemas: [], campos: [] });
+    registrarYEntrar.mockRejectedValue(new ErrorApi({ status: 409, message: "El cuit ya existe" }));
+    await llegarAVerificar();
+    await userEvent.click(screen.getByRole("button", { name: /^verificar dni$/i }));
+    await userEvent.click(await screen.findByRole("button", { name: /crear mi cuenta/i }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(/ya hay una cuenta registrada/i);
+    expect(screen.getByLabelText("Nombre")).toBeInTheDocument();
   });
 });

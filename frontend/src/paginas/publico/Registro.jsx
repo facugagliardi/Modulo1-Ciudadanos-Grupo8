@@ -9,14 +9,26 @@ import { soloDigitos } from "@/lib/dominio/formato";
 import { Button } from "@/componentes/ui/button";
 import { Campo } from "@/componentes/ui/campo";
 import { CampoFecha, hoyISO } from "@/componentes/ui/fecha";
+import { VerificacionDni } from "./VerificacionDni";
 
 /**
  * Alta de ciudadano físico con onboarding obligatorio:
  * 1. Datos personales (incluye nacionalidad).
- * 2. Carga obligatoria de foto/archivo de documento (DNI).
+ * 2. Documento. Si la nacionalidad es argentina, frente y dorso del DNI
+ *    verificados con IA contra los datos del paso 1, y la cuenta se crea
+ *    recién cuando coinciden. Si no, foto/archivo del documento.
  * 3. Carga obligatoria de correo electrónico de contacto.
  * 4. Ingreso al portal.
  */
+
+/** "Argentina", "argentino", "ARGENTINA " -> true. */
+function esArgentina(nacionalidad) {
+  return /^argentin[ao]$/.test(
+    String(nacionalidad ?? "")
+      .trim()
+      .toLowerCase(),
+  );
+}
 
 const VACIO = {
   cuit: "",
@@ -43,6 +55,11 @@ export function Registro() {
   const [archivoDoc, setArchivoDoc] = useState(null);
   const [errorDoc, setErrorDoc] = useState(null);
   const [subiendoDoc, setSubiendoDoc] = useState(false);
+
+  // Paso 2 (argentinos): cuenta creada tras verificar el DNI
+  const [creandoCuenta, setCreandoCuenta] = useState(false);
+  const [errorCreacion, setErrorCreacion] = useState(null);
+  const verificaDni = esArgentina(valores.nacionalidad);
 
   // Paso 3: Contacto
   const [email, setEmail] = useState("");
@@ -85,6 +102,13 @@ export function Registro() {
     setErrorGeneral(null);
     if (!validarPaso1()) return;
 
+    // Para un DNI argentino la cuenta no se crea acá: primero se verifica.
+    if (verificaDni && !ciudadanoId) {
+      setErrorCreacion(null);
+      setPaso(2);
+      return;
+    }
+
     setEnviando(true);
     try {
       const { sesion, ciudadano } = await registrarYEntrar(valores);
@@ -118,6 +142,40 @@ export function Registro() {
       setErrorDoc(mensajeAmable(error));
     } finally {
       setSubiendoDoc(false);
+    }
+  }
+
+  /**
+   * El DNI ya coincidió: se crea la cuenta y se guardan las dos fotos. Si la
+   * cuenta se creó pero falló una subida, el reintento no vuelve a registrar.
+   */
+  async function crearCuentaVerificada(fotos) {
+    setErrorCreacion(null);
+    setCreandoCuenta(true);
+    let id = ciudadanoId;
+    try {
+      if (!id) {
+        const { sesion, ciudadano } = await registrarYEntrar(valores);
+        id = ciudadano?.id ?? sesion?.id;
+        setCiudadanoId(id);
+      }
+    } catch (error) {
+      // 409 o errores de campo se ven y se corrigen en el paso 1.
+      if (error?.tieneErroresDeCampo) setErrores(error.errores);
+      setErrorGeneral(error);
+      setPaso(1);
+      setCreandoCuenta(false);
+      return;
+    }
+
+    try {
+      await subirDocumento(id, { archivo: fotos.frente, tipoDocumento: "DNI" });
+      await subirDocumento(id, { archivo: fotos.dorso, tipoDocumento: "DNI" });
+      setPaso(3);
+    } catch (error) {
+      setErrorCreacion(`Tu cuenta se creó, pero no pudimos guardar las fotos: ${mensajeAmable(error)}`);
+    } finally {
+      setCreandoCuenta(false);
     }
   }
 
@@ -157,7 +215,7 @@ export function Registro() {
         </span>
         <span className="text-borde">→</span>
         <span className={paso >= 2 ? "text-expediente font-bold" : ""}>
-          2. Documento
+          {verificaDni ? "2. Verificar DNI" : "2. Documento"}
         </span>
         <span className="text-borde">→</span>
         <span className={paso >= 3 ? "text-expediente font-bold" : ""}>
@@ -259,7 +317,11 @@ export function Registro() {
             </p>
 
             <Button type="submit" disabled={enviando} className="mt-u1 w-full">
-              {enviando ? "Creando la cuenta…" : "Continuar a documentación"}
+              {enviando
+                ? "Creando la cuenta…"
+                : verificaDni
+                  ? "Continuar a verificar DNI"
+                  : "Continuar a documentación"}
             </Button>
           </form>
 
@@ -273,7 +335,17 @@ export function Registro() {
         </>
       )}
 
-      {paso === 2 && (
+      {paso === 2 && verificaDni && (
+        <VerificacionDni
+          valores={valores}
+          onCorregir={() => setPaso(1)}
+          onConfirmar={crearCuentaVerificada}
+          creando={creandoCuenta}
+          errorCreacion={errorCreacion}
+        />
+      )}
+
+      {paso === 2 && !verificaDni && (
         <div className="rounded border border-borde bg-papel p-5 flex flex-col gap-u3">
           <div className="flex items-center gap-3">
             <div className="rounded-full bg-expediente-suave p-2 text-expediente">
