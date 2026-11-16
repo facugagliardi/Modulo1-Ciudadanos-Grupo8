@@ -5,6 +5,7 @@ import ar.edu.uade.ciudadanos.expediente.entity.EstadoExpediente;
 import ar.edu.uade.ciudadanos.organizacion.entity.EstadoOrganizacion;
 import ar.edu.uade.ciudadanos.organizacion.entity.EstadoRepresentacion;
 import ar.edu.uade.ciudadanos.persona.entity.EstadoCiudadano;
+import ar.edu.uade.ciudadanos.persona.state.CiudadanoState;
 import java.util.EnumMap;
 import java.util.Map;
 import java.util.Set;
@@ -73,7 +74,7 @@ public final class TransicionesEstado {
     }
 
     public static void exigirCiudadano(EstadoCiudadano actual, EstadoCiudadano nuevo) {
-        exigir(CIUDADANO, actual, nuevo, "ciudadano");
+        CiudadanoState.de(actual).cambiarEstado(nuevo);
     }
 
     public static void exigirOrganizacion(EstadoOrganizacion actual, EstadoOrganizacion nuevo) {

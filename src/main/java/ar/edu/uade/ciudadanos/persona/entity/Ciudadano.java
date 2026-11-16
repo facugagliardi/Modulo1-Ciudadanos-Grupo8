@@ -9,6 +9,8 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
+import ar.edu.uade.ciudadanos.persona.state.CiudadanoState;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.UUID;
@@ -43,6 +45,9 @@ public class Ciudadano {
     @Enumerated(EnumType.STRING)
     @Column(name = "estado", nullable = false, length = 50)
     private EstadoCiudadano estado = EstadoCiudadano.ACTIVO;
+
+    @Transient
+    private CiudadanoState state;
 
     @Column(name = "cuit", nullable = false, unique = true)
     private Long cuit;
@@ -97,6 +102,23 @@ public class Ciudadano {
 
     public void setEstado(EstadoCiudadano estado) {
         this.estado = estado;
+        this.state = estado != null ? CiudadanoState.de(estado) : null;
+    }
+
+    public CiudadanoState getState() {
+        if (this.state == null || this.state.getEstado() != this.estado) {
+            this.state = CiudadanoState.de(this.estado);
+        }
+        return this.state;
+    }
+
+    /**
+     * Aplica el patron State (GoF) delegando en el estado actual la validacion y transicion.
+     */
+    public void cambiarEstado(EstadoCiudadano nuevoEstado) {
+        CiudadanoState proximo = getState().cambiarEstado(nuevoEstado);
+        this.estado = proximo.getEstado();
+        this.state = proximo;
     }
 
     public Long getCuit() {
