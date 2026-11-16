@@ -131,10 +131,10 @@ public class GroqLectorDni {
                 throw new ApiException(HttpStatus.TOO_MANY_REQUESTS,
                         "Se alcanzo el limite gratuito del servicio de verificacion. Espera un minuto y proba de nuevo.");
             }
-            log.warn("Groq respondio {}: {}", e.getStatusCode().value(), e.getResponseBodyAsString());
+            log.warn("Groq respondio con HTTP {}", e.getStatusCode().value());
             throw new ApiException(HttpStatus.BAD_GATEWAY, "El servicio de verificacion de DNI respondio con un error");
         } catch (ResourceAccessException e) {
-            log.warn("No se pudo contactar a Groq: {}", e.getMessage());
+            log.warn("No se pudo contactar a Groq");
             throw new ApiException(HttpStatus.SERVICE_UNAVAILABLE, "No se pudo contactar al servicio de verificacion de DNI");
         }
 
@@ -192,7 +192,7 @@ public class GroqLectorDni {
                     soloDigitos(texto(json, "cuil")),
                     texto(json, "observaciones"));
         } catch (Exception e) {
-            log.warn("Respuesta de Groq ilegible: {}", respuesta);
+            log.warn("Respuesta de Groq ilegible");
             throw new ApiException(HttpStatus.BAD_GATEWAY, "El servicio de verificacion devolvio una respuesta ilegible");
         }
     }

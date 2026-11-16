@@ -3,7 +3,7 @@ name: Testing G3
 on:
   push:
     branches: ['**']
-    tags: [v1.0-testing]
+    tags: [v1.0-testing, v2.0-entrega4]
   pull_request:
   workflow_dispatch:
 
@@ -27,7 +27,7 @@ jobs:
         ports:
           - 55679:5672
         options: >-
-          --health-cmd "rabbitmq-diagnostics -q ping"
+          --health-cmd "test -s /var/lib/rabbitmq/.erlang.cookie && gosu rabbitmq rabbitmq-diagnostics -q ping"
           --health-interval 5s --health-timeout 5s --health-retries 30
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -148,7 +148,7 @@ jobs:
         run: docker compose up --build -d --wait --wait-timeout 720
       - name: Login, permisos, proxy y consumidor real
         run: docker compose run --rm -T verificar
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v6.3.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 22
           cache: npm
@@ -245,7 +245,7 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
-      - name: El tag de testing debe apuntar a un commit integrado en main
+      - name: El tag debe apuntar a un commit integrado en main
         if: github.ref_type == 'tag'
         run: git merge-base --is-ancestor HEAD origin/main
       - name: Exigir todas las etapas aprobadas

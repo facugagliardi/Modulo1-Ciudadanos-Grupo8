@@ -57,7 +57,7 @@ services:
     ports:
       - "127.0.0.1:${TESTING_RABBIT_UI_PORT:-15673}:15672"
     healthcheck:
-      test: [CMD, rabbitmq-diagnostics, -q, check_running]
+      test: [CMD-SHELL, "test -s /var/lib/rabbitmq/.erlang.cookie && gosu rabbitmq rabbitmq-diagnostics -q check_running"]
       interval: 5s
       timeout: 10s
       retries: 30
@@ -78,7 +78,7 @@ services:
       RABBITMQ_SSL_ENABLED: "false"
       RABBITMQ_AUTO_STARTUP: "true"
       ALMACENAMIENTO_DIR: /app/archivos-documentos
-      APP_CORS_ALLOWED_ORIGINS: ${APP_CORS_ALLOWED_ORIGINS:-http://localhost:8090,http://127.0.0.1:8090,http://localhost:5173,http://127.0.0.1:5173}
+      APP_CORS_ALLOWED_ORIGINS: ${APP_CORS_ALLOWED_ORIGINS:-http://localhost:${TESTING_WEB_PORT:-8090},http://127.0.0.1:${TESTING_WEB_PORT:-8090},http://localhost:5173,http://127.0.0.1:5173}
       LOGGING_LEVEL_AR_EDU_UADE_CIUDADANOS: INFO
       # Se toma del .env de la raiz (ignorado por Git). Ver .env.example.
       GROQ_API_KEY: ${GROQ_API_KEY:-}

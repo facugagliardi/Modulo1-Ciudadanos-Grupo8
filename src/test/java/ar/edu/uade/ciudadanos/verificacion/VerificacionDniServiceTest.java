@@ -18,8 +18,13 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
+import org.springframework.http.HttpStatus;
 import org.springframework.mock.web.MockMultipartFile;
 
+@ExtendWith(OutputCaptureExtension.class)
 class VerificacionDniServiceTest {
 
     private static final Clock HOY = Clock.fixed(Instant.parse("2026-11-15T12:00:00Z"), ZoneOffset.UTC);
@@ -147,5 +152,16 @@ class VerificacionDniServiceTest {
         assertThat(datos.fechaNacimiento()).isEqualTo(LocalDate.of(1990, 1, 15));
         assertThat(datos.fechaVencimiento()).isNull();
         assertThat(datos.observaciones()).isNull();
+    }
+
+    @Test
+    void respuestaIlegibleNoExponeDatosDelDocumentoEnElLog(CapturedOutput salida) {
+        GroqLectorDni real = new GroqLectorDni(new ObjectMapper(), "clave", "modelo", "none", "http://localhost");
+        String respuesta = "{\"choices\":[{\"message\":{\"content\":\"DNI-FICTICIO-12345678\"}}]}";
+
+        assertThatThrownBy(() -> real.interpretar(respuesta))
+                .isInstanceOfSatisfying(ApiException.class,
+                        error -> assertThat(error.getStatus()).isEqualTo(HttpStatus.BAD_GATEWAY));
+        assertThat(salida.getAll()).contains("Respuesta de Groq ilegible").doesNotContain("DNI-FICTICIO-12345678");
     }
 }

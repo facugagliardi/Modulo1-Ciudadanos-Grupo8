@@ -1,5 +1,6 @@
 """Resume JaCoCo usando el mismo alcance que el gate Maven y valida su coherencia con PIT."""
 import argparse
+from decimal import Decimal
 import fnmatch
 import json
 from pathlib import Path
@@ -11,7 +12,10 @@ args = parser.parse_args()
 root = Path(__file__).resolve().parent.parent
 ns = {'m': 'http://maven.apache.org/POM/4.0.0'}
 pom = ET.parse(root / 'pom.xml')
-includes = [n.text for n in pom.findall('.//m:execution[m:id="minimos-dominio"]//m:include', ns)]
+gate = pom.find('.//m:execution[m:id="minimos-dominio"]/m:configuration', ns)
+includes = [n.text for n in gate.findall('m:includes/m:include', ns)]
+minimos = {n.findtext('m:counter', namespaces=ns): Decimal(n.findtext('m:minimum', namespaces=ns))
+           for n in gate.findall('.//m:limit', ns)}
 pit = pom.findtext('.//m:dominio.pit', namespaces=ns).split(',')
 report = ET.parse(root / 'target/site/jacoco/jacoco.xml')
 classes = []
@@ -36,5 +40,9 @@ result = {'clases': classes, 'totales': totals}
 out = root / 'target/dominio-cobertura.json'
 out.write_text(json.dumps(result, indent=2), encoding='utf-8')
 print(json.dumps(totals, indent=2))
-if args.exigir and (totals['LINE']['porcentaje'] < 80 or totals['BRANCH']['porcentaje'] < 70):
-    raise SystemExit('No cumple 80% lineas / 70% ramas')
+if args.exigir:
+    for kind, minimo in minimos.items():
+        cubiertas = totals[kind]['covered']
+        total = cubiertas + totals[kind]['missed']
+        if cubiertas < minimo * total:
+            raise SystemExit(f'{kind}: {totals[kind]["porcentaje"]}% por debajo del mínimo de {minimo:.0%}')

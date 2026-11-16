@@ -27,8 +27,9 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.mockito.Mockito;
+import org.springframework.boot.test.context.TestComponent;
+import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder;
@@ -53,8 +54,8 @@ import org.springframework.web.servlet.config.annotation.EnableWebMvc;
  * 4. Mass Assignment (rechazo de campos no declarados con 400)
  * 5. Inyecciones (SQLi y Path Traversal)
  * 6. Fuerza bruta con HTTP 429 Too Many Requests y Retry-After
- * 7. Escaneo OWASP ZAP sin alertas High (cabeceras de seguridad CSP, X-Frame-Options, etc.)
- * 8. Dependencias sin CVE críticas sin mitigar (SCA)
+ * 7. Cabeceras de seguridad CSP, X-Frame-Options y otras
+ * 8. Registro de revisiones de aplicabilidad del SCA
  */
 class EjeDSeguridadTest {
 
@@ -397,7 +398,7 @@ class EjeDSeguridadTest {
         SecurityContextHolder.getContext().setAuthentication(auth);
     }
 
-    @Configuration
+    @TestConfiguration(proxyBeanMethods = false)
     @EnableWebMvc
     @org.springframework.security.config.annotation.web.configuration.EnableWebSecurity
     static class TestWebConfig {
@@ -413,6 +414,7 @@ class EjeDSeguridadTest {
         @Bean PublicController publicController() { return new PublicController(); }
     }
 
+    @TestComponent
     @RestController
     static class PublicController {
         @GetMapping({"/publico/health", "/actuator/health"})

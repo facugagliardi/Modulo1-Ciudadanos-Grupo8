@@ -1,8 +1,8 @@
 # Integracion continua para G3
 
 Workflow: `.github/workflows/testing.yml`, nombre **Testing G3**.
-Se ejecuta al subir una rama, en pull requests, al crear `v1.0-testing` y por
-ejecucion manual cuando el workflow este disponible en la rama por defecto.
+Se ejecuta al subir una rama, en pull requests, al publicar `v1.0-testing` o
+`v2.0-entrega4` y por ejecucion manual desde GitHub Actions.
 Las acciones estan fijadas por SHA. No necesita secretos de Retool, Render ni Core.
 Permiso del token: solo lectura del contenido del repositorio.
 
@@ -66,7 +66,8 @@ redactados; el workflow verifica tambien el checksum de la descarga.
 
 1. Integrar los cambios definitivos en main mediante revision del equipo.
 2. Ejecutar el workflow y resolver sus fallos sin omitir pruebas ni controles.
-3. Crear `v1.0-testing` en un commit de main, antes del horario exigido.
+3. Crear y publicar `v2.0-entrega4` en el commit de main que se va a presentar,
+   antes del horario exigido. Conservar el tag histórico `v1.0-testing`.
 4. Verificar el run disparado por ese tag. El workflow rechaza un tag cuyo commit
    no este integrado en main.
 5. Entregar el enlace del run aprobado sobre el tag y sus artifacts.
@@ -77,10 +78,10 @@ Un run verde en aedelstein es una verificacion previa; no reemplaza el run del t
 
 - El Quality Gate de SonarQube/SonarCloud (ratings, hotspots, vulnerabilidades y
   duplicacion) sigue pendiente de configuracion. PMD/ESLint no acreditan ese gate.
-- JaCoCo publica cobertura; la comprobacion de los umbrales de dominio y PIT para
-  mutation score se completan en el trabajo del eje B. No se declaran alcanzados.
-- La verificacion HTTP de Compose no equivale a los cinco escenarios E2E de
-  navegador ni a contratos completos OpenAPI/WSDL.
+- JaCoCo publica cobertura global y aplica los umbrales de dominio de Maven.
+  PIT aplica el mínimo de mutación al mismo alcance.
+- Compose ejecuta la verificación HTTP y cinco recorridos E2E en navegador.
+  Los contratos OpenAPI se acreditan con su evidencia específica.
 - Los tests actuales de integracion y el consumidor conectado al broker no
   acreditan por si solos toda la resiliencia exigida por la catedra.
 - El escaneo de Git revisa las referencias disponibles en el checkout. La purga
@@ -99,8 +100,8 @@ Un run verde en aedelstein es una verificacion previa; no reemplaza el run del t
 
 Ver [CALIDAD_JAVA_TESTING.md](CALIDAD_JAVA_TESTING.md) para el alcance de negocio,
 los comandos de reproduccion, JaCoCo, PIT y SonarQube local. Los gates de negocio
-80% lineas / 70% ramas y mutacion 60% ahora se ejecutan en verify por defecto y
-en el job Java automatico. Se guardan tambien los reportes PIT. El workflow
+85% de líneas / 70% de ramas y mutación 60% se ejecutan en `verify` y en el job
+Java automático. Se guardan también los reportes PIT. El workflow
 manual de dominio reproduce ese control; Sonar remoto sigue requiriendo la
 configuracion de cuenta/variables. Un resultado local o de rama no acredita el
 tag final ni el cierre de los demas requisitos del TP.
