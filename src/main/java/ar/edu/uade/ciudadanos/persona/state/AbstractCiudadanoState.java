@@ -40,7 +40,7 @@ public abstract class AbstractCiudadanoState implements CiudadanoState {
             throw ApiException.invalido("El nuevo estado no puede ser nulo");
         }
         if (this.estado == nuevoEstado) {
-            throw ApiException.invalido("El ciudadano ya esta en estado " + nuevoEstado);
+            throw ApiException.conflicto("El ciudadano ya esta en estado " + nuevoEstado);
         }
         if (!transicionesPermitidas.contains(nuevoEstado)) {
             String posibles = transicionesPermitidas.isEmpty()
@@ -49,7 +49,7 @@ public abstract class AbstractCiudadanoState implements CiudadanoState {
                             .map(Enum::name)
                             .sorted()
                             .collect(Collectors.joining(", "));
-            throw ApiException.invalido(
+            throw ApiException.conflicto(
                     "Transicion invalida de " + estado + " a " + nuevoEstado + ". Destinos permitidos: " + posibles);
         }
         return CiudadanoState.de(nuevoEstado);
