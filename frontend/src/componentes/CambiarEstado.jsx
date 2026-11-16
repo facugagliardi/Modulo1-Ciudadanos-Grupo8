@@ -12,7 +12,7 @@ import { BadgeEstado } from "./BadgeEstado";
  *
  * Las opciones salen del mismo grafo de transiciones que valida el backend, así
  * que sólo se ofrece lo que va a funcionar: nunca un destino inválido y nunca
- * el estado actual (mandarlo también es 400). El usuario no puede provocar ese
+ * el estado actual (mandarlo también es 409). El usuario no puede provocar ese
  * error aunque quiera.
  *
  * Cuando el destino es terminal, el diálogo lo dice con todas las letras y el

@@ -1,0 +1,34 @@
+meta {
+  name: 13_Cabeceras_Seguridad_OWASP_ZAP
+  type: http
+  seq: 13
+}
+
+get {
+  url: {{baseUrl}}/actuator/health
+  body: none
+  auth: none
+}
+
+tests {
+  test("Status code is 200 OK", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+  test("Cabecera X-Frame-Options es DENY (Anti-Clickjacking)", function() {
+    const header = res.getHeader('X-Frame-Options') || res.getHeader('x-frame-options');
+    expect(header).to.equal('DENY');
+  });
+  test("Cabecera X-Content-Type-Options es nosniff (Anti-MIME Sniffing)", function() {
+    const header = res.getHeader('X-Content-Type-Options') || res.getHeader('x-content-type-options');
+    expect(header).to.equal('nosniff');
+  });
+  test("Cabecera Referrer-Policy es strict-origin-when-cross-origin", function() {
+    const header = res.getHeader('Referrer-Policy') || res.getHeader('referrer-policy');
+    expect(header).to.equal('strict-origin-when-cross-origin');
+  });
+  test("Cabecera Content-Security-Policy está presente y define frame-ancestors none", function() {
+    const csp = res.getHeader('Content-Security-Policy') || res.getHeader('content-security-policy');
+    expect(csp).to.not.be.undefined;
+    expect(csp).to.contain("frame-ancestors 'none'");
+  });
+}

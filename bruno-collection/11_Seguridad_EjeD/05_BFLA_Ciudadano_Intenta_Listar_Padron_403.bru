@@ -1,0 +1,21 @@
+meta {
+  name: 05_BFLA_Ciudadano_Intenta_Listar_Padron_403
+  type: http
+  seq: 5
+}
+
+get {
+  url: {{baseUrl}}/ciudadanos
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt_ciudadano}}
+}
+
+tests {
+  test("Status code is 403 Forbidden cuando rol PERSONA invoca funcion de padron (BFLA)", function() {
+    expect(res.getStatus()).to.equal(403);
+  });
+}

@@ -102,7 +102,7 @@ Las guardas del frontend separan sesión, zona, permisos y páginas exclusivas d
 
 `CiudadanoService` lista resúmenes y compone el detalle con domicilio principal y contactos. La edición es parcial: campos `null` no se modifican. DNI y CUIL nuevos se verifican contra duplicados. Estado se cambia mediante operación separada.
 
-Transiciones: `ACTIVO`, `INACTIVO` y `BLOQUEADO` pueden pasar entre sí o a `FALLECIDO`; `FALLECIDO` es terminal. Repetir el estado actual da 400.
+Transiciones: `ACTIVO`, `INACTIVO` y `BLOQUEADO` pueden pasar entre sí o a `FALLECIDO`; `FALLECIDO` es terminal. Repetir el estado actual da 409.
 
 La consulta por DNI devuelve `{existe:false}` cuando no encuentra, en lugar de 404. El padrón requiere `LISTAR_PADRON`. Su resumen no contiene toda la información de contactos y domicilios: una tabla no puede buscar por datos que nunca descargó.
 

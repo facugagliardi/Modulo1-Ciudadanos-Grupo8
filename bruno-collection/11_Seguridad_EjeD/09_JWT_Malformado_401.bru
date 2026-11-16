@@ -1,0 +1,21 @@
+meta {
+  name: 09_JWT_Malformado_401
+  type: http
+  seq: 9
+}
+
+get {
+  url: {{baseUrl}}/ciudadanos/1
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: malformed.jwt.token
+}
+
+tests {
+  test("Status code is 401 Unauthorized ante JWT malformado", function() {
+    expect(res.getStatus()).to.equal(401);
+  });
+}

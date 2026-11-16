@@ -79,6 +79,11 @@ public class SolicitudDocumentacionService {
      */
     @Transactional(readOnly = true)
     public List<SolicitudResponse> listar() {
+        if (!autorizacion.puede(Permiso.LISTAR_PADRON)
+                && autorizacion.actual().tipoInfo() != ar.edu.uade.ciudadanos.security.TipoSujeto.CIUDADANO
+                && autorizacion.actual().tipoInfo() != ar.edu.uade.ciudadanos.security.TipoSujeto.JURIDICA) {
+            autorizacion.exigir(Permiso.LISTAR_PADRON, "listar solicitudes de documentacion");
+        }
         List<SolicitudDocumentacion> solicitudes = autorizacion.puede(Permiso.LISTAR_PADRON)
                 ? solicitudRepository.findAll()
                 : solicitudRepository.findByTitularId(autorizacion.actual().id());

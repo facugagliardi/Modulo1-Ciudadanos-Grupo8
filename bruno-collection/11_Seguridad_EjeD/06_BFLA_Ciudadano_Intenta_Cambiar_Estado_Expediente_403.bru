@@ -1,0 +1,27 @@
+meta {
+  name: 06_BFLA_Ciudadano_Intenta_Cambiar_Estado_Expediente_403
+  type: http
+  seq: 6
+}
+
+patch {
+  url: {{baseUrl}}/expedientes/1/estado
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt_ciudadano}}
+}
+
+body:json {
+  {
+    "estado": "EN_TRAMITE"
+  }
+}
+
+tests {
+  test("Status code is 403 Forbidden cuando rol PERSONA intenta cambiar estado (BFLA)", function() {
+    expect(res.getStatus()).to.equal(403);
+  });
+}

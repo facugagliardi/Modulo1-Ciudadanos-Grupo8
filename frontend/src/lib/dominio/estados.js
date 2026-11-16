@@ -5,12 +5,12 @@
  *   backend/src/main/java/ar/edu/uade/ciudadanos/common/TransicionesEstado.java
  *
  * Si alguien toca ese archivo, este queda desincronizado. Es la unica copia
- * que vale la pena mantener a mano: sirve para que el usuario nunca vea un 400
+ * que vale la pena mantener a mano: sirve para que el usuario nunca vea un 409
  * por transicion invalida, porque los destinos imposibles no se ofrecen.
  *
  * Dos reglas del backend que este modulo hace visibles:
- *   - Un destino fuera de la lista es 400.
- *   - Mandar el estado que ya se tiene TAMBIEN es 400 (no es idempotente).
+ *   - Un destino fuera de la lista es 409.
+ *   - Mandar el estado que ya se tiene TAMBIEN es 409 (no es idempotente).
  *     Por eso `destinosPosibles` nunca incluye el estado actual.
  */
 

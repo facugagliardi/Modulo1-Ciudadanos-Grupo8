@@ -1,0 +1,21 @@
+meta {
+  name: 01_BOLA_IDOR_Acceso_Ciudadano_Ajeno_403
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/ciudadanos/2
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt_ciudadano}}
+}
+
+tests {
+  test("Status code is 403 Forbidden para ciudadano ajeno (BOLA/IDOR)", function() {
+    expect(res.getStatus()).to.equal(403);
+  });
+}

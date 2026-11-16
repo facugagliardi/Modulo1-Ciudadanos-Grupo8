@@ -84,6 +84,7 @@ class ContactoServiceTest {
     @Test void titularPuedeVerificarUnaVezYAjenoNoPuedeEliminar() {
         ContactoCiudadano c = contacto();
         when(auth.actual()).thenReturn(new AuthPrincipal(2L, null, "PERSONA"));
+        when(auth.esPropia(2L)).thenReturn(true);
         when(vinculos.findByIdContactoId(8L)).thenReturn(List.of(new ContactoPersona(new ContactoPersonaId(2L, 8L))));
         service.verificar(8L, "123456");
         assertTrue(c.isVerificado());

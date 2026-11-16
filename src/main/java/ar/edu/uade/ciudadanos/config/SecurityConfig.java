@@ -26,6 +26,9 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import ar.edu.uade.ciudadanos.security.RateLimitFilter;
+import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter;
+
 /**
  * API stateless: no hay sesion ni formulario de login, la identidad viaja en el
  * JWT que emite {@code /auth/**}.
@@ -43,13 +46,17 @@ public class SecurityConfig {
     };
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final RateLimitFilter rateLimitFilter;
     private final ObjectMapper objectMapper;
     private final List<String> allowedOrigins;
 
     @Autowired
-    public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter, ObjectMapper objectMapper,
+    public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter,
+                          @Autowired(required = false) RateLimitFilter rateLimitFilter,
+                          ObjectMapper objectMapper,
                           @Value("${app.cors.allowed-origins:http://localhost:5173,http://localhost:8090,http://127.0.0.1:5173,http://127.0.0.1:8090}") List<String> allowedOrigins) {
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
+        this.rateLimitFilter = rateLimitFilter != null ? rateLimitFilter : new RateLimitFilter(objectMapper, 5, 60);
         this.objectMapper = objectMapper;
         this.allowedOrigins = List.copyOf(allowedOrigins);
     }
@@ -69,6 +76,13 @@ public class SecurityConfig {
                 .formLogin(AbstractHttpConfigurer::disable)
                 .logout(AbstractHttpConfigurer::disable)
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                .headers(headers -> headers
+                        .frameOptions(frame -> frame.deny())
+                        .contentTypeOptions(contentType -> {})
+                        .contentSecurityPolicy(csp -> csp.policyDirectives("default-src 'self'; frame-ancestors 'none';"))
+                        .referrerPolicy(referrer -> referrer.policy(ReferrerPolicyHeaderWriter.ReferrerPolicy.STRICT_ORIGIN_WHEN_CROSS_ORIGIN))
+                        .permissionsPolicy(permissions -> permissions.policy("camera=(), microphone=(), geolocation=()"))
+                )
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(RUTAS_PUBLICAS).permitAll()
@@ -78,7 +92,8 @@ public class SecurityConfig {
                                 escribirError(res, HttpStatus.UNAUTHORIZED, "Token ausente o invalido", req.getRequestURI()))
                         .accessDeniedHandler((req, res, e) ->
                                 escribirError(res, HttpStatus.FORBIDDEN, "Rol sin permiso", req.getRequestURI())))
-                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterAfter(rateLimitFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }

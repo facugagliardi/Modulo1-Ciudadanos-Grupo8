@@ -117,7 +117,7 @@ public class ExpedienteService {
         Expediente expediente = buscarParaActualizar(id);
 
         if (nuevo == EstadoExpediente.RESUELTO && expediente.getPublicWorksProjectId() != null) {
-            throw ApiException.invalido("Para resolver una obra debe registrar el resultado y el dictamen en /expedientes/{id}/resolucion-obra");
+            throw ApiException.conflicto("Para resolver una obra debe registrar el resultado y el dictamen en /expedientes/{id}/resolucion-obra");
         }
 
         EstadoExpediente anterior = expediente.getEstado();

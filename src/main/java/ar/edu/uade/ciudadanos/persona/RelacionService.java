@@ -127,8 +127,7 @@ public class RelacionService {
         if (autorizacion.puede(Permiso.EDITAR_TERCEROS)) {
             return;
         }
-        Long propio = autorizacion.actual().id();
-        if (!propio.equals(unoId) && !propio.equals(dosId)) {
+        if (!autorizacion.esPropia(unoId) && !autorizacion.esPropia(dosId)) {
             throw ApiException.prohibido("Solo podes administrar relaciones en las que participas");
         }
     }

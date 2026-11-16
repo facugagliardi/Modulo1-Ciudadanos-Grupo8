@@ -1,0 +1,49 @@
+meta {
+  name: 12_Fuerza_Bruta_Bloqueo_429
+  type: http
+  seq: 12
+}
+
+post {
+  url: {{baseUrl}}/auth/login
+  body: json
+  auth: none
+}
+
+headers {
+  X-Forwarded-For: 198.51.100.99
+}
+
+body:json {
+  {
+    "cuit": "20345678901",
+    "password": "PasswordIncorrecto"
+  }
+}
+
+script:pre-request {
+  // Realiza los 5 intentos fallidos previos para alcanzar el umbral de bloqueo
+  const targetIp = '198.51.100.99';
+  for (let i = 0; i < 5; i++) {
+    try {
+      await fetch(`${bru.getEnvVar('baseUrl')}/auth/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Forwarded-For': targetIp
+        },
+        body: JSON.stringify({ cuit: '20345678901', password: 'PasswordIncorrecto' })
+      });
+    } catch (e) {}
+  }
+}
+
+tests {
+  test("Status code is 429 Too Many Requests ante fuerza bruta", function() {
+    expect(res.getStatus()).to.equal(429);
+  });
+  test("Header Retry-After presente", function() {
+    const retryAfter = res.getHeader('Retry-After') || res.getHeader('retry-after');
+    expect(retryAfter).to.not.be.undefined;
+  });
+}

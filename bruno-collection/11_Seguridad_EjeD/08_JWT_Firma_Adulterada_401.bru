@@ -1,0 +1,21 @@
+meta {
+  name: 08_JWT_Firma_Adulterada_401
+  type: http
+  seq: 8
+}
+
+get {
+  url: {{baseUrl}}/ciudadanos/1
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt_ciudadano}}adulterado123
+}
+
+tests {
+  test("Status code is 401 Unauthorized ante firma adulterada", function() {
+    expect(res.getStatus()).to.equal(401);
+  });
+}
