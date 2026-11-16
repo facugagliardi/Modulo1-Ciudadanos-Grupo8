@@ -140,8 +140,7 @@ public class CiudadanoService {
         Ciudadano ciudadano = buscar(id);
 
         EstadoCiudadano anterior = ciudadano.getEstado();
-        TransicionesEstado.exigirCiudadano(anterior, nuevo);
-        ciudadano.setEstado(nuevo);
+        ciudadano.cambiarEstado(nuevo);
 
         if (eventPublisherService != null) {
             try {
