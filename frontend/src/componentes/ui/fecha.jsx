@@ -99,6 +99,36 @@ function deTextoAR(texto) {
   return deISO(`${a}-${mes.padStart(2, "0")}-${d.padStart(2, "0")}`) ? `${a}-${mes.padStart(2, "0")}-${d.padStart(2, "0")}` : null;
 }
 
+/**
+ * Pone las barras solas mientras se escribe: "14" -> "14/", "14072004" ->
+ * "14/07/2004". Nadie debería tener que tipear un separador que siempre va en
+ * el mismo lugar.
+ *
+ * - Al borrar no se agrega la barra del final: si no, borrar "14/" la volvería
+ *   a poner en el acto y el campo quedaría trabado.
+ * - Una barra tipeada después de un solo dígito completa con cero: "1/7/2004"
+ *   -> "01/07/2004". Una barra de más ("14//") se ignora.
+ * - Pegar "14-07-2004" o "14072004" también termina en "14/07/2004".
+ */
+export function conBarras(texto, borrando = false) {
+  const largos = [2, 2, 4];
+  const partes = [""];
+  for (const c of texto) {
+    const i = partes.length - 1;
+    if (/\d/.test(c)) {
+      if (partes[i].length < largos[i]) partes[i] += c;
+      else if (i < 2) partes.push(c);
+      else break;
+    } else if ((c === "/" || c === "-") && i < 2 && partes[i] !== "") {
+      partes[i] = partes[i].padStart(2, "0");
+      partes.push("");
+    }
+  }
+  const i = partes.length - 1;
+  const completa = i < 2 && partes[i].length === largos[i];
+  return partes.join("/") + (completa && !borrando ? "/" : "");
+}
+
 const sumarDias = (f, n) => new Date(f.getFullYear(), f.getMonth(), f.getDate() + n);
 const sumarMeses = (f, n) => {
   const destino = new Date(f.getFullYear(), f.getMonth() + n, 1);
@@ -161,7 +191,11 @@ export function CampoFecha({
    * "no podés haber nacido mañana" o "el vencimiento no puede ser anterior al
    * inicio".
    */
-  function alTipear(nuevo) {
+  function alTipear(crudo, campo) {
+    // Si se edita en el medio ("14/O7/2004" -> corregir el mes) no se
+    // reformatea: el cursor saltaría al final en cada tecla.
+    const alFinal = campo.selectionStart == null || campo.selectionStart === crudo.length;
+    const nuevo = alFinal ? conBarras(crudo, crudo.length < texto.length) : crudo;
     setTexto(nuevo);
     if (nuevo.trim() === "") return emitir("");
     const iso = deTextoAR(nuevo);
@@ -198,7 +232,7 @@ export function CampoFecha({
                 autoComplete="off"
                 disabled={disabled}
                 value={texto}
-                onChange={(e) => alTipear(e.target.value)}
+                onChange={(e) => alTipear(e.target.value, e.target)}
                 onBlur={alSalir}
                 className={cn(
                   claseControl,
@@ -265,6 +299,8 @@ function Calendario({ valor, min, max, alElegir }) {
   const [foco, setFoco] = useState(() => elegida ?? acotar(hoy, min, max));
   // "dias" | "meses" | "anios": tres niveles de zoom sobre la misma fecha.
   const [vista, setVista] = useState("dias");
+  // Cómo entra la próxima hoja: ver CLASE_HOJA. Con el teclado no se anima.
+  const [entrada, setEntrada] = useState(null);
   const grilla = useRef(null);
   const moverFocoAlPintar = useRef(false);
 
@@ -298,6 +334,9 @@ function Calendario({ valor, min, max, alElegir }) {
     const calcular = teclas[evento.key];
     if (!calcular) return;
     evento.preventDefault();
+    // Se recorre con las flechas tecla tras tecla: cada cambio de mes tiene
+    // que ser instantáneo, no una animación que hay que esperar.
+    setEntrada(null);
     mover(calcular());
   }
 
@@ -323,6 +362,14 @@ function Calendario({ valor, min, max, alElegir }) {
     anios: `${inicioTanda} – ${inicioTanda + ANIOS_POR_TANDA - 1}`,
   }[vista];
 
+  /* Una hoja por mes, por año o por tanda: cambiar de hoja la vuelve a montar
+     y eso dispara su entrada. Moverse dentro del mismo mes no cambia la hoja. */
+  const hoja = {
+    dias: `d-${foco.getFullYear()}-${foco.getMonth()}`,
+    meses: `m-${foco.getFullYear()}`,
+    anios: `a-${inicioTanda}`,
+  }[vista];
+
   return (
     <div>
       {/*
@@ -340,7 +387,10 @@ function Calendario({ valor, min, max, alElegir }) {
       <div className="mb-u2 flex items-center gap-1">
         <BotonFlecha
           etiqueta={ETIQUETA_ATRAS[vista]}
-          alPulsar={() => mover(pasoAtras())}
+          alPulsar={() => {
+            setEntrada("anterior");
+            mover(pasoAtras());
+          }}
           deshabilitado={fueraDeRango(finDeMes(pasoAtras()), min, max)}
         >
           <ChevronLeft className="size-4" aria-hidden="true" />
@@ -348,7 +398,10 @@ function Calendario({ valor, min, max, alElegir }) {
 
         <button
           type="button"
-          onClick={() => setVista(vista === "dias" ? "meses" : "anios")}
+          onClick={() => {
+            setEntrada("alejar");
+            setVista(vista === "dias" ? "meses" : "anios");
+          }}
           disabled={vista === "anios"}
           aria-label={vista === "dias" ? "Elegir mes" : "Elegir año"}
           className={cn(
@@ -367,143 +420,162 @@ function Calendario({ valor, min, max, alElegir }) {
 
         <BotonFlecha
           etiqueta={ETIQUETA_ADELANTE[vista]}
-          alPulsar={() => mover(pasoAdelante())}
+          alPulsar={() => {
+            setEntrada("siguiente");
+            mover(pasoAdelante());
+          }}
           deshabilitado={fueraDeRango(inicioDeMes(pasoAdelante()), min, max)}
         >
           <ChevronRight className="size-4" aria-hidden="true" />
         </BotonFlecha>
       </div>
 
-      {vista === "dias" && (
-        <>
-          <div className="grid grid-cols-7 gap-0.5" role="presentation">
-            {DIAS.map((d) => (
-              <span
-                key={d}
-                aria-hidden="true"
-                className="pb-1 text-center text-[11px] font-semibold uppercase tracking-wide text-apagado"
-              >
-                {d}
-              </span>
-            ))}
-          </div>
+      <div key={hoja} className={entrada ? CLASE_HOJA[entrada] : undefined}>
+        {vista === "dias" && (
+          <>
+            <div className="grid grid-cols-7 gap-0.5" role="presentation">
+              {DIAS.map((d) => (
+                <span
+                  key={d}
+                  aria-hidden="true"
+                  className="pb-1 text-center text-[11px] font-semibold uppercase tracking-wide text-apagado"
+                >
+                  {d}
+                </span>
+              ))}
+            </div>
 
-          <div
-            ref={grilla}
-            role="grid"
-            aria-label={`${MESES[foco.getMonth()]} de ${foco.getFullYear()}`}
-            onKeyDown={alTeclear}
-            className="grid grid-cols-7 gap-0.5"
-          >
-            {dias.map((dia) => {
-              const deOtroMes = dia.getMonth() !== foco.getMonth();
-              const deshabilitado = fueraDeRango(dia, min, max);
-              const esElegida = mismoDia(dia, elegida);
-              const tieneFoco = mismoDia(dia, foco);
+            <div
+              ref={grilla}
+              role="grid"
+              aria-label={`${MESES[foco.getMonth()]} de ${foco.getFullYear()}`}
+              onKeyDown={alTeclear}
+              className="grid grid-cols-7 gap-0.5"
+            >
+              {dias.map((dia) => {
+                const deOtroMes = dia.getMonth() !== foco.getMonth();
+                const deshabilitado = fueraDeRango(dia, min, max);
+                const esElegida = mismoDia(dia, elegida);
+                const tieneFoco = mismoDia(dia, foco);
+                return (
+                  <button
+                    key={aISO(dia)}
+                    type="button"
+                    role="gridcell"
+                    data-foco={tieneFoco ? "si" : undefined}
+                    tabIndex={tieneFoco ? 0 : -1}
+                    disabled={deshabilitado}
+                    aria-selected={esElegida}
+                    aria-current={mismoDia(dia, hoy) ? "date" : undefined}
+                    onClick={() => alElegir(aISO(dia))}
+                    className={cn(
+                      CELDA,
+                      "h-9",
+                      // `opacity-*` y no `text-apagado/50`: los tokens de color
+                      // son `var(--apagado)` con un hex adentro, y el
+                      // modificador de opacidad de Tailwind espera canales RGB
+                      // sueltos. Con un hex genera CSS inválido, el navegador lo
+                      // descarta y el texto queda del mismo color que el resto:
+                      // los días deshabilitados se veían habilitados.
+                      deOtroMes ? "text-apagado opacity-45" : "text-tinta",
+                      !esElegida && !deshabilitado && "hover:bg-expediente-suave",
+                      // Hoy se marca con un borde, no con relleno: el relleno es
+                      // del día elegido y dos rellenos distintos compiten.
+                      mismoDia(dia, hoy) && !esElegida && "ring-1 ring-inset ring-borde-fuerte",
+                      esElegida && "bg-expediente font-medium text-white",
+                      deshabilitado && "cursor-not-allowed text-apagado opacity-25 hover:bg-transparent",
+                    )}
+                  >
+                    {dia.getDate()}
+                  </button>
+                );
+              })}
+            </div>
+          </>
+        )}
+
+        {vista === "meses" && (
+          <div className="grid grid-cols-4 gap-0.5" role="grid" aria-label="Elegir mes">
+            {MESES.map((nombre, i) => {
+              const primero = new Date(foco.getFullYear(), i, 1);
+              const deshabilitado = fueraDeRango(primero, min, max) && fueraDeRango(finDeMes(primero), min, max);
+              const esElegido = elegida?.getFullYear() === foco.getFullYear() && elegida?.getMonth() === i;
               return (
                 <button
-                  key={aISO(dia)}
+                  key={nombre}
                   type="button"
                   role="gridcell"
-                  data-foco={tieneFoco ? "si" : undefined}
-                  tabIndex={tieneFoco ? 0 : -1}
                   disabled={deshabilitado}
-                  aria-selected={esElegida}
-                  aria-current={mismoDia(dia, hoy) ? "date" : undefined}
-                  onClick={() => alElegir(aISO(dia))}
+                  aria-selected={esElegido}
+                  onClick={() => {
+                    setEntrada("acercar");
+                    setFoco(new Date(foco.getFullYear(), i, 1));
+                    setVista("dias");
+                  }}
                   className={cn(
                     CELDA,
-                    "h-9",
-                    // `opacity-*` y no `text-apagado/50`: los tokens de color
-                    // son `var(--apagado)` con un hex adentro, y el
-                    // modificador de opacidad de Tailwind espera canales RGB
-                    // sueltos. Con un hex genera CSS inválido, el navegador lo
-                    // descarta y el texto queda del mismo color que el resto:
-                    // los días deshabilitados se veían habilitados.
-                    deOtroMes ? "text-apagado opacity-45" : "text-tinta",
-                    !esElegida && !deshabilitado && "hover:bg-expediente-suave",
-                    // Hoy se marca con un borde, no con relleno: el relleno es
-                    // del día elegido y dos rellenos distintos compiten.
-                    mismoDia(dia, hoy) && !esElegida && "ring-1 ring-inset ring-borde-fuerte",
-                    esElegida && "bg-expediente font-medium text-white",
-                    deshabilitado && "cursor-not-allowed text-apagado opacity-25 hover:bg-transparent",
+                    "h-11 capitalize",
+                    !esElegido && !deshabilitado && "text-tinta hover:bg-expediente-suave",
+                    esElegido && "bg-expediente font-medium text-white",
+                    deshabilitado && "cursor-not-allowed text-apagado opacity-25",
                   )}
                 >
-                  {dia.getDate()}
+                  {nombre.slice(0, 3)}
                 </button>
               );
             })}
           </div>
-        </>
-      )}
+        )}
 
-      {vista === "meses" && (
-        <div className="grid grid-cols-4 gap-0.5" role="grid" aria-label="Elegir mes">
-          {MESES.map((nombre, i) => {
-            const primero = new Date(foco.getFullYear(), i, 1);
-            const deshabilitado = fueraDeRango(primero, min, max) && fueraDeRango(finDeMes(primero), min, max);
-            const esElegido = elegida?.getFullYear() === foco.getFullYear() && elegida?.getMonth() === i;
-            return (
-              <button
-                key={nombre}
-                type="button"
-                role="gridcell"
-                disabled={deshabilitado}
-                aria-selected={esElegido}
-                onClick={() => {
-                  setFoco(new Date(foco.getFullYear(), i, 1));
-                  setVista("dias");
-                }}
-                className={cn(
-                  CELDA,
-                  "h-11 capitalize",
-                  !esElegido && !deshabilitado && "text-tinta hover:bg-expediente-suave",
-                  esElegido && "bg-expediente font-medium text-white",
-                  deshabilitado && "cursor-not-allowed text-apagado opacity-25",
-                )}
-              >
-                {nombre.slice(0, 3)}
-              </button>
-            );
-          })}
-        </div>
-      )}
-
-      {vista === "anios" && (
-        <div className="grid grid-cols-4 gap-0.5" role="grid" aria-label="Elegir año">
-          {Array.from({ length: ANIOS_POR_TANDA }, (_, i) => inicioTanda + i).map((anio) => {
-            const enero = new Date(anio, 0, 1);
-            const diciembre = new Date(anio, 11, 31);
-            const deshabilitado = fueraDeRango(enero, min, max) && fueraDeRango(diciembre, min, max);
-            const esElegido = elegida?.getFullYear() === anio;
-            return (
-              <button
-                key={anio}
-                type="button"
-                role="gridcell"
-                disabled={deshabilitado}
-                aria-selected={esElegido}
-                onClick={() => {
-                  setFoco(new Date(anio, foco.getMonth(), 1));
-                  setVista("meses");
-                }}
-                className={cn(
-                  CELDA,
-                  "h-11",
-                  !esElegido && !deshabilitado && "text-tinta hover:bg-expediente-suave",
-                  esElegido && "bg-expediente font-medium text-white",
-                  deshabilitado && "cursor-not-allowed text-apagado opacity-25",
-                )}
-              >
-                {anio}
-              </button>
-            );
-          })}
-        </div>
-      )}
+        {vista === "anios" && (
+          <div className="grid grid-cols-4 gap-0.5" role="grid" aria-label="Elegir año">
+            {Array.from({ length: ANIOS_POR_TANDA }, (_, i) => inicioTanda + i).map((anio) => {
+              const enero = new Date(anio, 0, 1);
+              const diciembre = new Date(anio, 11, 31);
+              const deshabilitado = fueraDeRango(enero, min, max) && fueraDeRango(diciembre, min, max);
+              const esElegido = elegida?.getFullYear() === anio;
+              return (
+                <button
+                  key={anio}
+                  type="button"
+                  role="gridcell"
+                  disabled={deshabilitado}
+                  aria-selected={esElegido}
+                  onClick={() => {
+                    setEntrada("acercar");
+                    setFoco(new Date(anio, foco.getMonth(), 1));
+                    setVista("meses");
+                  }}
+                  className={cn(
+                    CELDA,
+                    "h-11",
+                    !esElegido && !deshabilitado && "text-tinta hover:bg-expediente-suave",
+                    esElegido && "bg-expediente font-medium text-white",
+                    deshabilitado && "cursor-not-allowed text-apagado opacity-25",
+                  )}
+                >
+                  {anio}
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
+
+/**
+ * Cómo entra una hoja nueva del calendario (ver `.cal-*` en globals.css).
+ * Pasar de mes corre la hoja hacia el lado del salto; subir de nivel (días ->
+ * meses -> años) se aleja, y elegir un mes o un año se acerca.
+ */
+const CLASE_HOJA = {
+  siguiente: "cal-siguiente",
+  anterior: "cal-anterior",
+  alejar: "cal-alejar",
+  acercar: "cal-acercar",
+};
 
 /** Lo que comparten las celdas de las tres vistas. */
 const CELDA = cn(

@@ -8,6 +8,7 @@ import java.nio.file.FileSystemNotFoundException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -37,9 +38,12 @@ public class AlmacenamientoLocal implements AlmacenamientoArchivos {
 
     @Override
     public String guardar(MultipartFile archivo, Long documentoId, int version) {
-        // Nombre derivado del id y la version: nunca se pisan archivos, y las
-        // versiones viejas quedan en disco aunque la fila solo guarde la ultima.
-        String nombre = "documento-" + documentoId + "-v" + version + extensionDe(archivo);
+        // Las versiones viejas quedan en disco aunque la fila solo guarde la ultima.
+        // El sufijo aleatorio evita pisar archivos: DocumentoService pasa el id del
+        // ciudadano, asi que dos documentos v1 del mismo ciudadano (frente y dorso
+        // del DNI, o DNI y PASAPORTE) generaban el mismo nombre.
+        String nombre = "documento-" + documentoId + "-v" + version + "-"
+                + UUID.randomUUID().toString().substring(0, 8) + extensionDe(archivo);
         Path destino = raiz.resolve(nombre);
 
         try {

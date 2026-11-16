@@ -36,6 +36,21 @@ class AlmacenamientoLocalTest {
                 .isEqualTo("contenido");
     }
 
+    @Test
+    void dosArchivosConElMismoIdYVersionNoSePisan() throws IOException {
+        var frente = new MockMultipartFile("archivo", "frente.jpg", "image/jpeg", "frente".getBytes());
+        var dorso = new MockMultipartFile("archivo", "dorso.jpg", "image/jpeg", "dorso".getBytes());
+
+        String refFrente = almacenamiento().guardar(frente, 7L, 1);
+        String refDorso = almacenamiento().guardar(dorso, 7L, 1);
+
+        assertThat(refFrente).isNotEqualTo(refDorso);
+        assertThat(almacenamiento().leer(refFrente).getContentAsString(java.nio.charset.StandardCharsets.UTF_8))
+                .isEqualTo("frente");
+        assertThat(almacenamiento().leer(refDorso).getContentAsString(java.nio.charset.StandardCharsets.UTF_8))
+                .isEqualTo("dorso");
+    }
+
     /**
      * La referencia sale de la base. Si alguien lograra escribir ahi una ruta
      * cualquiera, este metodo serviria el archivo sin chistar: el endpoint esta
