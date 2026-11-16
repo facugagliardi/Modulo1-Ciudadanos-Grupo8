@@ -1,0 +1,27 @@
+meta {
+  name: 07_BFLA_Ciudadano_Intenta_Validar_Documento_403
+  type: http
+  seq: 7
+}
+
+post {
+  url: {{baseUrl}}/documentos/1/validar
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt_ciudadano}}
+}
+
+body:json {
+  {
+    "aprobado": true
+  }
+}
+
+tests {
+  test("Status code is 403 Forbidden cuando rol PERSONA intenta validar documentos (BFLA)", function() {
+    expect(res.getStatus()).to.equal(403);
+  });
+}

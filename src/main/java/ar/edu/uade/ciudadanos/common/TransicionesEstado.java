@@ -12,7 +12,7 @@ import java.util.Set;
 /**
  * Lista blanca de cambios de estado: para cada estado, a cuales puede pasar.
  *
- * <p>Los PATCH .../estado devuelven "400 transicion invalida", asi que el juego
+ * <p>Los PATCH .../estado devuelven "409 transicion invalida", asi que el juego
  * de transiciones tiene que estar declarado en algun lado en vez de repartido
  * en ifs. Un estado que mapea al conjunto vacio es terminal.
  */
@@ -94,14 +94,14 @@ public final class TransicionesEstado {
 
     private static <E extends Enum<E>> void exigir(Map<E, Set<E>> permitidas, E actual, E nuevo, String entidad) {
         if (actual == nuevo) {
-            throw ApiException.invalido("El " + entidad + " ya esta en estado " + nuevo);
+            throw ApiException.conflicto("El " + entidad + " ya esta en estado " + nuevo);
         }
         Set<E> destinos = permitidas.getOrDefault(actual, Set.of());
         if (!destinos.contains(nuevo)) {
             String posibles = destinos.isEmpty()
                     ? "ninguno, " + actual + " es un estado final"
                     : destinos.stream().map(Enum::name).sorted().reduce((a, b) -> a + ", " + b).orElse("");
-            throw ApiException.invalido(
+            throw ApiException.conflicto(
                     "Transicion invalida de " + actual + " a " + nuevo + ". Destinos permitidos: " + posibles);
         }
     }

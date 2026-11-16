@@ -159,9 +159,8 @@ public class ContactoService {
         if (autorizacion.puede(Permiso.EDITAR_TERCEROS)) {
             return;
         }
-        Long propio = autorizacion.actual().id();
         boolean esTitular = contactoPersonaRepository.findByIdContactoId(contactoId).stream()
-                .anyMatch(cp -> cp.getId().getCiudadanoId().equals(propio));
+                .anyMatch(cp -> autorizacion.esPropia(cp.getId().getCiudadanoId()));
         if (!esTitular) {
             throw ApiException.prohibido("No tenes permiso sobre ese contacto");
         }

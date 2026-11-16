@@ -1,0 +1,29 @@
+meta {
+  name: 10_Mass_Assignment_Propiedad_No_Permitida_400
+  type: http
+  seq: 10
+}
+
+post {
+  url: {{baseUrl}}/auth/login
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "cuit": "20345678901",
+    "password": "PasswordInvalido",
+    "rol": "ADMIN",
+    "esAdmin": true
+  }
+}
+
+tests {
+  test("Status code is 400 Bad Request por campos desconocidos (Mass Assignment)", function() {
+    expect(res.getStatus()).to.equal(400);
+  });
+  test("Mensaje de error indica campo no permitido", function() {
+    expect(res.getBody().message).to.contain("Campo no permitido");
+  });
+}

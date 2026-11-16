@@ -68,7 +68,8 @@ Fuentes: [PIT Maven](https://pitest.org/quickstart/maven/), [SonarScanner Maven]
 - ContactoService.verificar no compara el codigo con uno emitido; no se acredita verificacion real email/SMS.
 - El patron de telefono y su mensaje de longitud no expresan exactamente la misma regla.
 - Solicitudes puede cumplir estado aunque falle la publicacion; no se acredita outbox atomico o entrega garantizada.
-- Transiciones invalidas devuelven 400; continuidad exige acreditar 409.
+- Transiciones invalidas devuelven 409 (resuelto en TransicionesEstado).
+- Seguridad Eje D: BOLA/IDOR, BFLA, JWT invalidos, mass assignment, inyecciones, fuerza bruta (429 con Retry-After via RateLimitFilter), cabeceras ZAP y SCA sin CVE criticas validados en suite automatizada EjeDSeguridadTest y coleccion Bruno 11_Seguridad_EjeD.
 - Expedientes numera contando filas; no acredita numeracion concurrente segura.
 - CORS exige origen exacto: frontend en otro origen requiere APP_CORS_ALLOWED_ORIGINS. No se desplego produccion.
 

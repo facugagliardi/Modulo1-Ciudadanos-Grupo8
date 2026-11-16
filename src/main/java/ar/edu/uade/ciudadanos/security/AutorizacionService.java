@@ -103,8 +103,9 @@ public class AutorizacionService {
         throw ApiException.prohibido("No tenes permiso para modificar los datos de esa persona");
     }
 
-    private boolean esPropia(Long personaId) {
-        return actual().id().equals(personaId);
+    public boolean esPropia(Long personaId) {
+        return (actual().tipoInfo() == TipoSujeto.CIUDADANO || actual().tipoInfo() == TipoSujeto.JURIDICA)
+                && actual().id().equals(personaId);
     }
 
     // ------------------------------------------------------------ organizaciones
@@ -144,6 +145,9 @@ public class AutorizacionService {
     }
 
     private boolean vinculadoALaOrganizacion(Long organizacionId) {
+        if (actual().tipoInfo() != TipoSujeto.CIUDADANO && actual().tipoInfo() != TipoSujeto.JURIDICA) {
+            return false;
+        }
         Long propio = actual().id();
         boolean esDueno = ciudadanoOrganizacionRepository
                 .existsById(new CiudadanoOrganizacionId(propio, organizacionId));

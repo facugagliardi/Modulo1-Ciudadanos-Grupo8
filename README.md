@@ -378,7 +378,7 @@ actuación y alcances de representación. Normaliza a mayúsculas y recorta espa
 
 ```json
 {"estado":"RESUELTO"}   // sobre un expediente INICIADO
-→ 400 "Transicion invalida de INICIADO a RESUELTO. Destinos permitidos: ARCHIVADO, EN_TRAMITE"
+→ 409 "Transicion invalida de INICIADO a RESUELTO. Destinos permitidos: ARCHIVADO, EN_TRAMITE"
 ```
 
 **4. Archivos** — `documentacion/almacenamiento/ArchivosPermitidos.java`. Se validan
@@ -580,5 +580,55 @@ Conforme a lo acordado en la mesa de Product Owners para evitar desalineaciones 
   - `organizationRegistered`, `representationGranted`, `representationExpired`.
 
 ---
+
+## Seguridad según el Eje D
+
+El módulo cumple de forma integral con los requerimientos de seguridad del Eje D, validados tanto en pruebas automatizadas como en colecciones de ejecución en vivo:
+
+1. **Control de Acceso a Recursos de Otro Usuario (BOLA / IDOR):**
+   - [`AutorizacionService.esPropia(id)`](src/main/java/ar/edu/uade/ciudadanos/security/AutorizacionService.java) exige explícitamente `tipoInfo == CIUDADANO || JURIDICA` antes de contrastar el ID numérico, evitando colisiones de IDOR con usuarios de tipo `EMPLEADO`.
+   - Endpoints de ciudadanos, contactos, domicilios, relaciones y expedientes rechazan accesos ajenos sin permiso `LEER_TERCEROS` o `EDITAR_TERCEROS` con **HTTP 403 Forbidden**.
+
+2. **Control de Funciones de Otro Rol (BFLA):**
+   - El rol `PERSONA` carece de permisos administrativos. Intentos de listar el padrón (`GET /ciudadanos`), validar documentación (`POST /documentos/{id}/validar`) o alterar estados de expedientes (`PATCH /expedientes/{id}/estado`) retornan **HTTP 403 Forbidden**.
+   - El rol `AUDITOR` tiene permiso exclusivo de lectura (`LEER_TERCEROS`, `LISTAR_PADRON`), rechazando cualquier operación de escritura con **HTTP 403 Forbidden**.
+
+3. **Rechazo de JWT Inválidos:**
+   - [`JwtService`](src/main/java/ar/edu/uade/ciudadanos/security/JwtService.java) y [`JwtAuthenticationFilter`](src/main/java/ar/edu/uade/ciudadanos/security/JwtAuthenticationFilter.java) rechazan tokens con firma adulterada, vencidos, malformados o de tipo incorrecto (ej. usar un refresh token como token de acceso Bearer), devolviendo **HTTP 401 Unauthorized** (`Token ausente o invalido`).
+
+4. **Protección contra Mass Assignment:**
+   - Configurado `spring.jackson.deserialization.fail-on-unknown-properties: true`. Los DTO operan como lista blanca estricta. Cualquier propiedad no declarada en el contrato (ej. inyección de `"rol": "ADMIN"` o `"esAdmin": true`) es interceptada por [`GlobalExceptionHandler`](src/main/java/ar/edu/uade/ciudadanos/common/GlobalExceptionHandler.java) y rechazada con **HTTP 400 Bad Request** (`Campo no permitido: '<propiedad>'`).
+
+5. **Protección contra Inyecciones (SQLi y Path Traversal):**
+   - **SQL Injection:** Todas las consultas a la base de datos utilizan Spring Data JPA con parámetros nombrados / preparados.
+   - **Path Traversal:** [`AlmacenamientoLocal`](src/main/java/ar/edu/uade/ciudadanos/documentacion/almacenamiento/AlmacenamientoLocal.java) y [`ArchivosPermitidos`](src/main/java/ar/edu/uade/ciudadanos/documentacion/almacenamiento/ArchivosPermitidos.java) validan rutas, extensiones y MIME types, neutralizando secuencias de escape como `..` o rutas absolutas fuera del directorio de almacenamiento con **HTTP 400 / 404**.
+
+6. **Protección contra Fuerza Bruta (HTTP 429 Too Many Requests):**
+   - [`RateLimitFilter`](src/main/java/ar/edu/uade/ciudadanos/security/RateLimitFilter.java) monitorea fallos consecutivos de autenticación por IP de cliente en `/auth/login`, `/auth/empleados/login` y `/auth/usuario/login`.
+   - Tras 5 intentos fallidos dentro de la ventana de 60 segundos, las peticiones subsiguientes son bloqueadas con **HTTP 429 Too Many Requests**, cabecera `Retry-After: 60` y cuerpo JSON estandarizado `ErrorResponse`. Un inicio de sesión exitoso resetea el contador de fallos.
+
+7. **Escaneo OWASP ZAP sin alertas High:**
+   - Cabeceras de seguridad inyectadas tanto en [`SecurityConfig`](src/main/java/ar/edu/uade/ciudadanos/config/SecurityConfig.java) como en `frontend/nginx.conf`:
+     - `X-Frame-Options: DENY` (anti-clickjacking)
+     - `X-Content-Type-Options: nosniff` (anti-MIME sniffing)
+     - `Referrer-Policy: strict-origin-when-cross-origin`
+     - `Content-Security-Policy: default-src 'self'; ... frame-ancestors 'none';`
+     - `Permissions-Policy: camera=(), microphone=(), geolocation=()`
+     - `server_tokens off;`
+   - Fuga de información neutralizada: `server.error.include-stacktrace: never` y manejo centralizado de excepciones sin exposición de stack traces en respuestas HTTP.
+
+8. **Dependencias sin CVE Críticas sin mitigar (SCA):**
+   - Excepciones documentadas y justificadas en `config/sca-excepciones.json` (`CVE-2026-47884`, `CVE-2026-47890`).
+   - Verificadas mediante pruebas de arquitectura en bytecode ([`ArquitecturaRestSeguraTest`](src/test/java/ar/edu/uade/ciudadanos/security/ArquitecturaRestSeguraTest.java)), garantizando que el backend no exponga resolvers de vistas ni fragmentos SSE.
+
+### Ejecución de Pruebas de Seguridad Eje D
+
+- **Pruebas JUnit automatizadas:**
+  ```bash
+  ./mvnw test -Dtest=EjeDSeguridadTest
+  ```
+- **Pruebas en vivo con Bruno:**
+  Carpeta [`bruno-collection/11_Seguridad_EjeD/`](bruno-collection/11_Seguridad_EjeD) con 13 pruebas listas para ejecutar contra el servidor local.
+
 
 

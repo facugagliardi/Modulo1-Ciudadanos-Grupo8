@@ -320,9 +320,8 @@ public class DomicilioService {
 
         // Las tres operaciones que pasan por aca son escrituras.
         if (!autorizacion.puede(Permiso.EDITAR_TERCEROS)) {
-            Long propio = autorizacion.actual().id();
             return vinculos.stream()
-                    .filter(v -> v.getId().getIdCiudadano().equals(propio))
+                    .filter(v -> autorizacion.esPropia(v.getId().getIdCiudadano()))
                     .findFirst()
                     .orElseThrow(() -> ApiException.prohibido("El domicilio no pertenece a tu persona"));
         }

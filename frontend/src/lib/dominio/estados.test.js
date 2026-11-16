@@ -10,7 +10,7 @@ import {
 
 describe("grafo de transiciones", () => {
   it("nunca ofrece el estado actual como destino", () => {
-    // El backend rechaza con 400 mandar el estado que ya se tiene: no es
+    // El backend rechaza con 409 mandar el estado que ya se tiene: no es
     // idempotente. Si el grafo lo ofreciera, el usuario vería ese error.
     for (const [entidad, mapa] of Object.entries(TRANSICIONES)) {
       for (const estado of Object.keys(mapa)) {

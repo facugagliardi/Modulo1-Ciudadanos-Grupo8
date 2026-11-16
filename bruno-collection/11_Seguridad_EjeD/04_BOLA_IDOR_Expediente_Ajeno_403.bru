@@ -1,0 +1,21 @@
+meta {
+  name: 04_BOLA_IDOR_Expediente_Ajeno_403
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{baseUrl}}/expedientes/1
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt_ciudadano}}
+}
+
+tests {
+  test("Status code is 403 Forbidden para expediente de tercero sin permiso (BOLA/IDOR)", function() {
+    expect(res.getStatus()).to.equal(403);
+  });
+}
