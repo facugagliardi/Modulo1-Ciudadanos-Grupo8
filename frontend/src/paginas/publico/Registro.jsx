@@ -14,9 +14,9 @@ import { VerificacionDni } from "./VerificacionDni";
 /**
  * Alta de ciudadano físico con onboarding obligatorio:
  * 1. Datos personales (incluye nacionalidad).
- * 2. Documento. Si la nacionalidad es argentina, frente y dorso del DNI
- *    verificados con IA contra los datos del paso 1, y la cuenta se crea
- *    recién cuando coinciden. Si no, foto/archivo del documento.
+ * 2. Documento. Con verificación por IA habilitada, para nacionalidad argentina
+ *    se verifica frente y dorso antes de crear la cuenta. En los demás casos
+ *    se adjunta una foto o archivo del documento.
  * 3. Carga obligatoria de correo electrónico de contacto.
  * 4. Ingreso al portal.
  */
@@ -67,7 +67,8 @@ export function Registro() {
   // Paso 2 (argentinos): cuenta creada tras verificar el DNI
   const [creandoCuenta, setCreandoCuenta] = useState(false);
   const [errorCreacion, setErrorCreacion] = useState(null);
-  const verificaDni = esArgentina(valores.nacionalidad);
+  const verificaDni = import.meta.env.VITE_VERIFICACION_DNI_IA !== "false"
+    && esArgentina(valores.nacionalidad);
 
   // Paso 3: Contacto
   const [email, setEmail] = useState("");
@@ -110,7 +111,7 @@ export function Registro() {
     setErrorGeneral(null);
     if (!validarPaso1()) return;
 
-    // Para un DNI argentino la cuenta no se crea acá: primero se verifica.
+    // Cuando corresponde la verificación por IA, la cuenta se crea tras verificar.
     if (verificaDni && !ciudadanoId) {
       setErrorCreacion(null);
       setPaso(2);

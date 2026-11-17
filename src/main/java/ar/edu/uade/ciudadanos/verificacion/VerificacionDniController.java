@@ -3,6 +3,7 @@ package ar.edu.uade.ciudadanos.verificacion;
 import ar.edu.uade.ciudadanos.verificacion.dto.DatosIngresados;
 import ar.edu.uade.ciudadanos.verificacion.dto.ResultadoVerificacionDni;
 import java.time.LocalDate;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -16,6 +17,7 @@ import org.springframework.web.multipart.MultipartFile;
  * /auth/**) porque se usa antes de que exista la cuenta.
  */
 @RestController
+@ConditionalOnProperty(prefix = "app.groq", name = "habilitado", havingValue = "true", matchIfMissing = true)
 public class VerificacionDniController {
 
     private final VerificacionDniService verificacionDniService;

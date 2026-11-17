@@ -80,9 +80,7 @@ services:
       ALMACENAMIENTO_DIR: /app/archivos-documentos
       APP_CORS_ALLOWED_ORIGINS: ${APP_CORS_ALLOWED_ORIGINS:-http://localhost:${TESTING_WEB_PORT:-8090},http://127.0.0.1:${TESTING_WEB_PORT:-8090},http://localhost:5173,http://127.0.0.1:5173}
       LOGGING_LEVEL_AR_EDU_UADE_CIUDADANOS: INFO
-      # Se toma del .env de la raiz (ignorado por Git). Ver .env.example.
-      GROQ_API_KEY: ${GROQ_API_KEY:-}
-      GROQ_MODEL: ${GROQ_MODEL:-qwen/qwen3.8-27b}
+      APP_GROQ_HABILITADO: "false"
     depends_on:
       postgres:
         condition: service_healthy
@@ -101,6 +99,8 @@ services:
   frontend:
     build:
       context: ./frontend
+      args:
+        VITE_VERIFICACION_DNI_IA: "false"
     ports:
       - "127.0.0.1:${TESTING_WEB_PORT:-8090}:80"
     depends_on:

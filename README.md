@@ -10,6 +10,8 @@ docker compose up --build -d --wait --wait-timeout 900
 
 Abrir **http://localhost:8090**. Las bases, claves y cuentas sinteticas se preparan
 solas, sin configurar IntelliJ ni depender de Retool o del Core compartido.
+En este entorno el alta requiere adjuntar el DNI y guardar el correo. La
+verificación por IA está desactivada, así que no hace falta una clave de Groq.
 Consultar las cuentas con `docker compose run --rm credenciales` y verificar el
 arranque con `docker compose run --rm verificar`.
 Ver [guia de testing local](TESTING_LOCAL.md) para persistencia, broker y alcance.
