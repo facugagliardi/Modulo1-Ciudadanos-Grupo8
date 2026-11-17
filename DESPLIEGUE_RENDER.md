@@ -35,6 +35,7 @@ Cargar los valores secretos en **Environment** de Render, fuera del repositorio:
 | `POSTGRES_USER` | usuario de esa base |
 | `POSTGRES_PASSWORD` | contraseña de esa base |
 | `APP_JWT_SECRET` | clave de firma de M1, distinta del secreto de máquina del Core |
+| `GROQ_API_KEY` | clave del backend para la verificación de DNI por IA, habilitada por defecto |
 | `RABBITMQ_HOST` | `core-uade-2026.duckdns.org` |
 | `RABBITMQ_PORT` | `5671` |
 | `RABBITMQ_VHOST` | `core` |

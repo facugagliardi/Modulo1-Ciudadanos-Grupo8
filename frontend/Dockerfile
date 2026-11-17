@@ -11,6 +11,7 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
 COPY . .
+ARG VITE_VERIFICACION_DNI_IA=true
 ENV VITE_API_URL=/api
 RUN npm run build
 

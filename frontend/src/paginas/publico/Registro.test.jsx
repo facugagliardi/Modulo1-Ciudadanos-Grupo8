@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Registro } from "./Registro";
@@ -49,6 +49,8 @@ beforeEach(() => {
   unirFrenteYDorso.mockReset();
   unirFrenteYDorso.mockResolvedValue(unida);
 });
+
+afterEach(() => vi.unstubAllEnvs());
 
 async function completarCiudadano({ nacionalidad = "Uruguaya" } = {}) {
   await userEvent.type(screen.getByLabelText("Nombre"), "Ana");
@@ -118,14 +120,18 @@ describe("validación paso 1", () => {
   });
 });
 
-describe("flujo de onboarding sin DNI argentino (3 pasos)", () => {
-  it("avanza por los 3 pasos obligatorios: registro, documento y contacto antes de entrar", async () => {
+describe("flujo de onboarding sin verificación por IA", () => {
+  it.each([
+    { nacionalidad: "Uruguaya", ia: "true" },
+    { nacionalidad: "Argentina", ia: "false" },
+  ])("completa los 3 pasos con nacionalidad $nacionalidad e IA=$ia", async ({ nacionalidad, ia }) => {
+    vi.stubEnv("VITE_VERIFICACION_DNI_IA", ia);
     renderizar(<Registro />);
-    await completarCiudadano();
+    await completarCiudadano({ nacionalidad });
     await userEvent.click(screen.getByRole("button", { name: /continuar a documentación/i }));
 
     expect(registrarYEntrar).toHaveBeenCalledWith(
-      expect.objectContaining({ dni: "40123456", nombre: "Ana", nacionalidad: "Uruguaya" }),
+      expect.objectContaining({ dni: "40123456", nombre: "Ana", nacionalidad }),
     );
 
     // Paso 2: Foto de DNI
@@ -154,6 +160,7 @@ describe("flujo de onboarding sin DNI argentino (3 pasos)", () => {
     });
 
     expect(navegar).toHaveBeenCalledWith("/portal", { replace: true });
+    expect(verificarDni).not.toHaveBeenCalled();
   });
 
   it("explica el 409 en lugar de mostrar el mensaje técnico", async () => {
